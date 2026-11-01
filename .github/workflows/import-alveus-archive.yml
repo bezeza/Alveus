@@ -1,0 +1,91 @@
+name: Import Alveus source archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "alveus-0.03.1-beta.zip"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: import-alveus-archive
+  cancel-in-progress: false
+
+jobs:
+  import-source:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and extract source archive
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path, PurePosixPath
+          from zipfile import ZipFile
+          import shutil
+
+          archive = Path("alveus-0.03.1-beta.zip")
+          expected_root = "alveus-plasma-0.03.1"
+
+          if not archive.is_file():
+              raise SystemExit("Expected archive was not found.")
+
+          staging = Path("/tmp/alveus-source-import")
+          if staging.exists():
+              shutil.rmtree(staging)
+          staging.mkdir(parents=True)
+
+          with ZipFile(archive) as zf:
+              names = zf.namelist()
+              if not names or not any(
+                  name.startswith(expected_root + "/") for name in names
+              ):
+                  raise SystemExit("Unexpected archive layout.")
+
+              for name in names:
+                  path = PurePosixPath(name)
+                  if path.is_absolute() or ".." in path.parts:
+                      raise SystemExit(f"Unsafe archive path: {name}")
+                  if path.parts and path.parts[0] != expected_root:
+                      raise SystemExit(f"Unexpected top-level entry: {name}")
+
+              zf.extractall(staging)
+
+          source = staging / expected_root
+          if not (source / "CMakeLists.txt").is_file():
+              raise SystemExit("Archive is missing the project CMakeLists.txt.")
+          if not (source / "core").is_dir() or not (source / "package").is_dir():
+              raise SystemExit("Archive is missing required project directories.")
+
+          for item in source.iterdir():
+              destination = Path(item.name)
+              if item.is_dir():
+                  if destination.exists() and not destination.is_dir():
+                      destination.unlink()
+                  shutil.copytree(item, destination, dirs_exist_ok=True)
+              else:
+                  shutil.copy2(item, destination)
+
+          archive.unlink()
+          print("Alveus 0.03.1 source imported successfully.")
+          PY
+
+      - name: Commit imported source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git commit -m "Import Alveus 0.03.1 beta source"
+          git push
