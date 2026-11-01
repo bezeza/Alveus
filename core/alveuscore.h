@@ -12,6 +12,7 @@
 #pragma once
 
 #include "fileops.h"
+#include "platform/interfaces/fileoperations.h"
 #include "rules.h"
 
 #include <QDateTime>
@@ -298,13 +299,16 @@ private:
     void queueFileJob(FileJob job);
     void startNextFileJob();
     void updateFileJob();
-    static Alveus::FileOps::Result runTask(const FileTask &task, Alveus::FileOps::Control *control);
+    static Alveus::FileOps::Result runTask(const FileTask &task,
+                                           Alveus::Platform::IFileOperations *fileOperations,
+                                           Alveus::FileOps::Control *control);
     void reportFailures(const QString &kind, const QStringList &names);
     bool isReserved(const QString &path) const { return m_reserved.contains(QDir::cleanPath(path)); }
     void refreshChangedFiles();
     QString key(int screen, const QString &activity) const;
     void fenceNormalizeGeometry(Fence &f);
 
+    std::unique_ptr<Alveus::Platform::IFileOperations> m_fileOperations;
     QString m_desktopPath;
     QString m_storePath;
     QList<Fence> m_fences;

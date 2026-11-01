@@ -7,32 +7,39 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick DBus)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(Qt6 6.4 REQUIRED COMPONENTS DBus)
+endif()
 
 include(GNUInstallDirs)
 
 option(ALVEUS_BUILD_TESTS "Build the tests" OFF)
 
-# Where the QML module goes: ask Qt itself, so it lands on the import path
-# plasmashell actually uses (it differs between distributions).
-if(NOT ALVEUS_QML_DIR)
-    get_target_property(_qmake Qt6::qmake IMPORTED_LOCATION)
-    execute_process(COMMAND "${_qmake}" -query QT_INSTALL_QML
-                    OUTPUT_VARIABLE ALVEUS_QML_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+# Linux installs the Plasma package into the QML import path. Windows builds the
+# shared QML module into the application's private QML directory.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(NOT ALVEUS_QML_DIR)
+        get_target_property(_qmake Qt6::qmake IMPORTED_LOCATION)
+        execute_process(COMMAND "${_qmake}" -query QT_INSTALL_QML
+                        OUTPUT_VARIABLE ALVEUS_QML_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+else()
+    set(ALVEUS_QML_DIR "${CMAKE_INSTALL_BINDIR}/qml")
 endif()
-message(STATUS "Alveus QML module will be installed to: ${ALVEUS_QML_DIR}")
+message(STATUS "Alveus QML module install directory: ${ALVEUS_QML_DIR}")
 
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 
+add_subdirectory(platform)
 add_subdirectory(core)
 
-# The desktop layout (Plasma containment) itself is plain QML
-install(DIRECTORY package/
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/plasmoids/ua.bezeza.alveus)
-
-# KRunner (Alt+Space) finds fences and desktop files while Alveus is running
-install(FILES data/ua.bezeza.alveus.runner.desktop
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/krunner/dbusplugins)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    install(DIRECTORY package/
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/plasmoids/ua.bezeza.alveus)
+    install(FILES data/ua.bezeza.alveus.runner.desktop
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/krunner/dbusplugins)
+endif()
 
 # Translations
 find_program(MSGFMT_EXECUTABLE msgfmt)

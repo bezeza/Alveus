@@ -9,6 +9,11 @@ Inspired by Stardock Fences on Windows.
 
 **Status: 0.03.1 beta.**
 
+The current release is KDE Plasma 6-only. Cross-platform work for Windows and
+major Linux desktop environments is in progress on the feature/core-refactor
+branch. The first migration step introduces a platform-neutral file-operation
+contract; it does not yet mean that a Windows desktop host is available.
+
 This beta focuses on reliability. File operations use GNU coreutils (`cp`, `mv`),
 which are standard on Linux desktops. Copies are staged and preserve metadata and
 symlinks when supported; if a destination cannot preserve a symlink, the operation

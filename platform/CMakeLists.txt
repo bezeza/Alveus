@@ -1,0 +1,12 @@
+if(WIN32)
+    set(ALVEUS_PLATFORM_BACKEND windows/windowsfileoperations.cpp)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(ALVEUS_PLATFORM_BACKEND linux/linuxfileoperations.cpp ${CMAKE_SOURCE_DIR}/core/fileops.cpp)
+else()
+    message(FATAL_ERROR "Alveus platform backends are currently implemented for Windows and Linux.")
+endif()
+
+add_library(alveusplatform STATIC platformfactory.cpp ${ALVEUS_PLATFORM_BACKEND})
+target_include_directories(alveusplatform PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(alveusplatform PUBLIC Qt6::Core)
+target_compile_features(alveusplatform PUBLIC cxx_std_20)

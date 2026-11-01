@@ -6,8 +6,11 @@
 #include "alveuscore.h"
 #include "drives.h"
 #include "integrations.h"
-#include "runner.h"
+#include "platform/platformfactory.h"
 #include "thumbnails.h"
+#if defined(Q_OS_LINUX)
+#include "runner.h"
+#endif
 
 #include <QClipboard>
 #include <QDateTime>
@@ -252,6 +255,7 @@ bool validSnapshots(const QJsonValue &value)
 
 AlveusCore::AlveusCore(const QString &desktopPath, const QString &storePath, QObject *parent)
     : QObject(parent)
+    , m_fileOperations(Alveus::Platform::createFileOperations())
 {
     m_desktopPath = QDir::cleanPath(!desktopPath.isEmpty()
         ? desktopPath
@@ -338,10 +342,12 @@ AlveusCore::AlveusCore(const QString &desktopPath, const QString &storePath, QOb
 
     m_integrations->setWatchScreenShare(setting(QStringLiteral("autoPrivacy")).toBool());
 
+#if defined(Q_OS_LINUX)
     if (qEnvironmentVariableIsEmpty("ALVEUS_NO_DBUS")) {
         m_runner = new RunnerService(this);
         m_runner->registerOnBus();
     }
+#endif
 }
 
 AlveusCore::~AlveusCore()
@@ -750,7 +756,7 @@ bool AlveusCore::undo()
         if (exists(a) && !exists(b)) {
             tasks << FileTask{op == QLatin1String("move") ? FileTask::Move : FileTask::Restore, a, b};
             QDir().mkpath(QFileInfo(b).absolutePath());
-            slow = slow || !Alveus::FileOps::sameFilesystem(a, QFileInfo(b).absolutePath());
+            slow = slow || !m_fileOperations->sameFilesystem(a, QFileInfo(b).absolutePath());
         } else if (exists(a) || !exists(b)) {
             Q_EMIT message(QStringLiteral("undo-conflict"), b);
             return false;
@@ -841,7 +847,7 @@ bool AlveusCore::undo()
         // renames on one disk and trashing: instant, do it right away
         TaskResults results;
         for (const FileTask &task : std::as_const(tasks)) {
-            results << runTask(task, nullptr);
+            results << runTask(task, m_fileOperations.get(), nullptr);
             if (results.last() != Alveus::FileOps::Result::Done
                 && results.last() != Alveus::FileOps::Result::SourceLeft) {
                 break;
@@ -1803,9 +1809,9 @@ QStringList AlveusCore::importInto(const QList<QUrl> &urls, bool copy, const QSt
             continue;
         }
         const QString dst = dirPath + QLatin1Char('/') + uniqueName(dirPath, info.fileName());
-        if (!copy && Alveus::FileOps::sameFilesystem(src, dirPath)) {
+        if (!copy && m_fileOperations->sameFilesystem(src, dirPath)) {
             // same disk: an instant rename, done right here
-            if (Alveus::FileOps::movePath(src, dst) == Alveus::FileOps::Result::Done) {
+            if (m_fileOperations->movePath(src, dst) == Alveus::FileOps::Result::Done) {
                 created << dst;
                 ops->append(fileOp(QStringLiteral("move"), dst, src));
             } else {
@@ -1836,18 +1842,20 @@ void AlveusCore::reportFailures(const QString &kind, const QStringList &names)
     Q_EMIT message(kind, shown.join(QStringLiteral(", ")));
 }
 
-Alveus::FileOps::Result AlveusCore::runTask(const FileTask &task, Alveus::FileOps::Control *control)
+Alveus::FileOps::Result AlveusCore::runTask(const FileTask &task,
+                                                  Alveus::Platform::IFileOperations *fileOperations,
+                                                  Alveus::FileOps::Control *control)
 {
     using Alveus::FileOps::Result;
     switch (task.op) {
     case FileTask::Copy:
-        return Alveus::FileOps::copyTree(task.from, task.to, control);
+        return fileOperations ? fileOperations->copyTree(task.from, task.to, control) : Result::Failed;
     case FileTask::Move:
-        return Alveus::FileOps::movePath(task.from, task.to, control);
+        return fileOperations ? fileOperations->movePath(task.from, task.to, control) : Result::Failed;
     case FileTask::Trash:
         return QFile::moveToTrash(task.from) ? Result::Done : Result::Failed;
     case FileTask::Restore: {
-        const Result r = Alveus::FileOps::movePath(task.from, task.to, control);
+        const Result r = fileOperations ? fileOperations->movePath(task.from, task.to, control) : Result::Failed;
         // Keep .trashinfo while the item is still physically in the trash.
         // Removing it on SourceLeft would orphan the remaining copy.
         if (r == Result::Done && !QFileInfo::exists(task.from) && !QFileInfo(task.from).isSymLink()) {
@@ -1937,16 +1945,18 @@ void AlveusCore::startNextFileJob()
     const QList<FileTask> tasks = m_runningJob.tasks;
     auto control = m_jobControl;
     auto results = m_jobResults;
-    m_jobThread = QThread::create([tasks, control, results]() {
+    auto fileOperations = m_fileOperations.get();
+    m_jobThread = QThread::create([tasks, control, results, fileOperations]() {
         QList<qint64> sizes;
         for (const FileTask &t : tasks) {
-            sizes << (t.op == FileTask::Trash ? 0 : Alveus::FileOps::treeSize(t.from));
+            sizes << (t.op == FileTask::Trash || !fileOperations ? 0 : fileOperations->treeSize(t.from));
             control->bytesTotal += sizes.last();
         }
         for (int i = 0; i < tasks.size(); ++i) {
             control->index = i;
             control->bytesCurrent = 0;
-            const auto r = control->cancel ? Alveus::FileOps::Result::Cancelled : runTask(tasks.at(i), control.get());
+            const auto r = control->cancel ? Alveus::FileOps::Result::Cancelled
+                                            : runTask(tasks.at(i), fileOperations, control.get());
             *results << r; // read by the GUI thread only after the thread finished
             control->bytesDone += sizes.at(i);
             control->bytesCurrent = 0;
@@ -2400,7 +2410,7 @@ QString AlveusCore::archiveFiles(const QStringList &names, const QString &archiv
     QJsonArray ops;
     QList<FileTask> slow;
     QStringList failed;
-    const bool sameDisk = Alveus::FileOps::sameFilesystem(m_desktopPath, target);
+    const bool sameDisk = m_fileOperations->sameFilesystem(m_desktopPath, target);
     for (const QString &name : names) {
         const QString src = m_desktopPath + QLatin1Char('/') + name;
         if (!QFileInfo::exists(src)) {
@@ -2410,7 +2420,7 @@ QString AlveusCore::archiveFiles(const QStringList &names, const QString &archiv
         if (!sameDisk) {
             slow << FileTask{FileTask::Move, src, dst};
             m_reserved.insert(QDir::cleanPath(dst));
-        } else if (Alveus::FileOps::movePath(src, dst) == Alveus::FileOps::Result::Done) {
+        } else if (m_fileOperations->movePath(src, dst) == Alveus::FileOps::Result::Done) {
             ops.append(fileOp(QStringLiteral("move"), dst, src));
         } else {
             failed << name;
