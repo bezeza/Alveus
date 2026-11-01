@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Alveus
+Name[uk]=Alveus
+Comment=Find desktop fences and files
+Comment[uk]=Пошук парканів і файлів на стільниці
+Type=Service
+Icon=folder-favorites
+X-KDE-PluginInfo-Author=bezeza
+X-KDE-PluginInfo-Name=ua.bezeza.alveus
+X-KDE-PluginInfo-Version=0.03.1
+X-KDE-PluginInfo-License=GPL
+X-KDE-PluginInfo-EnabledByDefault=true
+X-Plasma-API=DBus
+X-Plasma-DBusRunner-Service=ua.bezeza.alveus
+X-Plasma-DBusRunner-Path=/runner

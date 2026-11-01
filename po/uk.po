@@ -1,0 +1,922 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: alveus 0.03\n"
+"PO-Revision-Date: 2026-11-01 13:00+0200\n"
+"Last-Translator: bezeza\n"
+"Language-Team: Ukrainian\n"
+"Language: uk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: package/contents/ui/AlveusSettings.qml:72
+msgid "General"
+msgstr "Загальне"
+
+#: package/contents/ui/AlveusSettings.qml:73
+msgid "Layouts"
+msgstr "Розкладки"
+
+#: package/contents/ui/AlveusSettings.qml:74
+msgid "Rules help"
+msgstr "Довідка з правил"
+
+#: package/contents/ui/AlveusSettings.qml:75
+msgid "About"
+msgstr "Про програму"
+
+#: package/contents/ui/AlveusSettings.qml:91
+#: package/contents/ui/FenceSettings.qml:260
+msgid "Icon size"
+msgstr "Розмір піктограм"
+
+#: package/contents/ui/AlveusSettings.qml:104
+msgid "Open files with a single click"
+msgstr "Відкривати файли одним клацанням"
+
+#: package/contents/ui/AlveusSettings.qml:109
+msgid "Hide what's in fences while the screen is shared (Zoom, Meet, OBS…)"
+msgstr "Ховати вміст парканів, коли екран показують (Zoom, Meet, OBS…)"
+
+#: package/contents/ui/AlveusSettings.qml:114
+msgid "Privacy mode now"
+msgstr "Увімкнути приватний режим зараз"
+
+#: package/contents/ui/AlveusSettings.qml:119
+msgid "Remind me to tidy up old files"
+msgstr "Нагадувати прибрати старі файли"
+
+#: package/contents/ui/AlveusSettings.qml:124
+msgid "Pages of this desktop"
+msgstr "Сторінки цієї стільниці"
+
+#: package/contents/ui/AlveusSettings.qml:127
+msgid "%1 page(s). Scroll the mouse wheel over the empty desktop to switch."
+msgstr ""
+"Сторінок: %1. Щоб перемикати, прокручуйте коліщатко миші над порожньою "
+"стільницею."
+
+#: package/contents/ui/AlveusSettings.qml:132
+msgid "Add page"
+msgstr "Додати сторінку"
+
+#: package/contents/ui/AlveusSettings.qml:140
+msgid "Tidy up old files…"
+msgstr "Прибрати старі файли…"
+
+#: package/contents/ui/AlveusSettings.qml:157
+msgid ""
+"Save how your fences are arranged and bring it back later — for example one "
+"layout for work and one for home."
+msgstr ""
+"Збережіть, як розставлені паркани, і поверніть це пізніше — наприклад, одна "
+"розкладка для роботи, інша для дому."
+
+#: package/contents/ui/AlveusSettings.qml:163
+msgid "Name of the layout"
+msgstr "Назва розкладки"
+
+#: package/contents/ui/AlveusSettings.qml:166
+msgid "Save current"
+msgstr "Зберегти поточну"
+
+#: package/contents/ui/AlveusSettings.qml:195
+msgid "%1 fences · %2"
+msgstr "Парканів: %1 · %2"
+
+#: package/contents/ui/AlveusSettings.qml:201
+msgid "Restore"
+msgstr "Відновити"
+
+#: package/contents/ui/AlveusSettings.qml:205
+msgid "Layout “%1” restored"
+msgstr "Розкладку «%1» відновлено"
+
+#: package/contents/ui/AlveusSettings.qml:217
+msgid "No saved layouts yet"
+msgstr "Збережених розкладок ще немає"
+
+#: package/contents/ui/AlveusSettings.qml:230
+msgid ""
+"<h3>Sorting rules</h3><p>Each fence has a short list of rules. New files on "
+"the desktop go to the first fence they fit. Fences with time rules (Today, "
+"Old) are checked first.</p><p><b>pdf, docx</b> — file types; <b>tar.gz</b> "
+"works too<br><b>folder</b> — folders<br><b>name:*invoice*</b> — by name; "
+"<b>*</b> and <b>?</b> are wildcards, otherwise the name only has to contain "
+"the text; use quotes for spaces: <b>\"name:my "
+"report*\"</b><br><b>from:telegram</b> — downloaded from a web address "
+"containing the text<br><b>newer:7</b> — changed in the last 7 days "
+"(<b>12h</b> = hours, <b>2w</b> = weeks)<br><b>older:60</b> — not changed for"
+" 60 days<br><b>larger:100M</b>, <b>smaller:1M</b> — by size (K, M, "
+"G)</p><p>A file fits when it matches <i>any</i> type, name or site rule and "
+"<i>all</i> time and size rules. With only time or size rules, any file can "
+"fit.</p><p>Files you put somewhere by hand stay there; rules only decide for"
+" the rest.</p>"
+msgstr ""
+"<h3>Правила сортування</h3><p>Кожен паркан має короткий список правил. Нові "
+"файли на стільниці потрапляють у перший паркан, якому вони підходять. "
+"Паркани з правилами часу («Сьогодні», «Старе») перевіряються "
+"першими.</p><p><b>pdf, docx</b> — типи файлів; <b>tar.gz</b> теж "
+"працює<br><b>folder</b> — теки<br><b>name:*рахунок*</b> — за назвою; "
+"<b>*</b> і <b>?</b> — шаблони, інакше назва просто має містити текст; для "
+"пробілів беріть у лапки: <b>\"name:мій звіт*\"</b><br><b>from:telegram</b> —"
+" завантажено з адреси, що містить цей текст<br><b>newer:7</b> — змінено за "
+"останні 7 днів (<b>12h</b> — години, <b>2w</b> — тижні)<br><b>older:60</b> —"
+" не змінювався 60 днів<br><b>larger:100M</b>, <b>smaller:1M</b> — за "
+"розміром (K, M, G)</p><p>Файл підходить, якщо збігається з <i>будь-яким</i> "
+"правилом типу, назви чи сайту і з <i>усіма</i> правилами часу й розміру. "
+"Якщо є лише правила часу чи розміру, підходить будь-який файл.</p><p>Файли, "
+"які ви поклали кудись вручну, там і лишаються; правила вирішують тільки за "
+"решту.</p>"
+
+#: package/contents/ui/AlveusSettings.qml:243
+msgid ""
+"Alveus is Latin for “beehive”: every fence is a cell, every file a bee. Free"
+" software under the GPL. This is an early beta — thank you for trying it!"
+msgstr ""
+"Alveus латиною — «вулик»: кожен паркан — комірка, кожен файл — бджола. "
+"Вільна програма за ліцензією GPL. Це рання бета — дякуємо, що спробували!"
+
+#: package/contents/ui/AlveusSettings.qml:250
+msgid "Website"
+msgstr "Сайт"
+
+#: package/contents/ui/AlveusSettings.qml:256
+msgid "Report a problem"
+msgstr "Повідомити про проблему"
+
+#: package/contents/ui/AlveusSettings.qml:263
+msgid "Support the project"
+msgstr "Підтримати проєкт"
+
+#: package/contents/ui/AlveusSettings.qml:271
+msgid "Donation links will appear here soon."
+msgstr "Посилання для підтримки скоро з’являться тут."
+
+#: package/contents/ui/AlveusSettings.qml:272
+msgid "Alveus is free. If it saves you time, you can buy the author a coffee."
+msgstr ""
+"Alveus безкоштовний. Якщо він економить вам час, можете пригостити автора "
+"кавою."
+
+#: package/contents/ui/AlveusSettings.qml:285
+msgid "monobank jar"
+msgstr "Банка monobank"
+
+#: package/contents/ui/CleanupDialog.qml:68
+msgid "Tidy up the desktop"
+msgstr "Прибрати стільницю"
+
+#: package/contents/ui/CleanupDialog.qml:75
+msgid "Not opened or changed for"
+msgstr "Не відкривалися й не змінювалися"
+
+#: package/contents/ui/CleanupDialog.qml:86
+msgid "days"
+msgstr "днів"
+
+#: package/contents/ui/CleanupDialog.qml:93
+#: package/contents/ui/CleanupDialog.qml:154
+msgid "Desktop archive"
+msgstr "Архів стільниці"
+
+#: package/contents/ui/CleanupDialog.qml:93
+msgid ""
+"Ticked files will be moved into the folder “%1” in Documents, sorted by "
+"today's date. Nothing is deleted, and you can undo it."
+msgstr ""
+"Позначені файли буде перенесено в теку «%1» у Документах, у підтеку з "
+"сьогоднішньою датою. Нічого не видаляється, і це можна скасувати."
+
+#: package/contents/ui/CleanupDialog.qml:94
+msgid "Nothing to tidy: every file on the desktop was used recently."
+msgstr "Прибирати нічого: усі файли на стільниці використовувалися нещодавно."
+
+#: package/contents/ui/CleanupDialog.qml:124
+msgid "%1 days"
+msgstr "%1 дн."
+
+#: package/contents/ui/CleanupDialog.qml:135
+msgid "Remind me in a week"
+msgstr "Нагадати через тиждень"
+
+#: package/contents/ui/CleanupDialog.qml:143
+msgid "Close"
+msgstr "Закрити"
+
+#: package/contents/ui/CleanupDialog.qml:147
+msgid "Move %1 to the archive"
+msgstr "Перенести в архів (%1)"
+
+#: package/contents/ui/DrivesView.qml:33
+msgid "System (%1)"
+msgstr "Система (%1)"
+
+#: package/contents/ui/DrivesView.qml:33
+msgid "System"
+msgstr "Система"
+
+#: package/contents/ui/DrivesView.qml:44
+msgid "Mounting %1…"
+msgstr "Підключаю %1…"
+
+#: package/contents/ui/DrivesView.qml:116
+msgid "Not mounted — double-click to mount"
+msgstr "Не підключено — двічі клацніть, щоб підключити"
+
+#: package/contents/ui/DrivesView.qml:118
+msgid "%1 free of %2 · read only"
+msgstr "вільно %1 з %2 · лише читання"
+
+#: package/contents/ui/DrivesView.qml:119
+msgid "%1 free of %2"
+msgstr "вільно %1 з %2"
+
+#: package/contents/ui/DrivesView.qml:160 package/contents/ui/FileIcon.qml:344
+msgid "Open"
+msgstr "Відкрити"
+
+#: package/contents/ui/DrivesView.qml:160
+msgid "Mount and open"
+msgstr "Підключити й відкрити"
+
+#: package/contents/ui/DrivesView.qml:167
+msgid "Unmount"
+msgstr "Від’єднати"
+
+#: package/contents/ui/DrivesView.qml:167
+msgid "Mount"
+msgstr "Підключити"
+
+#: package/contents/ui/DrivesView.qml:173
+msgid "Open terminal here"
+msgstr "Відкрити термінал тут"
+
+#: package/contents/ui/DrivesView.qml:179 package/contents/ui/FileIcon.qml:424
+msgid "Properties"
+msgstr "Властивості"
+
+#: package/contents/ui/DrivesView.qml:185
+msgid "Refresh"
+msgstr "Оновити"
+
+#: package/contents/ui/DrivesView.qml:195
+msgid "Looking for drives…"
+msgstr "Шукаю диски…"
+
+#: package/contents/ui/Fence.qml:219
+msgid "Back"
+msgstr "Назад"
+
+#: package/contents/ui/Fence.qml:249 package/contents/ui/Fence.qml:275
+#: package/contents/ui/Fence.qml:674 package/contents/ui/FileIcon.qml:380
+msgid "Untitled fence"
+msgstr "Паркан без назви"
+
+#: package/contents/ui/Fence.qml:353
+msgid "Merged into tabs"
+msgstr "Об’єднано у вкладки"
+
+#: package/contents/ui/Fence.qml:371
+msgid "Engorgio — double-click to unroll"
+msgstr "Engorgio — подвійне клацання, щоб розгорнути"
+
+#: package/contents/ui/Fence.qml:372
+msgid "Reducio — double-click to roll up"
+msgstr "Reducio — подвійне клацання, щоб згорнути"
+
+#: package/contents/ui/Fence.qml:523
+msgid "This folder is empty"
+msgstr "Ця тека порожня"
+
+#: package/contents/ui/Fence.qml:523
+msgid "Folder not found: %1"
+msgstr "Теку не знайдено: %1"
+
+#: package/contents/ui/Fence.qml:524
+msgid "Empty. New files of these types land here: %1"
+msgstr "Порожньо. Сюди потраплятимуть нові файли: %1"
+
+#: package/contents/ui/Fence.qml:525
+msgid "Drag files here"
+msgstr "Перетягніть файли сюди"
+
+#: package/contents/ui/Fence.qml:547
+msgid "Hidden while your screen is shown"
+msgstr "Приховано, поки екран показують"
+
+#: package/contents/ui/Fence.qml:631 package/contents/ui/FileIcon.qml:365
+msgid "Rename"
+msgstr "Перейменувати"
+
+#: package/contents/ui/Fence.qml:636
+msgid "Fence settings…"
+msgstr "Налаштування паркану…"
+
+#: package/contents/ui/Fence.qml:641
+msgid "Unroll"
+msgstr "Розгорнути"
+
+#: package/contents/ui/Fence.qml:641
+msgid "Roll up"
+msgstr "Згорнути"
+
+#: package/contents/ui/Fence.qml:646
+msgid "Select all"
+msgstr "Виділити все"
+
+#: package/contents/ui/Fence.qml:654
+msgid "Open folder"
+msgstr "Відкрити теку"
+
+#: package/contents/ui/Fence.qml:659 package/contents/ui/main.qml:435
+msgid "Paste"
+msgstr "Вставити"
+
+#: package/contents/ui/Fence.qml:667
+msgid "Add as a tab to"
+msgstr "Додати вкладкою до"
+
+#: package/contents/ui/Fence.qml:686
+msgid "Detach this tab"
+msgstr "Від’єднати вкладку"
+
+#: package/contents/ui/Fence.qml:692
+msgid "Move to page"
+msgstr "Перемістити на сторінку"
+
+#: package/contents/ui/Fence.qml:697
+msgid "Page %1"
+msgstr "Сторінка %1"
+
+#: package/contents/ui/Fence.qml:697
+msgid "New page"
+msgstr "Нова сторінка"
+
+#: package/contents/ui/Fence.qml:712
+msgid "Move to monitor"
+msgstr "Перемістити на монітор"
+
+#: package/contents/ui/Fence.qml:719
+msgid "Monitor %1"
+msgstr "Монітор %1"
+
+#: package/contents/ui/Fence.qml:730
+msgid "Only in activity “%1”"
+msgstr "Лише в активності «%1»"
+
+#: package/contents/ui/Fence.qml:737
+msgid "Remove fence (files stay on the desktop)"
+msgstr "Видалити паркан (файли лишаться на стільниці)"
+
+#: package/contents/ui/Fence.qml:741
+msgid "Fence removed"
+msgstr "Паркан видалено"
+
+#: package/contents/ui/FenceSettings.qml:81
+msgid "Fence settings"
+msgstr "Налаштування паркану"
+
+#: package/contents/ui/FenceSettings.qml:87
+msgid "Name"
+msgstr "Назва"
+
+#: package/contents/ui/FenceSettings.qml:95
+msgid "What goes into this fence"
+msgstr "Що потрапляє в паркан"
+
+#: package/contents/ui/FenceSettings.qml:98
+msgid "Files from the desktop, sorted by rules"
+msgstr "Файли зі стільниці, за правилами"
+
+#: package/contents/ui/FenceSettings.qml:104
+msgid "Everything in a folder (a portal)"
+msgstr "Усе з певної теки (портал)"
+
+#: package/contents/ui/FenceSettings.qml:109
+msgid "Drives and free space"
+msgstr "Диски й вільне місце"
+
+#: package/contents/ui/FenceSettings.qml:122
+msgid "for example: pdf, docx, name:*invoice*, newer:7"
+msgstr "наприклад: pdf, docx, name:*рахунок*, newer:7"
+
+#: package/contents/ui/FenceSettings.qml:131
+msgid "Not understood: %1"
+msgstr "Не зрозуміло: %1"
+
+#: package/contents/ui/FenceSettings.qml:138 package/contents/ui/main.qml:283
+#: package/contents/ui/main.qml:1047
+msgid "Documents"
+msgstr "Документи"
+
+#: package/contents/ui/FenceSettings.qml:139 package/contents/ui/main.qml:284
+#: package/contents/ui/main.qml:1048
+msgid "Photos"
+msgstr "Фото"
+
+#: package/contents/ui/FenceSettings.qml:140 package/contents/ui/main.qml:285
+#: package/contents/ui/main.qml:1049
+msgid "Video and music"
+msgstr "Відео й музика"
+
+#: package/contents/ui/FenceSettings.qml:141 package/contents/ui/main.qml:286
+#: package/contents/ui/main.qml:1050
+msgid "Archives"
+msgstr "Архіви"
+
+#: package/contents/ui/FenceSettings.qml:142 package/contents/ui/main.qml:282
+#: package/contents/ui/main.qml:1051
+msgid "Programs"
+msgstr "Програми"
+
+#: package/contents/ui/FenceSettings.qml:143 package/contents/ui/main.qml:1052
+msgid "Folders"
+msgstr "Теки"
+
+#: package/contents/ui/FenceSettings.qml:144
+#: package/contents/ui/FenceSettings.qml:202 package/contents/ui/main.qml:1053
+#: package/contents/ui/main.qml:1079
+msgid "Screenshots"
+msgstr "Знімки екрана"
+
+#: package/contents/ui/FenceSettings.qml:145
+msgid "From Telegram"
+msgstr "З Telegram"
+
+#: package/contents/ui/FenceSettings.qml:146 package/contents/ui/main.qml:1054
+msgid "Today"
+msgstr "Сьогодні"
+
+#: package/contents/ui/FenceSettings.qml:147
+msgid "This week"
+msgstr "Цього тижня"
+
+#: package/contents/ui/FenceSettings.qml:148
+msgid "Not touched for 60 days"
+msgstr "Не чіпали 60 днів"
+
+#: package/contents/ui/FenceSettings.qml:149
+msgid "Bigger than 100 MB"
+msgstr "Більші за 100 МБ"
+
+#: package/contents/ui/FenceSettings.qml:165
+msgid ""
+"<b>pdf, docx</b> — file types · <b>folder</b> — folders · "
+"<b>name:*invoice*</b> — by name · <b>from:telegram</b> — downloaded from a "
+"site · <b>newer:7</b> / <b>older:60</b> — changed within / more than N days "
+"ago (12h for hours) · <b>larger:100M</b> / <b>smaller:1M</b> — by size.<br>A"
+" file fits if it matches any type, name or site, and all time and size "
+"conditions. Files you moved by hand stay where you put them."
+msgstr ""
+"<b>pdf, docx</b> — типи файлів · <b>folder</b> — теки · "
+"<b>name:*рахунок*</b> — за назвою · <b>from:telegram</b> — завантажено з "
+"сайту · <b>newer:7</b> / <b>older:60</b> — змінено за останні / понад N днів"
+" тому (12h — години) · <b>larger:100M</b> / <b>smaller:1M</b> — за "
+"розміром.<br>Файл підходить, якщо збігається з будь-яким типом, назвою чи "
+"сайтом і з усіма умовами часу й розміру. Файли, переміщені вручну, лишаються"
+" там, де ви їх поклали."
+
+#: package/contents/ui/FenceSettings.qml:179
+msgid "Choose…"
+msgstr "Вибрати…"
+
+#: package/contents/ui/FenceSettings.qml:190 package/contents/ui/main.qml:1069
+msgid "Downloads"
+msgstr "Завантаження"
+
+#: package/contents/ui/FenceSettings.qml:196 package/contents/ui/main.qml:1074
+msgid "From phone (KDE Connect)"
+msgstr "З телефона (KDE Connect)"
+
+#: package/contents/ui/FenceSettings.qml:209
+msgid "Look"
+msgstr "Вигляд"
+
+#: package/contents/ui/FenceSettings.qml:233
+msgid "Theme colour"
+msgstr "Колір теми"
+
+#: package/contents/ui/FenceSettings.qml:239
+msgid "Opacity"
+msgstr "Непрозорість"
+
+#: package/contents/ui/FenceSettings.qml:251
+msgid "Blur the wallpaper behind (frosted glass)"
+msgstr "Розмивати шпалери позаду (матове скло)"
+
+#: package/contents/ui/FenceSettings.qml:254
+msgid "View"
+msgstr "Показ"
+
+#: package/contents/ui/FenceSettings.qml:257
+msgid "Icons"
+msgstr "Піктограми"
+
+#: package/contents/ui/FenceSettings.qml:257
+msgid "List"
+msgstr "Список"
+
+#: package/contents/ui/FenceSettings.qml:257
+msgid "Honeycomb"
+msgstr "Стільники"
+
+#: package/contents/ui/FenceSettings.qml:266
+msgid "Default"
+msgstr "Типовий"
+
+#: package/contents/ui/FenceSettings.qml:275 package/contents/ui/main.qml:1120
+msgid "Cancel"
+msgstr "Скасувати"
+
+#: package/contents/ui/FenceSettings.qml:279
+msgid "Save"
+msgstr "Зберегти"
+
+#: package/contents/ui/FenceSettings.qml:290
+msgid "Folder for this fence"
+msgstr "Тека для цього паркану"
+
+#: package/contents/ui/FileIcon.qml:349
+msgid "Show in folder"
+msgstr "Показати в теці"
+
+#: package/contents/ui/FileIcon.qml:355
+msgid "Copy"
+msgstr "Копіювати"
+
+#: package/contents/ui/FileIcon.qml:360
+msgid "Cut"
+msgstr "Вирізати"
+
+#: package/contents/ui/FileIcon.qml:373
+msgid "Move to fence"
+msgstr "Перемістити в паркан"
+
+#: package/contents/ui/FileIcon.qml:389
+msgid "Take out of the fence"
+msgstr "Вийняти з паркану"
+
+#: package/contents/ui/FileIcon.qml:397
+msgid "Send to phone"
+msgstr "Надіслати на телефон"
+
+#: package/contents/ui/FileIcon.qml:414
+msgid "Move to Trash"
+msgstr "У смітник"
+
+#: package/contents/ui/FileIcon.qml:419 package/contents/ui/main.qml:525
+msgid "Moved to Trash: %1"
+msgstr "Перенесено в смітник: %1"
+
+#: package/contents/ui/main.qml:147
+msgid "Couldn't mount the drive: %1"
+msgstr "Не вдалося підключити диск: %1"
+
+#: package/contents/ui/main.qml:148
+msgid "Couldn't unmount the drive: %1"
+msgstr "Не вдалося від’єднати диск: %1"
+
+#: package/contents/ui/main.qml
+msgid "Couldn't undo: “%1” could not be put back. Try again later."
+msgstr "Не вдалося скасувати: «%1» не вдалося повернути. Спробуйте пізніше."
+
+#: package/contents/ui/main.qml
+msgid "Couldn't save Alveus settings: %1"
+msgstr "Не вдалося зберегти налаштування Alveus: %1"
+
+#: package/contents/ui/main.qml
+msgid "Settings were not overwritten because they cannot be safely updated: %1"
+msgstr "Налаштування не перезаписано, оскільки їх неможливо безпечно оновити: %1"
+
+#: package/contents/ui/main.qml
+msgid "Alveus settings were damaged. A backup was saved: %1"
+msgstr "Налаштування Alveus пошкоджено. Резервну копію збережено: %1"
+
+#: package/contents/ui/main.qml
+msgid "Alveus settings were damaged and could not be backed up: %1"
+msgstr "Налаштування Alveus пошкоджено, але не вдалося створити резервну копію: %1"
+
+#: package/contents/ui/main.qml
+msgid "These settings require a newer Alveus version: %1"
+msgstr "Для цих налаштувань потрібна новіша версія Alveus: %1"
+
+#: package/contents/ui/main.qml
+msgid "Couldn't read Alveus settings: %1"
+msgstr "Не вдалося прочитати налаштування Alveus: %1"
+
+#: package/contents/ui/main.qml
+msgid "Couldn't copy: %1"
+msgstr "Не вдалося скопіювати: %1"
+
+#: package/contents/ui/main.qml
+msgid "Couldn't move: %1"
+msgstr "Не вдалося перемістити: %1"
+
+#: package/contents/ui/main.qml:300 package/contents/ui/main.qml:675
+#: package/contents/ui/main.qml:1042
+msgid "New fence"
+msgstr "Новий паркан"
+
+#: package/contents/ui/main.qml:377
+msgid "Undo: create fence “%1”"
+msgstr "Скасувати: створення паркану «%1»"
+
+#: package/contents/ui/main.qml:378
+msgid "Undo: change fence “%1”"
+msgstr "Скасувати: зміну паркану «%1»"
+
+#: package/contents/ui/main.qml:379
+msgid "Undo: remove fence “%1”"
+msgstr "Скасувати: видалення паркану «%1»"
+
+#: package/contents/ui/main.qml:380
+msgid "Undo: merge into tabs"
+msgstr "Скасувати: об’єднання у вкладки"
+
+#: package/contents/ui/main.qml:381
+msgid "Undo: detach tab"
+msgstr "Скасувати: від’єднання вкладки"
+
+#: package/contents/ui/main.qml:382 package/contents/ui/main.qml:386
+msgid "Undo: move files"
+msgstr "Скасувати: переміщення файлів"
+
+#: package/contents/ui/main.qml:383
+msgid "Undo: move icons"
+msgstr "Скасувати: переміщення піктограм"
+
+#: package/contents/ui/main.qml:384
+msgid "Undo: arrange icons"
+msgstr "Скасувати: впорядкування піктограм"
+
+#: package/contents/ui/main.qml:385
+msgid "Undo: copy files"
+msgstr "Скасувати: копіювання файлів"
+
+#: package/contents/ui/main.qml:387
+msgid "Undo: rename “%1”"
+msgstr "Скасувати: перейменування «%1»"
+
+#: package/contents/ui/main.qml:388
+msgid "Undo: move to Trash"
+msgstr "Скасувати: перенесення в смітник"
+
+#: package/contents/ui/main.qml:389
+msgid "Undo: create “%1”"
+msgstr "Скасувати: створення «%1»"
+
+#: package/contents/ui/main.qml:390
+msgid "Undo: restore layout “%1”"
+msgstr "Скасувати: відновлення розкладки «%1»"
+
+#: package/contents/ui/main.qml:391
+msgid "Undo: tidy up"
+msgstr "Скасувати: прибирання"
+
+#: package/contents/ui/main.qml:393 package/contents/ui/main.qml:441
+#: package/contents/ui/main.qml:962
+msgid "Undo"
+msgstr "Скасувати"
+
+#: package/contents/ui/main.qml:396
+msgid "B"
+msgstr "Б"
+
+#: package/contents/ui/main.qml:396
+msgid "KB"
+msgstr "КБ"
+
+#: package/contents/ui/main.qml:396
+msgid "MB"
+msgstr "МБ"
+
+#: package/contents/ui/main.qml:396
+msgid "GB"
+msgstr "ГБ"
+
+#: package/contents/ui/main.qml:396
+msgid "TB"
+msgstr "ТБ"
+
+#: package/contents/ui/main.qml:409
+msgid "Undone: "
+msgstr "Скасовано: "
+
+#: package/contents/ui/main.qml:415
+msgid "New Folder"
+msgstr "Нова тека"
+
+#: package/contents/ui/main.qml:416
+msgid "New text file"
+msgstr "Новий текстовий файл"
+
+#: package/contents/ui/main.qml:425
+msgid "Create Folder"
+msgstr "Створити теку"
+
+#: package/contents/ui/main.qml:430
+msgid "Create Text File"
+msgstr "Створити текстовий файл"
+
+#: package/contents/ui/main.qml:448
+msgid "New Fence"
+msgstr "Новий паркан"
+
+#: package/contents/ui/main.qml:453
+msgid "Arrange Icons"
+msgstr "Впорядкувати піктограми"
+
+#: package/contents/ui/main.qml:458
+msgid "Show Everything"
+msgstr "Показати все"
+
+#: package/contents/ui/main.qml:458
+msgid "Hide Everything"
+msgstr "Сховати все"
+
+#: package/contents/ui/main.qml:463
+msgid "Privacy Mode"
+msgstr "Приватний режим"
+
+#: package/contents/ui/main.qml:470
+msgid "Open Terminal Here"
+msgstr "Відкрити термінал тут"
+
+#: package/contents/ui/main.qml:475
+msgid "Alveus Settings…"
+msgstr "Налаштування Alveus…"
+
+#: package/contents/ui/main.qml:613
+msgid "Evanesco! Double-click the desktop to bring everything back"
+msgstr "Evanesco! Подвійне клацання по стільниці поверне все назад"
+
+#: package/contents/ui/main.qml:671
+msgid "Make a fence with %1 files"
+msgstr "Зробити паркан із файлів (%1)"
+
+#: package/contents/ui/main.qml:672
+msgid "Make a fence here"
+msgstr "Зробити паркан тут"
+
+#: package/contents/ui/main.qml:680
+msgid "Ready-made fences"
+msgstr "Готові паркани"
+
+#: package/contents/ui/main.qml:815
+msgid "Welcome to Alveus"
+msgstr "Вітаємо в Alveus"
+
+#: package/contents/ui/main.qml:828
+msgid ""
+"Drag a box on the empty desktop to make a fence. Each fence can collect "
+"files by type, name, site or date: new documents, photos or archives find "
+"their own place. Your files stay in the Desktop folder; fences only group "
+"them."
+msgstr ""
+"Обведіть мишкою область на порожній стільниці, щоб створити паркан. Кожен "
+"паркан може збирати файли за типом, назвою, сайтом чи датою: нові документи,"
+" фото чи архіви самі знаходять своє місце. Файли лишаються в теці "
+"«Стільниця», паркани лише групують їх."
+
+#: package/contents/ui/main.qml:835
+msgid ""
+"Double-click a fence title to roll it up · double-click the desktop to hide "
+"everything · right-click for more."
+msgstr ""
+"Подвійне клацання по заголовку згортає паркан · подвійне клацання по "
+"стільниці ховає все · правий клік — більше можливостей."
+
+#: package/contents/ui/main.qml:840
+msgid "I'll draw my own"
+msgstr "Намалюю сам"
+
+#: package/contents/ui/main.qml:844
+msgid "Create the usual fences"
+msgstr "Створити стандартні паркани"
+
+#: package/contents/ui/main.qml:871
+msgid "%1 files on the desktop haven't been opened for a long time."
+msgstr "Файлів на стільниці, які давно не відкривали: %1."
+
+#: package/contents/ui/main.qml:877
+msgid "Later"
+msgstr "Пізніше"
+
+#: package/contents/ui/main.qml:881
+msgid "Have a look"
+msgstr "Переглянути"
+
+#: package/contents/ui/main.qml:912
+msgid "Screen is shared: fences are hidden"
+msgstr "Екран показують: паркани приховано"
+
+#: package/contents/ui/main.qml:913
+msgid "Privacy mode — click to turn off"
+msgstr "Приватний режим — клацніть, щоб вимкнути"
+
+#: package/contents/ui/main.qml:1040
+msgid "Empty fence"
+msgstr "Порожній паркан"
+
+#: package/contents/ui/main.qml:1055
+msgid "Old files"
+msgstr "Старі файли"
+
+#: package/contents/ui/main.qml:1067
+msgid "Folder portal"
+msgstr "Портал до теки"
+
+#: package/contents/ui/main.qml:1076
+msgid "From phone"
+msgstr "З телефона"
+
+#: package/contents/ui/main.qml:1084
+msgid "Drives"
+msgstr "Диски"
+
+#: package/contents/ui/main.qml:1089
+msgid "Other folder…"
+msgstr "Інша тека…"
+
+#: package/contents/ui/main.qml:1092
+msgid "Folder"
+msgstr "Тека"
+
+#: package/contents/ui/main.qml:1109
+msgid "Move here"
+msgstr "Перемістити сюди"
+
+#: package/contents/ui/main.qml:1114
+msgid "Copy here"
+msgstr "Копіювати сюди"
+
+#: package/contents/ui/main.qml:1133
+msgid "%1 files moved to %2"
+msgstr "Перенесено файлів: %1 → %2"
+
+msgid "Couldn't undo: “%1” is in the way."
+msgstr "Не вдалося скасувати: заважає «%1»."
+
+msgid "Couldn't create the settings folder: %1"
+msgstr "Не вдалося створити теку налаштувань: %1"
+
+msgid "Copied, but the original could not be removed: %1"
+msgstr "Скопійовано, але оригінал не вдалося видалити: %1"
+
+msgid "Copied %1 item"
+msgid_plural "Copied %1 items"
+msgstr[0] "Скопійовано %1 об'єкт"
+msgstr[1] "Скопійовано %1 об'єкти"
+msgstr[2] "Скопійовано %1 об'єктів"
+
+msgid "Moved %1 item"
+msgid_plural "Moved %1 items"
+msgstr[0] "Переміщено %1 об'єкт"
+msgstr[1] "Переміщено %1 об'єкти"
+msgstr[2] "Переміщено %1 об'єктів"
+
+msgid "the file is not a settings object"
+msgstr "файл не є об'єктом налаштувань"
+
+msgid "unexpected file structure"
+msgstr "невідома структура файлу"
+
+msgid "Cancelling…"
+msgstr "Скасування…"
+
+msgid "Copying “%1”"
+msgstr "Копіювання «%1»"
+
+msgid "Undoing: “%1”"
+msgstr "Скасування: «%1»"
+
+msgid "Moving “%1”"
+msgstr "Переміщення «%1»"
+
+msgid "%1 (%2 of %3)"
+msgstr "%1 (%2 з %3)"
+
+msgid "%1 of %2"
+msgstr "%1 з %2"
+
+msgid "%1 more waiting"
+msgid_plural "%1 more waiting"
+msgstr[0] "ще %1 в черзі"
+msgstr[1] "ще %1 в черзі"
+msgstr[2] "ще %1 в черзі"
+
+#: package/contents/ui/ConfigOverlay.qml
+msgid "Remove"
+msgstr "Вилучити"
+
+msgid "Click and drag to rotate"
+msgstr "Натисніть і тягніть, щоб повернути"
+
+msgid "Hide Background"
+msgstr "Сховати тло"
+
+msgid "Show Background"
+msgstr "Показати тло"

@@ -1,0 +1,1100 @@
+// Unit tests for the Alveus core
+#include "../core/alveuscore.h"
+#include "../core/drives.h"
+#include "../core/integrations.h"
+#include "../core/rules.h"
+#include "../core/runner.h"
+#include "../core/thumbnails.h"
+
+#include <QClipboard>
+#include <QDBusConnection>
+#include <QDir>
+#include <QElapsedTimer>
+#include <QFile>
+#include <QFileInfo>
+#include <QGuiApplication>
+#include <QImage>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QMimeData>
+#include <QPainter>
+#include <QPdfWriter>
+#include <QProcess>
+#include <QSignalSpy>
+#include <QStandardPaths>
+#include <QTemporaryDir>
+#include <QTest>
+
+#include <sys/stat.h>
+#include <sys/xattr.h>
+#include <unistd.h>
+
+using namespace Alveus;
+
+static void touch(const QString &path, const QByteArray &data = "x")
+{
+    QFile f(path);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write(data);
+}
+
+static void age(const QString &path, int days)
+{
+    QFile f(path);
+    QVERIFY(f.open(QIODevice::ReadWrite));
+    const QDateTime t = QDateTime::currentDateTime().addDays(-days);
+    QVERIFY(f.setFileTime(t, QFileDevice::FileModificationTime));
+    QVERIFY(f.setFileTime(t, QFileDevice::FileAccessTime));
+}
+
+static QStringList names(const QVariantList &files)
+{
+    QStringList out;
+    for (const QVariant &v : files) {
+        out << v.toMap().value(QStringLiteral("name")).toString();
+    }
+    out.sort();
+    return out;
+}
+
+static QStringList ids(const QVariantList &fences)
+{
+    QStringList out;
+    for (const QVariant &v : fences) {
+        out << v.toMap().value(QStringLiteral("id")).toString();
+    }
+    out.sort();
+    return out;
+}
+
+class CoreTest : public QObject
+{
+    Q_OBJECT
+
+    QTemporaryDir m_tmp;
+    QString desk() const { return m_tmp.path() + QStringLiteral("/Desktop"); }
+    QString store() const { return m_tmp.path() + QStringLiteral("/store/layout.json"); }
+    QString d(const QString &n) const { return desk() + QLatin1Char('/') + n; }
+
+private Q_SLOTS:
+    void initTestCase()
+    {
+        qputenv("ALVEUS_NO_DBUS", "1");
+    }
+
+    void init()
+    {
+        QDir(m_tmp.path()).removeRecursively();
+        QDir().mkpath(desk());
+        qputenv("XDG_DATA_HOME", (m_tmp.path() + QStringLiteral("/data")).toUtf8());
+        qputenv("XDG_CACHE_HOME", (m_tmp.path() + QStringLiteral("/cache")).toUtf8());
+        qputenv("XDG_CONFIG_HOME", (m_tmp.path() + QStringLiteral("/config")).toUtf8());
+        qputenv("ALVEUS_ARCHIVE_DIR", (m_tmp.path() + QStringLiteral("/Documents")).toUtf8());
+        touch(d(QStringLiteral("report.pdf")));
+        touch(d(QStringLiteral("Scan.JPG")));
+        touch(d(QStringLiteral("song.mp3")));
+        touch(d(QStringLiteral("backup.tar.gz")));
+        touch(d(QStringLiteral("Рахунок_березень.xlsx")));
+        touch(d(QStringLiteral("notes")));
+        QDir().mkpath(d(QStringLiteral("Projects")));
+    }
+
+    // ---- rules ---------------------------------------------------------------
+
+    void rulesParsing()
+    {
+        QCOMPARE(tokenize(QStringLiteral("pdf, .DOCX;*.txt  \"name:мій звіт\"")),
+                 (QStringList{QStringLiteral("pdf"), QStringLiteral(".DOCX"), QStringLiteral("*.txt"), QStringLiteral("name:мій звіт")}));
+        Rules r(QStringLiteral("pdf, .DOCX, *.txt, tar.gz, folder"));
+        QCOMPARE(r.extensions(), (QStringList{QStringLiteral("pdf"), QStringLiteral("docx"), QStringLiteral("txt"), QStringLiteral("tar.gz")}));
+        QVERIFY(r.errors().isEmpty());
+        QVERIFY(!r.hasTimeCondition());
+        QCOMPARE(Rules(QStringLiteral("foo:bar, pdf")).errors(), QStringList{QStringLiteral("foo:bar")});
+        QCOMPARE(Rules(QStringLiteral("newer:x")).errors(), QStringList{QStringLiteral("newer:x")});
+        QVERIFY(Rules(QString()).isEmpty());
+        QCOMPARE(Rules::normalize(QStringLiteral("pdf,pdf  name:мій звіт")), QStringLiteral("pdf, name:мій, звіт"));
+        QCOMPARE(Rules::normalize(QStringLiteral("pdf, \"name:мій звіт\"")), QStringLiteral("pdf, name:\"мій звіт\""));
+
+        bool ok = false;
+        QCOMPARE(parseSize(QStringLiteral("1.5M"), &ok), qint64(1.5 * 1024 * 1024));
+        QVERIFY(ok);
+        QCOMPARE(parseSize(QStringLiteral("10kb"), &ok), qint64(10 * 1024));
+        QCOMPARE(parseAge(QStringLiteral("12h"), &ok), qint64(12 * 3600));
+        QCOMPARE(parseAge(QStringLiteral("2w"), &ok), qint64(14 * 86400));
+        QCOMPARE(parseAge(QStringLiteral("3"), &ok), qint64(3 * 86400));
+    }
+
+    void rulesMatching()
+    {
+        const QDateTime now = QDateTime::currentDateTime();
+        auto file = [&](const QString &name, int daysOld = 0, qint64 size = 10, bool dir = false, const QString &origin = {}) {
+            FileFacts f;
+            f.name = name;
+            f.modified = now.addDays(-daysOld);
+            f.size = size;
+            f.isDir = dir;
+            f.origin = origin;
+            return f;
+        };
+        QVERIFY(Rules(QStringLiteral("pdf")).matches(file(QStringLiteral("A.PDF")), now));
+        QVERIFY(!Rules(QStringLiteral("pdf")).matches(file(QStringLiteral(".pdf")), now)); // no name, only a dot
+        QVERIFY(!Rules(QStringLiteral("pdf")).matches(file(QStringLiteral("pdf"), 0, 1, true), now));
+        QVERIFY(Rules(QStringLiteral("tar.gz")).matches(file(QStringLiteral("a.tar.gz")), now));
+        QVERIFY(Rules(QStringLiteral("folder")).matches(file(QStringLiteral("X"), 0, 0, true), now));
+        // names: Cyrillic, case-insensitive, contains or wildcard
+        QVERIFY(Rules(QStringLiteral("name:рахунок")).matches(file(QStringLiteral("Рахунок_1.pdf")), now));
+        QVERIFY(Rules(QStringLiteral("name:Скан_*")).matches(file(QStringLiteral("скан_002.png")), now));
+        QVERIFY(!Rules(QStringLiteral("name:Скан_*")).matches(file(QStringLiteral("мій скан_002.png")), now));
+        QVERIFY(Rules(QStringLiteral("\"name:мій звіт\"")).matches(file(QStringLiteral("Мій звіт 2026.docx")), now));
+        // origin
+        QVERIFY(Rules(QStringLiteral("from:telegram")).matches(file(QStringLiteral("x.bin"), 0, 1, false, QStringLiteral("https://web.Telegram.org/a")), now));
+        QVERIFY(!Rules(QStringLiteral("from:telegram")).matches(file(QStringLiteral("x.bin")), now));
+        // time and size conditions combine with AND
+        QVERIFY(Rules(QStringLiteral("newer:1")).matches(file(QStringLiteral("x")), now));
+        QVERIFY(!Rules(QStringLiteral("newer:1")).matches(file(QStringLiteral("x"), 3), now));
+        QVERIFY(Rules(QStringLiteral("older:30")).matches(file(QStringLiteral("x"), 45), now));
+        QVERIFY(!Rules(QStringLiteral("pdf, older:30")).matches(file(QStringLiteral("x.pdf"), 5), now));
+        QVERIFY(Rules(QStringLiteral("pdf, older:30")).matches(file(QStringLiteral("x.pdf"), 40), now));
+        QVERIFY(!Rules(QStringLiteral("pdf, older:30")).matches(file(QStringLiteral("x.doc"), 40), now));
+        QVERIFY(Rules(QStringLiteral("larger:1M")).matches(file(QStringLiteral("big.iso"), 0, 5 * 1024 * 1024), now));
+        QVERIFY(!Rules(QStringLiteral("larger:1M")).matches(file(QStringLiteral("small.iso"), 0, 100), now));
+        QVERIFY(Rules(QStringLiteral("newer:1")).hasTimeCondition());
+    }
+
+    // ---- sorting -------------------------------------------------------------
+
+    void startsLoose()
+    {
+        AlveusCore core(desk(), store());
+        core.registerDesktop(0, QString());
+        QCOMPARE(core.looseFiles(0, QString()).size(), 7);
+        QVERIFY(core.showWelcome());
+        QCOMPARE(core.version(), QStringLiteral("0.03.1 beta"));
+    }
+
+    void rulesSortFiles()
+    {
+        AlveusCore core(desk(), store());
+        const QString docs = core.createFence(0, QString(), 0, 0.1, 0.1, 0.2, 0.3, QStringLiteral("Docs"), core.presetRules(QStringLiteral("documents")));
+        const QString pics = core.createFence(0, QString(), 0, 0.4, 0.1, 0.2, 0.3, QStringLiteral("Pics"), core.presetRules(QStringLiteral("images")));
+        const QString arch = core.createFence(0, QString(), 0, 0.7, 0.1, 0.2, 0.3, QStringLiteral("Arch"), core.presetRules(QStringLiteral("archives")));
+        const QString bills = core.createFence(0, QString(), 1, 0.7, 0.5, 0.2, 0.3, QStringLiteral("Bills"), QStringLiteral("name:рахунок"));
+        QCOMPARE(names(core.filesInFence(docs, QString())), (QStringList{QStringLiteral("report.pdf"), QStringLiteral("Рахунок_березень.xlsx")}));
+        QCOMPARE(names(core.filesInFence(pics, QString())), QStringList{QStringLiteral("Scan.JPG")});
+        QCOMPARE(names(core.filesInFence(arch, QString())), QStringList{QStringLiteral("backup.tar.gz")});
+        QVERIFY(core.filesInFence(bills, QString()).isEmpty()); // "Docs" came first
+        touch(d(QStringLiteral("new.docx")));
+        core.rescanNow();
+        QCOMPARE(core.fenceOfFile(QStringLiteral("new.docx"), QString()), docs);
+    }
+
+    void timeFencesWin()
+    {
+        age(d(QStringLiteral("report.pdf")), 90);
+        AlveusCore core(desk(), store());
+        const QString docs = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Docs"), QStringLiteral("pdf, xlsx"));
+        const QString today = core.createFence(0, QString(), 0, 0.3, 0, 0.2, 0.2, QStringLiteral("Today"), core.presetRules(QStringLiteral("today")));
+        const QString old = core.createFence(0, QString(), 0, 0.6, 0, 0.2, 0.2, QStringLiteral("Old"), core.presetRules(QStringLiteral("old")));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("report.pdf"), QString()), old);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("Рахунок_березень.xlsx"), QString()), today);
+        QVERIFY(core.fence(today).value(QStringLiteral("timeRule")).toBool());
+        Q_UNUSED(docs)
+    }
+
+    void downloadedFrom()
+    {
+        const QByteArray p = QFile::encodeName(d(QStringLiteral("song.mp3")));
+        const QByteArray url = "https://web.telegram.org/k/";
+        if (setxattr(p.constData(), "user.xdg.origin.url", url.constData(), size_t(url.size()), 0) != 0) {
+            QSKIP("this filesystem has no user extended attributes");
+        }
+        QCOMPARE(readOrigin(d(QStringLiteral("song.mp3"))), QString::fromLatin1(url));
+        AlveusCore core(desk(), store());
+        const QString tg = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Telegram"), core.presetRules(QStringLiteral("telegram")));
+        QCOMPARE(names(core.filesInFence(tg, QString())), QStringList{QStringLiteral("song.mp3")});
+    }
+
+    void manualChoicesStick()
+    {
+        AlveusCore core(desk(), store());
+        const QString docs = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Docs"), QStringLiteral("pdf"));
+        const QString other = core.createFence(0, QString(), 0, 0.5, 0, 0.2, 0.2, QStringLiteral("Other"), QString());
+        core.assignFiles({QStringLiteral("report.pdf")}, other);
+        core.updateFence(docs, {{QStringLiteral("rules"), QStringLiteral("pdf, mp3")}});
+        QCOMPARE(core.fenceOfFile(QStringLiteral("report.pdf"), QString()), other);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("song.mp3"), QString()), docs);
+        core.assignFiles({QStringLiteral("song.mp3")}, QString()); // taken out by hand
+        QCOMPARE(core.fenceOfFile(QStringLiteral("song.mp3"), QString()), QString());
+    }
+
+    void removeAndUndo()
+    {
+        AlveusCore core(desk(), store());
+        const QString docs = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Docs"), QStringLiteral("pdf"));
+        core.assignFiles({QStringLiteral("notes")}, docs);
+        core.removeFence(docs);
+        QCOMPARE(core.fenceCount(), 0);
+        QVERIFY(QFile::exists(d(QStringLiteral("report.pdf"))));
+        QCOMPARE(core.undoText(), QStringLiteral("remove-fence|Docs"));
+        QVERIFY(core.undo());
+        QCOMPARE(core.fenceCount(), 1);
+        QCOMPARE(names(core.filesInFence(docs, QString())), (QStringList{QStringLiteral("notes"), QStringLiteral("report.pdf")}));
+    }
+
+    // ---- tabs, pages, activities, screens -------------------------------------
+
+    void tabs()
+    {
+        AlveusCore core(desk(), store());
+        const QString a = core.createFence(0, QString(), 0, 0.1, 0.1, 0.3, 0.3, QStringLiteral("A"), QStringLiteral("pdf"));
+        const QString b = core.createFence(0, QString(), 0, 0.6, 0.6, 0.2, 0.2, QStringLiteral("B"), QStringLiteral("mp3"));
+        core.mergeFences(a, b);
+        QVariantMap fb = core.fence(b);
+        QVERIFY(!fb.value(QStringLiteral("group")).toString().isEmpty());
+        QCOMPARE(fb.value(QStringLiteral("x")).toReal(), 0.1);        // took A's frame
+        QCOMPARE(fb.value(QStringLiteral("activeTab")).toBool(), true);
+        QCOMPARE(core.fence(a).value(QStringLiteral("activeTab")).toBool(), false);
+        QCOMPARE(fb.value(QStringLiteral("tabs")).toList().size(), 2);
+        // shared frame: moving one moves both
+        core.updateFence(a, {{QStringLiteral("x"), 0.2}, {QStringLiteral("collapsed"), true}});
+        QCOMPARE(core.fence(b).value(QStringLiteral("x")).toReal(), 0.2);
+        QCOMPARE(core.fence(b).value(QStringLiteral("collapsed")).toBool(), true);
+        // but not the rules
+        QCOMPARE(core.fence(b).value(QStringLiteral("rules")).toString(), QStringLiteral("mp3"));
+        core.activateTab(a);
+        QCOMPARE(core.fence(a).value(QStringLiteral("activeTab")).toBool(), true);
+        QCOMPARE(core.fence(b).value(QStringLiteral("activeTab")).toBool(), false);
+        core.detachTab(b);
+        QVERIFY(core.fence(a).value(QStringLiteral("group")).toString().isEmpty());
+        QVERIFY(core.fence(b).value(QStringLiteral("group")).toString().isEmpty());
+        QVERIFY(core.fence(b).value(QStringLiteral("activeTab")).toBool());
+    }
+
+    void pagesAndActivities()
+    {
+        AlveusCore core(desk(), store());
+        const QString work = core.createFence(0, QStringLiteral("work"), 0, 0, 0, 0.2, 0.2, QStringLiteral("Work"), QStringLiteral("pdf"));
+        const QString all = core.createFence(0, QString(), 1, 0, 0, 0.2, 0.2, QStringLiteral("All"), QStringLiteral("mp3"));
+        QCOMPARE(ids(core.fences(0, QStringLiteral("work"), 0)), QStringList{work});
+        QCOMPARE(ids(core.fences(0, QStringLiteral("work"), 1)), QStringList{all});
+        QVERIFY(core.fences(0, QStringLiteral("home"), 0).isEmpty());
+        QCOMPARE(ids(core.fences(0, QStringLiteral("home"), 1)), QStringList{all});
+        QCOMPARE(core.pageCount(0, QStringLiteral("home")), 2);
+        core.setPageCount(0, QStringLiteral("home"), 4);
+        QCOMPARE(core.pageCount(0, QStringLiteral("home")), 4);
+        // the PDF is in "Work" there, but loose at home
+        QCOMPARE(core.fenceOfFile(QStringLiteral("report.pdf"), QStringLiteral("work")), work);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("report.pdf"), QStringLiteral("home")), QString());
+        core.registerDesktop(0, QStringLiteral("home"));
+        QVERIFY(names(core.looseFiles(0, QStringLiteral("home"))).contains(QStringLiteral("report.pdf")));
+    }
+
+    void monitors()
+    {
+        AlveusCore core(desk(), store());
+        const QString left = core.createFence(0, QString(), 0, 0.1, 0.1, 0.2, 0.2, QStringLiteral("Left"), QString());
+        const QString right = core.createFence(1, QString(), 0, 0.5, 0.5, 0.2, 0.2, QStringLiteral("Right"), QString());
+        core.registerDesktop(0, QString());
+        core.registerDesktop(1, QString());
+        QCOMPARE(ids(core.fences(0, QString(), 0)), QStringList{left});
+        core.unregisterDesktop(1, QString()); // unplugged
+        QCOMPARE(core.fences(0, QString(), 0).size(), 2);
+        QVariantMap r = core.fence(right);
+        QVERIFY(r.value(QStringLiteral("orphan")).toBool());
+        // moved while away: remembered separately
+        core.updateFence(right, {{QStringLiteral("x"), 0.7}, {QStringLiteral("y"), 0.0}, {QStringLiteral("orphan"), true}});
+        QCOMPARE(core.fence(right).value(QStringLiteral("x")).toReal(), 0.7);
+        core.registerDesktop(1, QString()); // back again
+        QCOMPARE(ids(core.fences(1, QString(), 0)), QStringList{right});
+        QCOMPARE(core.fence(right).value(QStringLiteral("x")).toReal(), 0.5);
+        // move to another monitor for good
+        core.updateFence(right, {{QStringLiteral("screen"), 0}});
+        QCOMPARE(core.fences(0, QString(), 0).size(), 2);
+        QCOMPARE(core.screens(QString()), (QVariantList{0, 1}));
+    }
+
+    void iconPositions()
+    {
+        AlveusCore core(desk(), store());
+        core.registerDesktop(0, QString());
+        core.registerDesktop(1, QString());
+        core.setFilePositions({QVariantMap{{QStringLiteral("name"), QStringLiteral("notes")}, {QStringLiteral("screen"), 1},
+                                           {QStringLiteral("page"), 0}, {QStringLiteral("col"), 3}, {QStringLiteral("row"), 2}}});
+        QVERIFY(!names(core.looseFiles(0, QString())).contains(QStringLiteral("notes")));
+        QVariantMap m;
+        for (const QVariant &v : core.looseFiles(1, QString())) {
+            if (v.toMap().value(QStringLiteral("name")) == QStringLiteral("notes")) {
+                m = v.toMap();
+            }
+        }
+        QCOMPARE(m.value(QStringLiteral("col")).toInt(), 3);
+        QVERIFY(m.value(QStringLiteral("hasPos")).toBool());
+        core.unregisterDesktop(1, QString()); // its icons come to the main screen, auto-placed
+        bool found = false;
+        for (const QVariant &v : core.looseFiles(0, QString())) {
+            if (v.toMap().value(QStringLiteral("name")) == QStringLiteral("notes")) {
+                found = true;
+                QVERIFY(!v.toMap().value(QStringLiteral("hasPos")).toBool());
+            }
+        }
+        QVERIFY(found);
+        core.registerDesktop(1, QString());
+        core.clearPositions(1, 0);
+        QVERIFY(!names(core.looseFiles(1, QString())).contains(QStringLiteral("notes")));
+    }
+
+    // ---- persistence, snapshots ---------------------------------------------
+
+    void persistence()
+    {
+        QString id;
+        {
+            AlveusCore core(desk(), store());
+            id = core.createFence(1, QStringLiteral("act"), 2, 0.25, 0.5, 0.3, 0.2, QStringLiteral("Фото"), QStringLiteral("jpg"));
+            core.updateFence(id, {{QStringLiteral("collapsed"), true}, {QStringLiteral("color"), QStringLiteral("#ff8800")},
+                                  {QStringLiteral("view"), QStringLiteral("honeycomb")}, {QStringLiteral("opacity"), 0.8}});
+            core.assignFiles({QStringLiteral("notes")}, id);
+            core.setSetting(QStringLiteral("cleanupDays"), 30);
+            core.saveSnapshot(QStringLiteral("Робочий"));
+            core.saveNow();
+        }
+        AlveusCore core(desk(), store());
+        const QVariantMap f = core.fence(id);
+        QCOMPARE(f.value(QStringLiteral("title")).toString(), QStringLiteral("Фото"));
+        QCOMPARE(f.value(QStringLiteral("page")).toInt(), 2);
+        QCOMPARE(f.value(QStringLiteral("activity")).toString(), QStringLiteral("act"));
+        QCOMPARE(f.value(QStringLiteral("color")).toString(), QStringLiteral("#ff8800"));
+        QCOMPARE(f.value(QStringLiteral("view")).toString(), QStringLiteral("honeycomb"));
+        QCOMPARE(f.value(QStringLiteral("opacity")).toReal(), 0.8);
+        QCOMPARE(f.value(QStringLiteral("collapsed")).toBool(), true);
+        QCOMPARE(names(core.filesInFence(id, QStringLiteral("act"))), (QStringList{QStringLiteral("Scan.JPG"), QStringLiteral("notes")}));
+        QCOMPARE(core.setting(QStringLiteral("cleanupDays")).toInt(), 30);
+        QCOMPARE(core.setting(QStringLiteral("iconSize")).toInt(), 48); // default
+        QCOMPARE(core.snapshots().size(), 1);
+    }
+
+    void corruptSettingsAreBackedUpBeforeReplacement()
+    {
+        QDir().mkpath(QFileInfo(store()).absolutePath());
+        touch(store(), "{ this is not valid json");
+
+        AlveusCore core(desk(), store());
+        const QString id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Recovered"), QString());
+        core.saveNow();
+
+        const QStringList backups = QDir(QFileInfo(store()).absolutePath())
+            .entryList({QFileInfo(store()).fileName() + QStringLiteral(".corrupt-*")}, QDir::Files);
+        QVERIFY2(!backups.isEmpty(), "The damaged layout must be preserved before a new one is saved");
+        QFile backup(QFileInfo(store()).absolutePath() + QLatin1Char('/') + backups.first());
+        QVERIFY(backup.open(QIODevice::ReadOnly));
+        QVERIFY(backup.readAll().contains("not valid json"));
+
+        QFile repaired(store());
+        QVERIFY(repaired.open(QIODevice::ReadOnly));
+        QJsonParseError error;
+        const QJsonDocument doc = QJsonDocument::fromJson(repaired.readAll(), &error);
+        QCOMPARE(error.error, QJsonParseError::NoError);
+        QCOMPARE(doc.object().value(QStringLiteral("version")).toInt(), 2);
+        QCOMPARE(doc.object().value(QStringLiteral("fences")).toArray().size(), 1);
+        QCOMPARE(core.fence(id).value(QStringLiteral("title")).toString(), QStringLiteral("Recovered"));
+    }
+
+    void structurallyInvalidSettingsAreBackedUpBeforeReplacement()
+    {
+        auto verifyRejectedStore = [this](const QString &path, const QByteArray &original) {
+            QDir().mkpath(QFileInfo(path).absolutePath());
+            touch(path, original);
+            AlveusCore core(desk(), path);
+            const QString id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2,
+                                                QStringLiteral("Recovered"), QString());
+            core.saveNow();
+
+            const QStringList backups = QDir(QFileInfo(path).absolutePath())
+                .entryList({QFileInfo(path).fileName() + QStringLiteral(".corrupt-*")}, QDir::Files);
+            QVERIFY2(!backups.isEmpty(), "Structurally invalid settings must be preserved before replacement");
+            QFile backup(QFileInfo(path).absolutePath() + QLatin1Char('/') + backups.first());
+            QVERIFY(backup.open(QIODevice::ReadOnly));
+            QCOMPARE(backup.readAll(), original);
+
+            QFile repaired(path);
+            QVERIFY(repaired.open(QIODevice::ReadOnly));
+            QJsonParseError error;
+            const QJsonDocument doc = QJsonDocument::fromJson(repaired.readAll(), &error);
+            QCOMPARE(error.error, QJsonParseError::NoError);
+            QCOMPARE(doc.object().value(QStringLiteral("fences")).toArray().size(), 1);
+            QCOMPARE(core.fence(id).value(QStringLiteral("title")).toString(), QStringLiteral("Recovered"));
+        };
+
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/missing-fences.json"),
+                            R"({"version":2})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-fence.json"),
+                            R"({"version":2,"fences":[{}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-snapshot.json"),
+                            R"({"version":2,"fences":[],"files":{},"pages":{},"snapshots":[{"id":"x","name":"bad","state":{"fences":[{}]}}]})");
+    }
+
+    void newerSettingsAreNeverOverwritten()
+    {
+        QDir().mkpath(QFileInfo(store()).absolutePath());
+        const QByteArray original = R"({"version":999,"fences":[{"id":"future"}],"custom":"keep me"})";
+        touch(store(), original);
+
+        AlveusCore core(desk(), store());
+        core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Local"), QString());
+        core.saveNow();
+
+        QFile file(store());
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), original);
+    }
+
+    void fenceAppearanceCanBeUndone()
+    {
+        AlveusCore core(desk(), store());
+        const QString id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Style"), QString());
+        core.updateFence(id, {{QStringLiteral("color"), QStringLiteral("#ff8800")},
+                              {QStringLiteral("opacity"), 0.8}, {QStringLiteral("blur"), false}});
+        QCOMPARE(core.fence(id).value(QStringLiteral("color")).toString(), QStringLiteral("#ff8800"));
+        QVERIFY(core.undo());
+        QCOMPARE(core.fence(id).value(QStringLiteral("color")).toString(), QString());
+        QCOMPARE(core.fence(id).value(QStringLiteral("opacity")).toReal(), 0.55);
+        QCOMPARE(core.fence(id).value(QStringLiteral("blur")).toBool(), true);
+    }
+
+    void importPreservesSymlinksAndOriginMetadata()
+    {
+        AlveusCore core(desk(), store());
+        const QString source = m_tmp.path() + QStringLiteral("/source-tree");
+        QVERIFY(QDir().mkpath(source));
+        const QString target = source + QStringLiteral("/target.txt");
+        touch(target, "relative link target");
+        const QString link = source + QStringLiteral("/relative-link.txt");
+        const QByteArray linkTarget = "target.txt";
+        const QByteArray linkName = QFile::encodeName(link);
+        QVERIFY(::symlink(linkTarget.constData(), linkName.constData()) == 0);
+        QVERIFY(QDir().mkpath(source + QStringLiteral("/subdir")));
+        touch(source + QStringLiteral("/subdir/inside.txt"), "inside");
+        const QByteArray dirLinkTarget = "subdir";
+        const QByteArray dirLinkName = QFile::encodeName(source + QStringLiteral("/directory-link"));
+        QVERIFY(::symlink(dirLinkTarget.constData(), dirLinkName.constData()) == 0);
+        const QByteArray danglingTarget = "missing-target";
+        const QByteArray danglingName = QFile::encodeName(source + QStringLiteral("/dangling-link"));
+        QVERIFY(::symlink(danglingTarget.constData(), danglingName.constData()) == 0);
+
+        const QByteArray origin = "https://web.telegram.org/k/";
+        const QByteArray sourceName = QFile::encodeName(target);
+        const bool hasOrigin = ::setxattr(sourceName.constData(), "user.xdg.origin.url", origin.constData(),
+                                          size_t(origin.size()), 0) == 0;
+
+        const QStringList copied = core.importToDesktop({QUrl::fromLocalFile(source)}, true, QString());
+        QCOMPARE(copied.size(), 1);
+        QVERIFY(core.waitForFileJobs());
+        const QString copiedFile = copied.first() + QStringLiteral("/target.txt");
+        const QString copiedLink = copied.first() + QStringLiteral("/relative-link.txt");
+        const QString copiedDirLink = copied.first() + QStringLiteral("/directory-link");
+        const QString copiedDangling = copied.first() + QStringLiteral("/dangling-link");
+        QVERIFY(QFileInfo(copiedLink).isSymLink());
+        QVERIFY(QFileInfo(copiedDirLink).isSymLink());
+        QVERIFY(QFileInfo(copiedDangling).isSymLink());
+        auto readLinkTarget = [](const QString &path) {
+            char targetBuffer[512] = {};
+            const QByteArray encoded = QFile::encodeName(path);
+            const ssize_t length = ::readlink(encoded.constData(), targetBuffer, sizeof(targetBuffer) - 1);
+            return length > 0 ? QByteArray(targetBuffer, int(length)) : QByteArray();
+        };
+        QCOMPARE(readLinkTarget(copiedLink), linkTarget);
+        QCOMPARE(readLinkTarget(copiedDirLink), dirLinkTarget);
+        QCOMPARE(readLinkTarget(copiedDangling), danglingTarget);
+        QFile throughLink(copiedLink);
+        QVERIFY(throughLink.open(QIODevice::ReadOnly));
+        QCOMPARE(throughLink.readAll(), QByteArray("relative link target"));
+        if (hasOrigin) {
+            QCOMPARE(readOrigin(copiedFile), QString::fromLatin1(origin));
+        }
+        QVERIFY(QFile::exists(target)); // copy must not change the source
+    }
+
+    void fileOperationsRejectSpecialFilesWithoutBlocking()
+    {
+        const QString sourceDir = m_tmp.path() + QStringLiteral("/special-source");
+        QVERIFY(QDir().mkpath(sourceDir));
+        const QString fifo = sourceDir + QStringLiteral("/pipe");
+        const QByteArray encodedFifo = QFile::encodeName(fifo);
+        QVERIFY(::mkfifo(encodedFifo.constData(), 0600) == 0);
+
+        const QString copied = m_tmp.path() + QStringLiteral("/special-copy");
+        QCOMPARE(Alveus::FileOps::copyTree(sourceDir, copied), Alveus::FileOps::Result::Failed);
+        QVERIFY(!QFileInfo::exists(copied));
+        struct stat st {};
+        QVERIFY(::lstat(encodedFifo.constData(), &st) == 0);
+        QVERIFY(S_ISFIFO(st.st_mode));
+
+        const QString moved = m_tmp.path() + QStringLiteral("/special-move");
+        QCOMPARE(Alveus::FileOps::movePath(sourceDir, moved), Alveus::FileOps::Result::Failed);
+        QVERIFY(QFileInfo(sourceDir).isDir());
+        QVERIFY(!QFileInfo::exists(moved));
+    }
+
+    void crossFilesystemMoveReportsSourceLeftWhenRemovalFails()
+    {
+        if (::geteuid() == 0) {
+            QSKIP("permission test needs an unprivileged user");
+        }
+        QTemporaryDir other(QStringLiteral("/dev/shm/alveus-source-left-XXXXXX"));
+        if (!other.isValid() || Alveus::FileOps::sameFilesystem(m_tmp.path(), other.path())) {
+            QSKIP("needs /dev/shm on a different filesystem");
+        }
+
+        const QString lockedDir = m_tmp.path() + QStringLiteral("/locked-source");
+        QVERIFY(QDir().mkpath(lockedDir));
+        const QString source = lockedDir + QStringLiteral("/payload.txt");
+        touch(source, "keep the original");
+        QVERIFY(QFile::setPermissions(lockedDir, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+
+        const QString destination = other.path() + QStringLiteral("/payload.txt");
+        QCOMPARE(Alveus::FileOps::movePath(source, destination), Alveus::FileOps::Result::SourceLeft);
+        QVERIFY(QFileInfo::exists(source));
+        QFile copied(destination);
+        QVERIFY(copied.open(QIODevice::ReadOnly));
+        QCOMPARE(copied.readAll(), QByteArray("keep the original"));
+
+        QVERIFY(QFile::setPermissions(lockedDir, QFileDevice::ReadOwner | QFileDevice::WriteOwner
+                                           | QFileDevice::ExeOwner));
+        QVERIFY(QFile::remove(source));
+        QVERIFY(QFile::remove(destination));
+        QVERIFY(QDir().rmdir(lockedDir));
+    }
+
+    // Needs a FAT mount (USB stick, or `fusefat -o rw+ img dir`):
+    //   ALVEUS_TEST_FAT_DIR=/run/media/me/STICK coretest copyAndMoveToFat
+    void copyAndMoveToFat()
+    {
+        const QString fat = qEnvironmentVariable("ALVEUS_TEST_FAT_DIR");
+        if (fat.isEmpty()) {
+            QSKIP("set ALVEUS_TEST_FAT_DIR to a FAT mount");
+        }
+        const QString dir = fat + QStringLiteral("/alveus-test-") + QString::number(QDateTime::currentMSecsSinceEpoch());
+        QVERIFY(QDir().mkpath(dir));
+        AlveusCore core(desk(), store());
+
+        auto makeTree = [this](const QString &name) {
+            const QString tree = d(name);
+            QDir().mkpath(tree + QStringLiteral("/sub"));
+            touch(tree + QStringLiteral("/a.txt"), "data a");
+            touch(tree + QStringLiteral("/sub/b.txt"), "data b");
+            QFile::link(QStringLiteral("a.txt"), tree + QStringLiteral("/link.txt"));
+            return tree;
+        };
+
+        // Regular files can use the data-only fallback on FAT.
+        touch(d(QStringLiteral("single.txt")), "single");
+        core.importToFolder({QUrl::fromLocalFile(d(QStringLiteral("single.txt")))}, true, dir);
+        QVERIFY(core.waitForFileJobs());
+        QFile single(dir + QStringLiteral("/single.txt"));
+        QVERIFY(single.open(QIODevice::ReadOnly));
+        QCOMPARE(single.readAll(), QByteArray("single"));
+
+        // A FAT filesystem cannot represent symlinks. Do not silently turn
+        // them into regular files or skip them: fail and keep the source.
+        const QString tree = makeTree(QStringLiteral("tree"));
+        core.importToFolder({QUrl::fromLocalFile(tree)}, true, dir);
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(QFileInfo(tree).isDir());
+        QVERIFY(QFileInfo(tree + QStringLiteral("/link.txt")).isSymLink());
+        QVERIFY(!QFileInfo::exists(dir + QStringLiteral("/tree")));
+
+        const QString moving = makeTree(QStringLiteral("moving"));
+        core.importToFolder({QUrl::fromLocalFile(moving)}, false, dir);
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(QFileInfo(moving).isDir());
+        QVERIFY(QFileInfo(moving + QStringLiteral("/link.txt")).isSymLink());
+        QVERIFY(!QFileInfo::exists(dir + QStringLiteral("/moving")));
+        const QStringList hidden = QDir(dir).entryList(QDir::Hidden | QDir::AllEntries | QDir::NoDotAndDotDot)
+                                       .filter(QStringLiteral(".alveus-copy-"));
+        QVERIFY2(hidden.isEmpty(), qPrintable(hidden.join(u' ')));
+        QVERIFY(QDir(dir).removeRecursively());
+    }
+
+    // Moving to another disk runs in the background, with progress, and can be
+    // undone; a cancelled copy leaves nothing behind.
+    void backgroundJobsOnAnotherDisk()
+    {
+        QTemporaryDir other(QStringLiteral("/dev/shm/alveus-test-XXXXXX"));
+        if (!other.isValid() || Alveus::FileOps::sameFilesystem(desk(), other.path())) {
+            QSKIP("needs /dev/shm on a different filesystem");
+        }
+        AlveusCore core(desk(), store());
+        QSignalSpy jobs(&core, &AlveusCore::fileJobChanged);
+
+        QDir().mkpath(d(QStringLiteral("big/sub")));
+        touch(d(QStringLiteral("big/sub/x.txt")), "x");
+        QFile::link(QStringLiteral("sub/x.txt"), d(QStringLiteral("big/link")));
+        const QStringList moved = core.importToFolder({QUrl::fromLocalFile(d(QStringLiteral("big")))}, false, other.path());
+        QCOMPARE(moved, QStringList{other.path() + QStringLiteral("/big")});
+        QVERIFY(core.fileJob().value(QStringLiteral("active")).toBool());
+        QVERIFY(!core.canUndo() || core.undoText() != QStringLiteral("move|1")); // undo step comes when it is done
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(!core.fileJob().value(QStringLiteral("active")).toBool());
+        QVERIFY(jobs.count() >= 2);
+        QVERIFY(QFile::exists(other.path() + QStringLiteral("/big/sub/x.txt")));
+        QVERIFY(QFileInfo(other.path() + QStringLiteral("/big/link")).isSymLink());
+        QVERIFY(!QFileInfo::exists(d(QStringLiteral("big"))));
+        QCOMPARE(core.undoText(), QStringLiteral("move|1"));
+
+        QVERIFY(core.undo()); // back across disks: in the background too
+        QVERIFY(!core.canUndo() || core.undoText() == QStringLiteral("move|1"));
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(QFile::exists(d(QStringLiteral("big/sub/x.txt"))));
+        QVERIFY(!QFileInfo::exists(other.path() + QStringLiteral("/big")));
+
+        // cancel: no half copy, original untouched, nothing to undo
+        QFile big(d(QStringLiteral("large.bin")));
+        QVERIFY(big.open(QIODevice::WriteOnly));
+        const QByteArray mb(1 << 20, 'z');
+        for (int i = 0; i < 64; ++i) {
+            big.write(mb);
+        }
+        big.close();
+        core.importToFolder({QUrl::fromLocalFile(d(QStringLiteral("large.bin"))), QUrl::fromLocalFile(d(QStringLiteral("notes")))},
+                            true, other.path());
+        core.cancelFileJobs();
+        QVERIFY(core.waitForFileJobs());
+        const QStringList left = QDir(other.path()).entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot);
+        QVERIFY2(left.isEmpty() || left == QStringList{QStringLiteral("large.bin")}, qPrintable(left.join(u' ')));
+        QVERIFY(!left.contains(QStringLiteral("notes"))); // the second one never started
+        QVERIFY(QFile::exists(d(QStringLiteral("large.bin"))));
+    }
+
+    // The desktop is not re-read on every write of a growing file.
+    void growingFileIsNotRescannedOnEveryWrite()
+    {
+        AlveusCore core(desk(), store());
+        QSignalSpy changes(&core, &AlveusCore::changed);
+        const QString path = d(QStringLiteral("download.bin"));
+        touch(path, "start");
+        QTRY_VERIFY_WITH_TIMEOUT(names(core.looseFiles(0, QString())).contains(QStringLiteral("download.bin")), 3000);
+        changes.clear();
+        QFile f(path);
+        QVERIFY(f.open(QIODevice::Append));
+        QElapsedTimer t;
+        t.start();
+        while (t.elapsed() < 2000) { // ~200 writes in 2 s
+            f.write(QByteArray(1024, 'a'));
+            f.flush();
+            QTest::qWait(10);
+        }
+        f.close();
+        QTest::qWait(1300);
+        QVERIFY2(changes.count() <= 6, qPrintable(QString::number(changes.count())));
+        qint64 size = -1;
+        for (const QVariant &v : core.looseFiles(0, QString())) {
+            if (v.toMap().value(QStringLiteral("name")).toString() == QStringLiteral("download.bin")) {
+                size = v.toMap().value(QStringLiteral("size")).toLongLong();
+            }
+        }
+        QCOMPARE(size, QFileInfo(path).size());
+    }
+
+    void settingsBlockedMessageOnce()
+    {
+        QDir().mkpath(m_tmp.path() + QStringLiteral("/store"));
+        touch(store(), R"({"version":999})");
+        AlveusCore core(desk(), store());
+        QSignalSpy messages(&core, &AlveusCore::message);
+        core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("A"), QString());
+        core.saveNow();
+        core.createFence(0, QString(), 0, 0.3, 0, 0.2, 0.2, QStringLiteral("B"), QString());
+        core.saveNow();
+        QTest::qWait(50);
+        int blocked = 0;
+        for (const auto &m : messages) {
+            blocked += m.at(0).toString() == QStringLiteral("settings-save-blocked");
+        }
+        QCOMPARE(blocked, 1);
+        QCOMPARE(QFile(store()).size(), qint64(QByteArray(R"({"version":999})").size())); // untouched
+    }
+
+    void desktopFileChangesAreRescanned()
+    {
+        const QString path = d(QStringLiteral("watch.txt"));
+        touch(path, "a");
+        AlveusCore core(desk(), store());
+        auto fileSize = [&core]() -> qint64 {
+            for (const QVariant &entry : core.looseFiles(0, QString())) {
+                const QVariantMap item = entry.toMap();
+                if (item.value(QStringLiteral("name")).toString() == QStringLiteral("watch.txt")) {
+                    return item.value(QStringLiteral("size")).toLongLong();
+                }
+            }
+            return -1;
+        };
+        QCOMPARE(fileSize(), qint64(1));
+        touch(path, "a much longer file body");
+        QTRY_COMPARE_WITH_TIMEOUT(fileSize(), qint64(23), 4000);
+    }
+
+    void failedUndoKeepsTheUndoEntry()
+    {
+        AlveusCore core(desk(), store());
+        const QString outside = m_tmp.path() + QStringLiteral("/outside.txt");
+        touch(outside, "move me");
+        const QStringList moved = core.importToDesktop({QUrl::fromLocalFile(outside)}, false, QString());
+        QCOMPARE(moved.size(), 1);
+        touch(outside, "conflict");
+
+        QVERIFY(!core.undo());
+        QVERIFY(core.canUndo());
+        QVERIFY(QFile::exists(moved.first()));
+
+        QVERIFY(QFile::remove(outside));
+        QVERIFY(core.undo());
+        QVERIFY(QFile::exists(outside));
+        QVERIFY(!QFile::exists(moved.first()));
+    }
+
+    void migrationFromVersion1()
+    {
+        QDir().mkpath(m_tmp.path() + QStringLiteral("/store"));
+        touch(store(), R"({"version":1,"welcomeDismissed":true,
+            "fences":[{"id":"abc","title":"Docs","screen":0,"x":0.1,"y":0.1,"w":0.2,"h":0.2,"collapsed":false,"extensions":["pdf","odt"]}],
+            "files":{"notes":{"fence":"abc","manual":true},"song.mp3":{"fence":"","manual":false}}})");
+        AlveusCore core(desk(), store());
+        QCOMPARE(core.fence(QStringLiteral("abc")).value(QStringLiteral("rules")).toString(), QStringLiteral("pdf, odt"));
+        QCOMPARE(names(core.filesInFence(QStringLiteral("abc"), QString())), (QStringList{QStringLiteral("notes"), QStringLiteral("report.pdf")}));
+        QVERIFY(!core.showWelcome());
+    }
+
+    void snapshots()
+    {
+        AlveusCore core(desk(), store());
+        const QString a = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("A"), QStringLiteral("pdf"));
+        const QString snap = core.saveSnapshot(QStringLiteral("one"));
+        core.removeFence(a);
+        core.createFence(0, QString(), 0, 0.5, 0.5, 0.2, 0.2, QStringLiteral("B"), QString());
+        QCOMPARE(core.fenceCount(), 1);
+        core.restoreSnapshot(snap);
+        QCOMPARE(core.fenceCount(), 1);
+        QCOMPARE(core.fence(a).value(QStringLiteral("title")).toString(), QStringLiteral("A"));
+        QVERIFY(core.undo()); // back to "B"
+        QVERIFY(core.fence(a).isEmpty());
+        core.deleteSnapshot(snap);
+        QVERIFY(core.snapshots().isEmpty());
+    }
+
+    // ---- file operations ----------------------------------------------------
+
+    void importAndUndo()
+    {
+        AlveusCore core(desk(), store());
+        const QString id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("In"), QString());
+        const QString outside = m_tmp.path() + QStringLiteral("/outside");
+        QDir().mkpath(outside + QStringLiteral("/dir/sub"));
+        touch(outside + QStringLiteral("/report.pdf"));
+        touch(outside + QStringLiteral("/dir/sub/deep.txt"));
+
+        QStringList got = core.importToDesktop({QUrl::fromLocalFile(outside + QStringLiteral("/report.pdf"))}, true, id);
+        QCOMPARE(got, QStringList{d(QStringLiteral("report (1).pdf"))});
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(QFile::exists(outside + QStringLiteral("/report.pdf")));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("report (1).pdf"), QString()), id);
+
+        got = core.importToDesktop({QUrl::fromLocalFile(outside + QStringLiteral("/dir"))}, false, QString());
+        QVERIFY(!QFile::exists(outside + QStringLiteral("/dir")));
+        QVERIFY(QFile::exists(d(QStringLiteral("dir/sub/deep.txt"))));
+        QVERIFY(core.undo()); // the folder goes back where it was
+        QVERIFY(QFile::exists(outside + QStringLiteral("/dir/sub/deep.txt")));
+        QVERIFY(!QFile::exists(d(QStringLiteral("dir"))));
+
+        // a desktop file dropped on a fence is only reassigned
+        core.importToDesktop({QUrl::fromLocalFile(d(QStringLiteral("song.mp3")))}, false, id);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("song.mp3"), QString()), id);
+        QVERIFY(QFile::exists(d(QStringLiteral("song.mp3"))));
+        // never into itself
+        QVERIFY(core.importToFolder({QUrl::fromLocalFile(desk())}, true, d(QStringLiteral("Projects"))).isEmpty());
+    }
+
+    void renameTrashCreateUndo()
+    {
+        AlveusCore core(desk(), store());
+        const QString id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("F"), QString());
+        core.assignFiles({QStringLiteral("song.mp3")}, id);
+        QVERIFY(core.renamePath(d(QStringLiteral("song.mp3")), QStringLiteral("tune.mp3")));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("tune.mp3"), QString()), id);
+        QVERIFY(!core.renamePath(d(QStringLiteral("tune.mp3")), QStringLiteral("notes")));
+        QVERIFY(!core.renamePath(d(QStringLiteral("tune.mp3")), QStringLiteral("a/b")));
+        QVERIFY(core.undo());
+        QVERIFY(QFile::exists(d(QStringLiteral("song.mp3"))));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("song.mp3"), QString()), id);
+
+        QCOMPARE(core.trashPaths({d(QStringLiteral("notes")), d(QStringLiteral("Projects"))}), 2);
+        QVERIFY(!QFile::exists(d(QStringLiteral("notes"))));
+        QVERIFY(QFile::exists(m_tmp.path() + QStringLiteral("/data/Trash/files/notes")));
+        QVERIFY(core.undo());
+        QVERIFY(QFile::exists(d(QStringLiteral("notes"))));
+        QVERIFY(QFileInfo(d(QStringLiteral("Projects"))).isDir());
+        QVERIFY(!QFile::exists(m_tmp.path() + QStringLiteral("/data/Trash/info/notes.trashinfo")));
+
+        const QString folder = core.createFolder(QString(), QStringLiteral("Нова тека"));
+        QCOMPARE(folder, d(QStringLiteral("Нова тека")));
+        QCOMPARE(core.createFolder(QString(), QStringLiteral("Нова тека")), d(QStringLiteral("Нова тека (1)")));
+        const QString txt = core.createTextFile(QString(), QStringLiteral("Нотатка.txt"));
+        QVERIFY(QFile::exists(txt));
+        QVERIFY(core.undo());
+        QVERIFY(!QFile::exists(txt));
+    }
+
+    void clipboard()
+    {
+        AlveusCore core(desk(), store());
+        const QString outside = m_tmp.path() + QStringLiteral("/outside");
+        QDir().mkpath(outside);
+        touch(outside + QStringLiteral("/clip.txt"));
+        core.copyToClipboard({outside + QStringLiteral("/clip.txt")}, false);
+        QVERIFY(core.canPaste());
+        QCOMPARE(core.paste(QString(), QString()), QStringList{d(QStringLiteral("clip.txt"))});
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(QFile::exists(outside + QStringLiteral("/clip.txt")));
+        core.copyToClipboard({d(QStringLiteral("notes"))}, false); // copy of a desktop file onto the desktop
+        QCOMPARE(core.paste(QString(), QString()), QStringList{d(QStringLiteral("notes (1)"))});
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(QFileInfo(d(QStringLiteral("notes (1)"))).exists());
+        core.copyToClipboard({d(QStringLiteral("clip.txt"))}, true); // cut into a folder
+        QCOMPARE(core.paste(d(QStringLiteral("Projects")), QString()), QStringList{d(QStringLiteral("Projects/clip.txt"))});
+        QVERIFY(!QFile::exists(d(QStringLiteral("clip.txt"))));
+        QVERIFY(!core.canPaste()); // a cut is used up
+    }
+
+    void portals()
+    {
+        AlveusCore core(desk(), store());
+        const QString dl = m_tmp.path() + QStringLiteral("/Downloads");
+        QDir().mkpath(dl + QStringLiteral("/Telegram Desktop"));
+        touch(dl + QStringLiteral("/a.zip"));
+        const QString id = core.createPortal(0, QString(), 0, 0, 0, 0.3, 0.3, QStringLiteral("Downloads"), dl);
+        QCOMPARE(names(core.filesInFence(id, QString())), (QStringList{QStringLiteral("Telegram Desktop"), QStringLiteral("a.zip")}));
+        // portal fences never take desktop files
+        core.updateFence(id, {{QStringLiteral("rules"), QStringLiteral("pdf")}});
+        QCOMPARE(core.fenceOfFile(QStringLiteral("report.pdf"), QString()), QString());
+        core.importToFolder({QUrl::fromLocalFile(d(QStringLiteral("notes")))}, false, dl);
+        QVERIFY(QFile::exists(dl + QStringLiteral("/notes")));
+        QVERIFY(names(core.listFolder(dl)).contains(QStringLiteral("notes")));
+        QCOMPARE(core.parentFolder(dl + QStringLiteral("/Telegram Desktop")), dl);
+        QCOMPARE(core.folderName(dl), QStringLiteral("Downloads"));
+        // the watcher notices changes made by others
+        touch(dl + QStringLiteral("/later.txt"));
+        QTRY_VERIFY_WITH_TIMEOUT(names(core.listFolder(dl)).contains(QStringLiteral("later.txt")), 3000);
+    }
+
+    void tidyUpHelper()
+    {
+        age(d(QStringLiteral("song.mp3")), 100);
+        age(d(QStringLiteral("notes")), 70);
+        AlveusCore core(desk(), store());
+        QCOMPARE(names(core.staleFiles(60)), (QStringList{QStringLiteral("notes"), QStringLiteral("song.mp3")}));
+        QCOMPARE(core.staleCount(), 2);
+        QVERIFY(!core.cleanupDue()); // fewer than 5
+        const QString target = core.archiveFiles({QStringLiteral("song.mp3"), QStringLiteral("notes")}, QStringLiteral("Архів стільниці"));
+        QVERIFY(target.startsWith(m_tmp.path() + QStringLiteral("/Documents/Архів стільниці/")));
+        QVERIFY(QFile::exists(target + QStringLiteral("/song.mp3")));
+        QVERIFY(!QFile::exists(d(QStringLiteral("song.mp3"))));
+        QVERIFY(core.undo());
+        QVERIFY(QFile::exists(d(QStringLiteral("song.mp3"))));
+        QVERIFY(QFile::exists(d(QStringLiteral("notes"))));
+    }
+
+    void watcherAndRunner()
+    {
+        AlveusCore core(desk(), store());
+        const QString id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Рахунки"), QString());
+        touch(d(QStringLiteral("fresh.txt")));
+        QTRY_VERIFY_WITH_TIMEOUT(core.fenceOfFile(QStringLiteral("fresh.txt"), QString()).isEmpty()
+                                     && core.runnerMatches(QStringLiteral("fresh")).size() == 1, 3000);
+        const QVariantList m = core.runnerMatches(QStringLiteral("рах"));
+        QCOMPARE(m.size(), 2); // the fence and the xlsx
+        QCOMPARE(m.first().toMap().value(QStringLiteral("id")).toString(), QStringLiteral("fence:") + id);
+        QSignalSpy spy(&core, &AlveusCore::fenceRequested);
+        core.hidden();
+        core.setHidden(true);
+        core.runnerRun(QStringLiteral("fence:") + id);
+        QCOMPARE(spy.count(), 1);
+        QVERIFY(!core.hidden());
+        QVERIFY(core.runnerMatches(QStringLiteral("x")).isEmpty()); // too short
+    }
+
+    void runnerOverDBus()
+    {
+        if (!QDBusConnection::sessionBus().isConnected()) {
+            QSKIP("no session bus");
+        }
+        AlveusCore core(desk(), store());
+        core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Звіти"), QString());
+        auto *svc = new RunnerService(&core);
+        QVERIFY(svc->registerOnBus());
+        QProcess gdbus;
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert(QStringLiteral("LANG"), QStringLiteral("C.UTF-8"));
+        gdbus.setProcessEnvironment(env);
+        gdbus.start(QStringLiteral("gdbus"), {QStringLiteral("call"), QStringLiteral("--session"), QStringLiteral("--dest"),
+                                              QStringLiteral("ua.bezeza.alveus"), QStringLiteral("--object-path"), QStringLiteral("/runner"),
+                                              QStringLiteral("--method"), QStringLiteral("org.kde.krunner1.Match"), QStringLiteral("звіт")});
+        QTRY_VERIFY_WITH_TIMEOUT(gdbus.state() == QProcess::NotRunning, 5000);
+        const QString out = QString::fromUtf8(gdbus.readAllStandardOutput());
+        QVERIFY2(out.contains(QStringLiteral("Звіти")) && out.contains(QStringLiteral("fence:")), qPrintable(out + gdbus.readAllStandardError()));
+        QDBusConnection::sessionBus().unregisterService(QStringLiteral("ua.bezeza.alveus"));
+        QDBusConnection::sessionBus().unregisterObject(QStringLiteral("/runner"));
+    }
+
+    // ---- integrations --------------------------------------------------------
+
+    void integrationsParsing()
+    {
+        QCOMPARE(Integrations::parsePhones(QStringLiteral("a1b2 Pixel 8\n\nc3d4 Samsung Galaxy\n")).size(), 2);
+        QCOMPARE(Integrations::parsePhones(QStringLiteral("a1b2 Pixel 8\n")).first().toMap().value(QStringLiteral("name")).toString(),
+                 QStringLiteral("Pixel 8"));
+
+        const QString cfg = m_tmp.path() + QStringLiteral("/cfg");
+        QDir().mkpath(cfg + QStringLiteral("/kdeconnect/dev123/kdeconnect_share"));
+        touch(cfg + QStringLiteral("/kdeconnect/dev123/kdeconnect_share/config"),
+              "[General]\nincoming_path=$HOME/Phone\n");
+        QCOMPARE(Integrations::phoneFolder(cfg), QDir::homePath() + QStringLiteral("/Phone"));
+        touch(cfg + QStringLiteral("/spectaclerc"), "[ImageSave]\nimageSaveLocation=file:///home/u/Pictures/Знімки/\n");
+        QCOMPARE(Integrations::screenshotFolder(cfg), QStringLiteral("/home/u/Pictures/Знімки"));
+
+        const QByteArray camera = R"([{"type":"PipeWire:Interface:Node","info":{"state":"running","props":{"media.class":"Video/Source","device.api":"v4l2"}}}])";
+        const QByteArray screen = R"([{"type":"PipeWire:Interface:Node","info":{"state":"running","props":{"media.class":"Video/Source","node.name":"xdg-desktop-portal-kde"}}}])";
+        const QByteArray idle = R"([{"type":"PipeWire:Interface:Node","info":{"state":"suspended","props":{"media.class":"Video/Source"}}}])";
+        QVERIFY(!Integrations::screencastIn(camera));
+        QVERIFY(Integrations::screencastIn(screen));
+        QVERIFY(!Integrations::screencastIn(idle));
+        QVERIFY(!Integrations::screencastIn("not json"));
+    }
+
+
+    void drives()
+    {
+        // which mounts count as disks
+        QVERIFY(isUserMount(QStringLiteral("/"), QStringLiteral("btrfs"), QStringLiteral("/dev/nvme0n1p3")));
+        QVERIFY(isUserMount(QStringLiteral("/mnt/Data"), QStringLiteral("ntfs3"), QStringLiteral("/dev/sdb2")));
+        QVERIFY(isUserMount(QStringLiteral("/run/media/user/USB"), QStringLiteral("vfat"), QStringLiteral("/dev/sdc1")));
+        QVERIFY(isUserMount(QStringLiteral("/mnt/nas"), QStringLiteral("cifs"), QStringLiteral("//nas/share")));
+        QVERIFY(isUserMount(QStringLiteral("/media/Windows"), QStringLiteral("fuseblk"), QStringLiteral("/dev/sda3"))); // ntfs-3g
+        QVERIFY(!isUserMount(QStringLiteral("/boot/efi"), QStringLiteral("vfat"), QStringLiteral("/dev/nvme0n1p1")));
+        QVERIFY(!isUserMount(QStringLiteral("/home"), QStringLiteral("btrfs"), QStringLiteral("/dev/nvme0n1p3")));
+        QVERIFY(!isUserMount(QStringLiteral("/run/user/1000"), QStringLiteral("tmpfs"), QStringLiteral("tmpfs")));
+        QVERIFY(!isUserMount(QStringLiteral("/var/lib/flatpak"), QStringLiteral("ext4"), QStringLiteral("/dev/sda1")));
+        QVERIFY(!isUserMount(QStringLiteral("/sys/fs/cgroup"), QStringLiteral("cgroup2"), QStringLiteral("cgroup2")));
+
+        // lsblk: an unmounted NTFS disk shows; EFI, Windows recovery, swap and mounted ones don't
+        const QByteArray json = R"({"blockdevices":[
+          {"name":"sda","path":"/dev/sda","label":null,"fstype":null,"mountpoints":[null],"size":1000204886016,"rm":false,"hotplug":false,"type":"disk",
+           "children":[
+             {"name":"sda1","path":"/dev/sda1","label":"Recovery","fstype":"ntfs","mountpoints":[null],"size":629145600,"rm":false,"hotplug":false,"type":"part"},
+             {"name":"sda2","path":"/dev/sda2","label":"Фільми","fstype":"ntfs","mountpoints":[null],"size":999000000000,"rm":false,"hotplug":false,"type":"part"}]},
+          {"name":"nvme0n1","path":"/dev/nvme0n1","fstype":null,"mountpoints":[null],"size":512110190592,"rm":false,"hotplug":false,"type":"disk",
+           "children":[
+             {"name":"nvme0n1p1","path":"/dev/nvme0n1p1","label":null,"fstype":"vfat","mountpoints":["/boot/efi"],"size":629145600,"rm":false,"hotplug":false,"type":"part"},
+             {"name":"nvme0n1p2","path":"/dev/nvme0n1p2","label":"swap","fstype":"swap","mountpoints":["[SWAP]"],"size":8589934592,"rm":false,"hotplug":false,"type":"part"},
+             {"name":"nvme0n1p3","path":"/dev/nvme0n1p3","label":"fedora","fstype":"btrfs","mountpoints":["/home","/"],"size":500000000000,"rm":false,"hotplug":false,"type":"part"}]},
+          {"name":"sdc","path":"/dev/sdc","fstype":null,"mountpoints":[null],"size":"32010928128","rm":true,"hotplug":true,"type":"disk",
+           "children":[{"name":"sdc1","path":"/dev/sdc1","label":"FLASH","fstype":"exfat","mountpoints":[null],"size":"32008830976","rm":true,"hotplug":true,"type":"part"}]}
+        ]})";
+        const QList<Drive> un = unmountedFromLsblk(json);
+        QCOMPARE(un.size(), 2);
+        QCOMPARE(un[0].device, QStringLiteral("/dev/sda2"));
+        QCOMPARE(un[0].label, QStringLiteral("Фільми"));
+        QCOMPARE(un[0].fsType, QStringLiteral("ntfs"));
+        QVERIFY(!un[0].removable);
+        QCOMPARE(un[1].device, QStringLiteral("/dev/sdc1"));
+        QVERIFY(un[1].removable);
+        QCOMPARE(un[1].total, qint64(32008830976));
+        QVERIFY(removableFromLsblk(json).value(QStringLiteral("/dev/sdc1")));
+
+        // names and icons
+        Drive mounted;
+        mounted.device = QStringLiteral("/dev/sdb2");
+        mounted.mountPoint = QStringLiteral("/mnt/Data");
+        mounted.fsType = QStringLiteral("ntfs3");
+        mounted.total = 1000;
+        mounted.free = 250;
+        QVariantMap m = toMap(mounted);
+        QCOMPARE(m.value(QStringLiteral("name")).toString(), QStringLiteral("Data"));
+        QCOMPARE(m.value(QStringLiteral("mounted")).toBool(), true);
+        QCOMPARE(m.value(QStringLiteral("icon")).toString(), QStringLiteral("drive-harddisk"));
+        QCOMPARE(toMap(un[0]).value(QStringLiteral("name")).toString(), QStringLiteral("Фільми"));
+        QCOMPARE(toMap(un[1]).value(QStringLiteral("icon")).toString(), QStringLiteral("drive-removable-media-usb"));
+
+        // the real machine: the system disk is always there, first
+        const QList<Drive> live = fromMounts(QStorageInfo::mountedVolumes());
+        QVERIFY(!live.isEmpty());
+        QVERIFY(live.first().system);
+        QVERIFY(live.first().total > 0);
+
+        // a drives fence keeps its marker
+        AlveusCore core(desk(), store());
+        const QString id = core.createPortal(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Диски"), QStringLiteral("drives:"));
+        QCOMPARE(core.fence(id).value(QStringLiteral("portal")).toString(), QStringLiteral("drives:"));
+        QTRY_VERIFY_WITH_TIMEOUT(!core.drives().isEmpty(), 5000);
+    }
+
+    void thumbnails()
+    {
+        if (QStandardPaths::findExecutable(QStringLiteral("pdftoppm")).isEmpty()
+            || QStandardPaths::findExecutable(QStringLiteral("ffmpeg")).isEmpty()) {
+            QSKIP("pdftoppm/ffmpeg not installed");
+        }
+        // a real one-page PDF and a short video
+        const QString pdf = d(QStringLiteral("page.pdf"));
+        {
+            QPdfWriter writer(pdf);
+            QPainter p(&writer);
+            p.fillRect(QRect(0, 0, 2000, 2000), Qt::darkCyan);
+            p.drawText(QPoint(300, 600), QStringLiteral("Alveus"));
+        }
+        const QString video = d(QStringLiteral("clip.mp4"));
+        QProcess::execute(QStringLiteral("ffmpeg"), {QStringLiteral("-loglevel"), QStringLiteral("error"), QStringLiteral("-f"),
+                                                     QStringLiteral("lavfi"), QStringLiteral("-i"), QStringLiteral("testsrc=duration=3:size=320x240:rate=10"),
+                                                     QStringLiteral("-pix_fmt"), QStringLiteral("yuv420p"), video});
+        QVERIFY(QFile::exists(video));
+
+        AlveusCore core(desk(), store());
+        QSignalSpy spy(&core, &AlveusCore::thumbnailReady);
+        QVERIFY(core.thumbnail(pdf).isEmpty());   // not cached yet: on its way
+        QVERIFY(core.thumbnail(video).isEmpty());
+        QTRY_COMPARE_WITH_TIMEOUT(spy.count(), 2, 20000);
+        const QString pdfThumb = core.thumbnail(pdf);
+        QVERIFY(pdfThumb.startsWith(QStringLiteral("file://") + m_tmp.path() + QStringLiteral("/cache/thumbnails/large/")));
+        QImage img(QUrl(pdfThumb).toLocalFile());
+        QVERIFY(!img.isNull());
+        QVERIFY(img.width() <= 256 && img.height() <= 256);
+        QCOMPARE(img.text(QStringLiteral("Thumb::URI")), QString::fromLatin1(QUrl::fromLocalFile(pdf).toEncoded()));
+        QVERIFY(!core.thumbnail(video).isEmpty());
+        // a changed file needs a new thumbnail
+        age(pdf, 1);
+        QVERIFY(core.thumbnail(pdf).isEmpty());
+
+        // a document Dolphin already made a thumbnail for: we use it as is
+        const QString doc = d(QStringLiteral("Лист.docx"));
+        touch(doc, "not really a docx");
+        QImage page(200, 256, QImage::Format_RGB32);
+        page.fill(Qt::white);
+        page.setText(QStringLiteral("Thumb::URI"), QString::fromLatin1(QUrl::fromLocalFile(doc).toEncoded()));
+        page.setText(QStringLiteral("Thumb::MTime"), QString::number(QFileInfo(doc).lastModified().toSecsSinceEpoch()));
+        const QString cached = Thumbnailer::cacheFile(doc, QStringLiteral("normal"));
+        QDir().mkpath(QFileInfo(cached).absolutePath());
+        QVERIFY(page.save(cached));
+        core.rescanNow();
+        bool offered = false;
+        for (const QVariant &v : core.filesInFence(QString(), QString())) {
+            if (v.toMap().value(QStringLiteral("name")) == QStringLiteral("Лист.docx")) {
+                offered = v.toMap().value(QStringLiteral("canThumb")).toBool();
+            }
+        }
+        QVERIFY(offered);
+        QCOMPARE(core.thumbnail(doc), QUrl::fromLocalFile(cached).toString());
+    }
+};
+
+QTEST_MAIN(CoreTest)
+#include "coretest.moc"

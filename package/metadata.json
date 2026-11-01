@@ -1,0 +1,22 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "ua.bezeza.alveus",
+        "Name": "Alveus",
+        "Name[uk]": "Alveus",
+        "Description": "Desktop fences: draw a box to make a fence, files sort themselves by rules",
+        "Description[uk]": "Паркани на стільниці: обведіть область — і є паркан, файли розкладаються самі за правилами",
+        "Icon": "folder-favorites",
+        "Category": "File System",
+        "Authors": [
+            {
+                "Name": "bezeza"
+            }
+        ],
+        "License": "GPL-2.0-or-later",
+        "Version": "0.03.1",
+        "Website": "https://github.com/bezeza/alveus-plasma"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-ContainmentType": "Desktop"
+}
