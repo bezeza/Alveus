@@ -138,7 +138,7 @@ int main(int argc, char **argv)
             exitCode = 1;
         }
         if (!criticalWarnings.isEmpty()) {
-            for (const QString &warning : std::as_const(criticalWarnings)) {
+            for (const QString &warning : criticalWarnings) {
                 qWarning("critical QML warning: %s", qPrintable(warning));
             }
             exitCode = 1;
