@@ -707,7 +707,10 @@ private Q_SLOTS:
 
         const QString id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2,
                                             QStringLiteral("PDF"), QStringLiteral("pdf"));
+        const QString otherId = core.createFence(0, QString(), 0, 0.3, 0, 0.2, 0.2,
+                                                 QStringLiteral("Images"), QStringLiteral("png"));
         QCOMPARE(names(core.filesInFence(id, QString())), QStringList{QStringLiteral("report.pdf")});
+        QVERIFY(core.filesInFence(otherId, QString()).isEmpty());
         QVERIFY(fileChanges.count() > 0);
 
         // Appearance edits update the fence row, not every file model.
@@ -726,6 +729,7 @@ private Q_SLOTS:
         QStringList affected = qvariant_cast<QStringList>(fileChanges.first().at(1));
         QVERIFY(affected.contains(id));
         QVERIFY(affected.contains(QString()));
+        QVERIFY(!affected.contains(otherId));
         QCOMPARE(names(core.filesInFence(id, QString())), QStringList{QStringLiteral("song.mp3")});
 
         // A new file changes only the destination fence model; removal does likewise.
@@ -737,6 +741,7 @@ private Q_SLOTS:
         QCOMPARE(fileChanges.count(), 1);
         affected = qvariant_cast<QStringList>(fileChanges.first().at(1));
         QVERIFY(affected.contains(id));
+        QVERIFY(!affected.contains(otherId));
 
         fileChanges.clear();
         QVERIFY(QFile::remove(d(QStringLiteral("fresh.mp3"))));
