@@ -59,7 +59,9 @@ jobs:
               -not -path './build/*' -print0
           )
           if (("${#scripts[@]}" > 0)); then
-            bash -n "${scripts[@]}"
+            for script in "${scripts[@]}"; do
+              bash -n "$script"
+            done
             shellcheck --severity=error "${scripts[@]}"
           fi
 
@@ -84,4 +86,4 @@ jobs:
             tests/scene.qml
 
       - name: Check patch whitespace
-        run: git diff --check
+        run: git diff --check HEAD^ HEAD
