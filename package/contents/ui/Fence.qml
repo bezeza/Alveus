@@ -737,8 +737,12 @@ Item {
             text: i18n("Remove fence (files stay on the desktop)")
             icon.name: "edit-delete-remove"
             onTriggered: {
+                // removing the fence destroys this item (and its i18n context)
+                // right away, so take what we need first
+                const desk = fence.desk
+                const note = i18n("Fence removed")
                 Core.removeFence(fence.fid)
-                fence.desk.showUndoToast(i18n("Fence removed"))
+                if (desk) desk.showUndoToast(note)
             }
         }
     }
