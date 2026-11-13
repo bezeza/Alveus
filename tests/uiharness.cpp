@@ -7,6 +7,7 @@
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QQuickView>
+#include <QStringList>
 #include <QTest>
 #include <QTimer>
 
@@ -43,6 +44,19 @@ static QList<int> nums(const QString &s)
         out << p.trimmed().toInt();
     }
     return out;
+}
+
+static bool isCriticalQmlWarning(const QQmlError &error)
+{
+    const QString message = error.description().toLower();
+    return message.contains(QStringLiteral("referenceerror"))
+        || message.contains(QStringLiteral("typeerror"))
+        || message.contains(QStringLiteral("binding loop"))
+        || message.contains(QStringLiteral("unable to assign"))
+        || message.contains(QStringLiteral("cannot assign"))
+        || message.contains(QStringLiteral("is not a type"))
+        || message.contains(QStringLiteral("is not installed"))
+        || message.contains(QStringLiteral("cannot load library"));
 }
 
 static void play(QQuickView *view, const QString &script)
@@ -94,9 +108,13 @@ int main(int argc, char **argv)
     QQuickView view;
     I18n i18n;
     view.engine()->rootContext()->setContextObject(&i18n);
-    QObject::connect(view.engine(), &QQmlEngine::warnings, [](const QList<QQmlError> &list) {
+    QStringList criticalWarnings;
+    QObject::connect(view.engine(), &QQmlEngine::warnings, [&criticalWarnings](const QList<QQmlError> &list) {
         for (const QQmlError &e : list) {
             fprintf(stderr, "QML: %s\n", qPrintable(e.toString()));
+            if (isCriticalQmlWarning(e)) {
+                criticalWarnings << e.toString();
+            }
         }
     });
     view.setResizeMode(QQuickView::SizeRootObjectToView);
@@ -114,8 +132,18 @@ int main(int argc, char **argv)
     QTimer::singleShot(delay, [&]() {
         play(&view, actions);
         QTest::qWait(300);
-        view.grabWindow().save(out);
-        app.quit();
+        int exitCode = 0;
+        if (!view.grabWindow().save(out)) {
+            qWarning("failed to save UI harness screenshot: %s", qPrintable(out));
+            exitCode = 1;
+        }
+        if (!criticalWarnings.isEmpty()) {
+            for (const QString &warning : std::as_const(criticalWarnings)) {
+                qWarning("critical QML warning: %s", qPrintable(warning));
+            }
+            exitCode = 1;
+        }
+        app.exit(exitCode);
     });
     return app.exec();
 }
