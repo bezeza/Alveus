@@ -15,7 +15,7 @@
         ],
         "License": "GPL-2.0-or-later",
         "Version": "0.03.1",
-        "Website": "https://github.com/bezeza/alveus-plasma"
+        "Website": "https://github.com/bezeza/Alveus"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "X-Plasma-ContainmentType": "Desktop"
