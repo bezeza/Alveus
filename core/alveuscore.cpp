@@ -185,7 +185,7 @@ bool validStateObject(const QJsonObject &root)
             return false;
         }
         const QJsonObject files = root.value(QStringLiteral("files")).toObject();
-        for (auto it = files.cbegin(); it != files.cend(); ++it) {
+        for (auto it = files.constBegin(); it != files.constEnd(); ++it) {
             if (!it.value().isObject()) {
                 return false;
             }
@@ -213,7 +213,7 @@ bool validStateObject(const QJsonObject &root)
             return false;
         }
         const QJsonObject pages = root.value(QStringLiteral("pages")).toObject();
-        for (auto it = pages.cbegin(); it != pages.cend(); ++it) {
+        for (auto it = pages.constBegin(); it != pages.constEnd(); ++it) {
             if (!isJsonInteger(it.value()) || it.value().toInt() < 1) {
                 return false;
             }
