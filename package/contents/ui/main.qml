@@ -20,8 +20,12 @@ ContainmentItem {
     id: root
 
     // ---- who am I --------------------------------------------------------------
+    // Alveus only works as a desktop layout. Plasma also lets people add it as a
+    // widget ("Add Widgets…"); then it must not act as a desktop (it would draw
+    // fences over the real desktop and claim its files), only explain itself.
+    readonly property bool asWidget: Plasmoid.isContainment === false
     // Plasmoid.screen is unsigned: "no screen" arrives as a huge number
-    readonly property int screenId: (Plasmoid.screen === undefined || Plasmoid.screen > 64) ? -1 : Plasmoid.screen
+    readonly property int screenId: (asWidget || Plasmoid.screen === undefined || Plasmoid.screen > 64) ? -1 : Plasmoid.screen
     readonly property string activity: Plasmoid.activity !== undefined ? Plasmoid.activity : ""
     readonly property string activityName: Plasmoid.activityName !== undefined ? Plasmoid.activityName : ""
     property int registeredScreen: -1
@@ -54,8 +58,11 @@ ContainmentItem {
             Core.registerDesktop(screenId, activity)
         }
     }
-    onScreenIdChanged: syncDesktop()
-    onActivityChanged: syncDesktop()
+    // Later, not right here: screenId/activity are often re-evaluated while
+    // another binding (pageCount, isPrimary) reads them, and registering changes
+    // Core.revision, which that same binding depends on (a binding loop).
+    onScreenIdChanged: Qt.callLater(syncDesktop)
+    onActivityChanged: Qt.callLater(syncDesktop)
     Component.onCompleted: {
         syncDesktop()
         refresh()
@@ -509,8 +516,44 @@ ContainmentItem {
     }
 
     // =============================================================================
+    // Shown instead of the desktop when Alveus was added as a widget
+    Loader {
+        anchors.fill: parent
+        active: root.asWidget
+        sourceComponent: Rectangle {
+            radius: Kirigami.Units.cornerRadius
+            color: Qt.rgba(Kirigami.Theme.backgroundColor.r, Kirigami.Theme.backgroundColor.g,
+                           Kirigami.Theme.backgroundColor.b, 0.9)
+            clip: true
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: Kirigami.Units.largeSpacing
+                spacing: Kirigami.Units.smallSpacing
+                PlasmaComponents.Label {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    wrapMode: Text.Wrap
+                    elide: Text.ElideRight
+                    text: i18n("Alveus is a desktop layout, not a widget. Remove this widget, then right-click the desktop → Configure Desktop and Wallpaper… → Layout: Alveus.")
+                }
+                PlasmaComponents.Button {
+                    Layout.alignment: Qt.AlignHCenter
+                    icon.name: "edit-delete-remove"
+                    text: i18n("Remove this widget")
+                    onClicked: {
+                        const action = Plasmoid.internalAction("remove")
+                        if (action) action.trigger()
+                    }
+                }
+            }
+        }
+    }
+    Layout.preferredWidth: asWidget ? Kirigami.Units.gridUnit * 18 : -1
+    Layout.preferredHeight: asWidget ? Kirigami.Units.gridUnit * 9 : -1
+
     Item {
         id: area
+        visible: !root.asWidget
         x: root.freeRect.x
         y: root.freeRect.y
         width: root.freeRect.width

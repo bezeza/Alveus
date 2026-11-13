@@ -31,7 +31,25 @@ else
 fi
 
 cp "$cfg" "$backup"
-sed -i 's/^plugin=ua\.bezeza\.alveus$/plugin=org.kde.desktopcontainment/' "$cfg"
+# Two passes over the backup:
+#  1. find Alveus added as a *widget* ([Containments][N][Applets][M] with our plugin)
+#  2. write the config back: desktops ([Containments][N]) using Alveus become the
+#     standard desktop; Alveus widgets are dropped with all their subsections
+#     (turning them into a desktop *inside* a desktop would break Plasma).
+awk '
+    FNR == NR {
+        if ($0 ~ /^\[.*\]$/) s = $0
+        if ($0 == "plugin=ua.bezeza.alveus" && s ~ /^\[Containments\]\[[0-9]+\]\[Applets\]\[[0-9]+\]$/) widget[s] = 1
+        next
+    }
+    $0 ~ /^\[.*\]$/ {
+        s = $0; skip = 0
+        for (w in widget) if (s == w || index(s, w "[") == 1) skip = 1
+    }
+    skip { next }
+    $0 == "plugin=ua.bezeza.alveus" && s ~ /^\[Containments\]\[[0-9]+\]$/ { print "plugin=org.kde.desktopcontainment"; next }
+    { print }
+' "$backup" "$backup" > "$cfg"
 restart
 
 echo "Back to the standard desktop. Backup of the old settings: $backup"
