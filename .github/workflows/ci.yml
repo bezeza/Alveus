@@ -1,0 +1,89 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main, 'ci/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Qt build, tests and static checks
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install build and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential cmake ninja-build gettext shellcheck \
+            qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools \
+            qml6-module-qtquick qml6-module-qtquick-controls \
+            qml6-module-qtquick-layouts qml6-module-qtquick-dialogs \
+            qml6-module-qtquick-effects qml6-module-qtquick-window \
+            qml6-module-qtqml qml6-module-qtqml-models \
+            qml6-module-qtqml-workerscript \
+            dbus-daemon libglib2.0-bin ffmpeg poppler-utils
+
+      - name: Configure
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DALVEUS_BUILD_TESTS=ON
+
+      - name: Build all targets
+        run: cmake --build build --parallel "$(nproc)"
+
+      - name: Run core tests
+        run: dbus-run-session -- ctest --test-dir build --output-on-failure
+
+      - name: Check shell scripts
+        shell: bash
+        run: |
+          mapfile -d '' scripts < <(
+            find . -type f -name '*.sh' \
+              -not -path './.git/*' \
+              -not -path './build/*' -print0
+          )
+          if (("${#scripts[@]}" > 0)); then
+            for script in "${scripts[@]}"; do
+              bash -n "$script"
+            done
+            shellcheck --severity=error "${scripts[@]}"
+          fi
+
+      - name: Lint QML scene and effects
+        shell: bash
+        env:
+          QML_IMPORT_PATH: ${{ github.workspace }}/build/qml:${{ github.workspace }}/build/mocks:${{ github.workspace }}/tests/mocks
+        run: |
+          qmllint_bin="$(command -v qmllint || true)"
+          if [[ -z "$qmllint_bin" && -x /usr/lib/qt6/bin/qmllint ]]; then
+            qmllint_bin=/usr/lib/qt6/bin/qmllint
+          fi
+          if [[ -z "$qmllint_bin" ]]; then
+            echo "qmllint was not installed" >&2
+            exit 1
+          fi
+          "$qmllint_bin" \
+            -I "$GITHUB_WORKSPACE/build/qml" \
+            -I "$GITHUB_WORKSPACE/build/mocks" \
+            -I "$GITHUB_WORKSPACE/tests/mocks" \
+            package/contents/ui/Backdrop.qml \
+            tests/scene.qml
+
+      - name: Check patch whitespace
+        run: git diff --check HEAD^ HEAD
