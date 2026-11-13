@@ -847,9 +847,11 @@ private Q_SLOTS:
         QCOMPARE(core.fenceOfFile(QStringLiteral("report (1).pdf"), QString()), id);
 
         got = core.importToDesktop({QUrl::fromLocalFile(outside + QStringLiteral("/dir"))}, false, QString());
+        QVERIFY(core.waitForFileJobs()); // same-filesystem directory validation runs in the worker
         QVERIFY(!QFile::exists(outside + QStringLiteral("/dir")));
         QVERIFY(QFile::exists(d(QStringLiteral("dir/sub/deep.txt"))));
         QVERIFY(core.undo()); // the folder goes back where it was
+        QVERIFY(core.waitForFileJobs()); // undo of a directory move is asynchronous too
         QVERIFY(QFile::exists(outside + QStringLiteral("/dir/sub/deep.txt")));
         QVERIFY(!QFile::exists(d(QStringLiteral("dir"))));
 
@@ -878,6 +880,7 @@ private Q_SLOTS:
         QVERIFY(!QFile::exists(d(QStringLiteral("notes"))));
         QVERIFY(QFile::exists(m_tmp.path() + QStringLiteral("/data/Trash/files/notes")));
         QVERIFY(core.undo());
+        QVERIFY(core.waitForFileJobs()); // restoring the trashed directory uses the worker
         QVERIFY(QFile::exists(d(QStringLiteral("notes"))));
         QVERIFY(QFileInfo(d(QStringLiteral("Projects"))).isDir());
         QVERIFY(!QFile::exists(m_tmp.path() + QStringLiteral("/data/Trash/info/notes.trashinfo")));
