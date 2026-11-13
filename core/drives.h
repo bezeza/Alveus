@@ -62,6 +62,7 @@ Q_SIGNALS:
 
 private:
     void rebuild();
+    QVariantList buildList() const;
 
     QTimer m_timer;
     QProcess *m_lsblk = nullptr;

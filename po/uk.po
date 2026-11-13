@@ -920,3 +920,11 @@ msgstr "Сховати тло"
 
 msgid "Show Background"
 msgstr "Показати тло"
+
+#: package/contents/ui/main.qml
+msgid "Alveus is a desktop layout, not a widget. Remove this widget, then right-click the desktop → Configure Desktop and Wallpaper… → Layout: Alveus."
+msgstr "Alveus — це компонування стільниці, а не віджет. Вилучіть цей віджет, тоді клацніть правою кнопкою на стільниці → «Налаштувати стільницю й шпалери…» → Компонування: Alveus."
+
+#: package/contents/ui/main.qml
+msgid "Remove this widget"
+msgstr "Вилучити цей віджет"

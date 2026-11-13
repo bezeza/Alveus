@@ -261,7 +261,9 @@ QVariantList DriveWatcher::drives()
 {
     if (!m_timer.isActive()) {
         m_timer.start();
-        rebuild();  // mounted ones right away
+        // Mounted ones right away, but quietly: this runs while QML reads the
+        // property, and emitting changed() here would be a binding loop.
+        m_list = buildList();
         refresh();  // then the rest from lsblk
     }
     return m_list;
@@ -305,6 +307,15 @@ void DriveWatcher::refresh()
 
 void DriveWatcher::rebuild()
 {
+    const QVariantList list = buildList();
+    if (list != m_list) {
+        m_list = list;
+        Q_EMIT changed();
+    }
+}
+
+QVariantList DriveWatcher::buildList() const
+{
     QList<Alveus::Drive> mounted = Alveus::fromMounts(QStorageInfo::mountedVolumes());
     const QHash<QString, bool> removable = Alveus::removableFromLsblk(m_lsblkJson);
     QVariantList list;
@@ -315,10 +326,7 @@ void DriveWatcher::rebuild()
     for (const Alveus::Drive &d : Alveus::unmountedFromLsblk(m_lsblkJson)) {
         list << Alveus::toMap(d);
     }
-    if (list != m_list) {
-        m_list = list;
-        Q_EMIT changed();
-    }
+    return list;
 }
 
 void DriveWatcher::mount(const QString &device)
