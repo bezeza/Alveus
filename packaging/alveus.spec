@@ -8,7 +8,7 @@ Summary:        Desktop fences for KDE Plasma 6
 # Most code GPL-2.0-or-later; two widget-handle QML files copied from
 # KDE plasma-desktop are LGPL-2.0-or-later
 License:        GPL-2.0-or-later AND LGPL-2.0-or-later
-URL:            https://github.com/bezeza/alveus-plasma
+URL:            https://github.com/bezeza/Alveus
 Source0:        %{url}/archive/v%{version}/alveus-plasma-%{version}.tar.gz
 
 BuildRequires:  cmake >= 3.21

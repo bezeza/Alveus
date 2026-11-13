@@ -116,7 +116,7 @@ Remove completely: `./uninstall.sh` (or `sudo dnf remove alveus`).
 
 ## Publishing (for the author)
 
-- **GitHub**: push this folder to `github.com/bezeza/alveus-plasma`, tag `v0.03.1`
+- **GitHub**: push this folder to `github.com/bezeza/Alveus`, tag `v0.03.1`
 - **COPR**: create project *alveus* at copr.fedorainfracloud.org → *Packages* →
   *New package* → *SCM*: clone URL of the repo, build method **make srpm**
   (uses `.copr/Makefile`), then *Rebuild*. Choose the current Fedora releases, x86_64 and aarch64
