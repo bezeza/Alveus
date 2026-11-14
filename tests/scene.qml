@@ -51,6 +51,7 @@ Item {
 
     Loader {
         id: desk
+        objectName: "desktopLoader"
         anchors.fill: parent
         source: Qt.resolvedUrl("../package/contents/ui/main.qml")
         onLoaded: Qt.callLater(scene.prepare)
