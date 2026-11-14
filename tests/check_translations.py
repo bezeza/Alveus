@@ -74,6 +74,15 @@ for msgid, src in source.items():
             fail(f"HTML markup differs for {msgid!r}")
 
 # Every literal passed to i18n()/i18nc()/i18np() in the QML UI must be translated.
+source_messages = set(source)
+russian_messages = set(russian)
+for entry in source.values():
+    if "msgid_plural" in entry:
+        source_messages.add(entry["msgid_plural"])
+for entry in russian.values():
+    if "msgid_plural" in entry:
+        russian_messages.add(entry["msgid_plural"])
+
 qml_root = ROOT / "package/contents/ui"
 single = re.compile(r'\bi18n\s*\(\s*("(?:\\.|[^"\\])*")', re.S)
 contextual = re.compile(r'\bi18nc\s*\(\s*("(?:\\.|[^"\\])*")\s*,\s*("(?:\\.|[^"\\])*")', re.S)
@@ -86,7 +95,7 @@ for qml in qml_root.rglob("*.qml"):
     for match in plural.finditer(text):
         messages.extend((ast.literal_eval(match.group(1)), ast.literal_eval(match.group(2))))
     for message in messages:
-        if message not in source or message not in russian:
+        if message not in source_messages or message not in russian_messages:
             fail(f"{qml.relative_to(ROOT)} uses an untranslated source string: {message!r}")
 
 print(f"OK: {len(source)} source messages and all QML strings have complete Russian translations.")
