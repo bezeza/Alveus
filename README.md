@@ -101,7 +101,7 @@ Remove completely: `./uninstall.sh` (or `sudo dnf remove alveus`).
 
 ## Known limitations (0.03.1 beta)
 
-- 38 automated core test cases are included; run them on Qt 6.4+ before
+- Automated core tests are included; run the current Qt 6.4+ test suite before
   installing this beta on a primary desktop
 - Real Plasma desktop runs may still find rough edges — please report them
 - Thumbnails for office documents are not generated (videos, PDFs and images are)
@@ -111,6 +111,7 @@ Remove completely: `./uninstall.sh` (or `sudo dnf remove alveus`).
 ## Where things are stored
 
 - Fence layout, saved layouts, settings: `~/.local/share/alveus/layout.json`
+- Diagnostics: `~/.local/share/alveus/logs/alveus.log` (rotating; open from Settings → Diagnostics)
 - Files: your Desktop folder, untouched
 - Widget positions: Plasma's own config, as with the standard desktop
 
@@ -130,13 +131,19 @@ Remove completely: `./uninstall.sh` (or `sudo dnf remove alveus`).
 See the [development roadmap](ROADMAP.md) for planned work, priorities, and release criteria.
 
 ```sh
-cmake -B build -DALVEUS_BUILD_TESTS=ON && cmake --build build
-QT_QPA_PLATFORM=offscreen dbus-run-session -- build/tests/coretest  # 38 test cases
-ctest --test-dir build --output-on-failure
+cmake -S . -B build -DALVEUS_BUILD_TESTS=ON
+cmake --build build --parallel
+dbus-run-session -- ctest --test-dir build --output-on-failure
 ```
 
 `tests/uiharness` + `tests/scene.qml` render the desktop offscreen with stand-in
 Plasma modules (`tests/mocks`, `tests/mockplasmoid`) for screenshots.
+
+All coding agents must read [`AGENTS.md`](AGENTS.md) before working. It defines
+the shared engineering, diagnostics, testing, and handoff rules. Every
+implementation PR must update `docs/DEVELOPMENT_LOG.md`; CI checks this
+requirement. Provider-specific entrypoints are provided for Claude Code,
+GitHub Copilot, Cursor, Gemini CLI, Cline, Roo Code, Aider, and Windsurf.
 
 ## License
 

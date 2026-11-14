@@ -44,6 +44,7 @@ class AlveusCore : public QObject
     QML_SINGLETON
 
     Q_PROPERTY(QString version READ version CONSTANT)
+    Q_PROPERTY(QString diagnosticsPath READ diagnosticsPath CONSTANT)
     // Bumped on every change; QML re-reads lists when it changes.
     Q_PROPERTY(int revision READ revision NOTIFY changed)
     Q_PROPERTY(QString desktopPath READ desktopPath CONSTANT)
@@ -185,6 +186,11 @@ public:
     Q_INVOKABLE QString screenshotFolder() const;  // where Spectacle saves screenshots
     Q_INVOKABLE QString downloadsFolder() const;
     Q_INVOKABLE void openUrl(const QString &url);
+    QString diagnosticsPath() const;
+    Q_INVOKABLE QVariantList recentDiagnostics(int limit = 100) const;
+    Q_INVOKABLE void openDiagnosticsFolder() const;
+    Q_INVOKABLE void copyDiagnostics() const;
+    Q_INVOKABLE void clearDiagnostics();
     Q_INVOKABLE void refreshDrives();
     Q_INVOKABLE void mountDrive(const QString &device);
     Q_INVOKABLE void unmountDrive(const QString &device);
@@ -213,6 +219,7 @@ Q_SIGNALS:
     void message(const QString &kind, const QString &detail);
     void drivesChanged();
     void fileJobChanged();
+    void diagnosticsChanged();
 
 private:
     // One step of a background job. Copy/Move come from drops, paste and

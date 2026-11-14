@@ -1,0 +1,14 @@
+---
+description: Mandatory repository-wide Alveus engineering rules
+alwaysApply: true
+---
+
+Before any analysis, planning, or edits, read and follow the repository-root
+`AGENTS.md`. It is the canonical policy for every coding agent.
+
+Preserve existing user changes. Use a dedicated branch, focused diffs, regression
+tests, the repository's current CI checks, and a dated
+`docs/DEVELOPMENT_LOG.md` entry for every implementation PR. Never claim
+unrun checks passed. Do not merge, install, change Plasma layout, or restart
+plasmashell without explicit user approval. Do not log secrets or user file
+contents. Do not duplicate or weaken the canonical rules in `AGENTS.md`.

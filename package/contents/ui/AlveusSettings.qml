@@ -18,6 +18,7 @@ QQC2.Popup {
 
     property var desk
     property int tab: 0
+    property var diagnosticEntries: []
 
     modal: true
     focus: true
@@ -30,6 +31,26 @@ QQC2.Popup {
     function openAt(t) {
         tab = t
         open()
+    }
+
+    function refreshDiagnostics() {
+        diagnosticEntries = Core.recentDiagnostics(100)
+    }
+
+    onTabChanged: if (tab === 4) refreshDiagnostics()
+
+    Connections {
+        target: Core
+        function onDiagnosticsChanged() {
+            if (dialog.tab === 4) dialog.refreshDiagnostics()
+        }
+    }
+
+    Timer {
+        interval: 2000
+        repeat: true
+        running: dialog.visible && dialog.tab === 4
+        onTriggered: dialog.refreshDiagnostics()
     }
 
     background: Rectangle {
@@ -73,6 +94,7 @@ QQC2.Popup {
             QQC2.TabButton { text: i18n("Layouts") }
             QQC2.TabButton { text: i18n("Rules help") }
             QQC2.TabButton { text: i18n("About") }
+            QQC2.TabButton { text: i18n("Diagnostics") }
         }
 
         StackLayout {
@@ -286,6 +308,102 @@ QQC2.Popup {
                             icon.name: "emblem-favorite"
                             onClicked: Core.openUrl(Links.monobank)
                         }
+                    }
+                }
+            }
+
+            // ---- diagnostics
+            QQC2.ScrollView {
+                contentWidth: availableWidth
+                ColumnLayout {
+                    width: parent.width
+                    spacing: Kirigami.Units.largeSpacing
+
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        text: i18n("Warnings and errors are recorded automatically. Recent entries appear below.")
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        QQC2.Button {
+                            text: i18n("Open log folder")
+                            icon.name: "folder-open"
+                            onClicked: Core.openDiagnosticsFolder()
+                        }
+                        QQC2.Button {
+                            text: i18n("Copy log")
+                            icon.name: "edit-copy"
+                            onClicked: Core.copyDiagnostics()
+                        }
+                        QQC2.Button {
+                            text: i18n("Refresh")
+                            icon.name: "view-refresh"
+                            onClicked: dialog.refreshDiagnostics()
+                        }
+                    }
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        opacity: 0.6
+                        font: Kirigami.Theme.smallFont
+                        text: Core.diagnosticsPath
+                    }
+                    ListView {
+                        id: diagnosticList
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        spacing: Kirigami.Units.smallSpacing
+                        model: dialog.diagnosticEntries
+
+                        delegate: ColumnLayout {
+                            required property string time
+                            required property string level
+                            required property string category
+                            required property string message
+                            width: diagnosticList.width
+                            spacing: Kirigami.Units.smallSpacing
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                PlasmaComponents.Label {
+                                    text: time
+                                    opacity: 0.6
+                                    font: Kirigami.Theme.smallFont
+                                }
+                                PlasmaComponents.Label {
+                                    text: level.toUpperCase()
+                                    font.bold: true
+                                }
+                                PlasmaComponents.Label {
+                                    text: category
+                                    opacity: 0.6
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                }
+                            }
+                            PlasmaComponents.Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                text: message
+                            }
+                            Kirigami.Separator { Layout.fillWidth: true }
+                        }
+                    }
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        visible: diagnosticList.count === 0
+                        horizontalAlignment: Text.AlignHCenter
+                        opacity: 0.6
+                        text: i18n("No warnings or errors have been recorded.")
+                    }
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        opacity: 0.6
+                        font: Kirigami.Theme.smallFont
+                        text: i18n("The log rotates automatically. File names and paths can appear in third-party error messages, so review the log before sharing it.")
                     }
                 }
             }
