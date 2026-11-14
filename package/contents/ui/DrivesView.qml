@@ -129,7 +129,7 @@ ListView {
         PlasmaComponents.Label {
             visible: view.showSummary && view.storageSummary.complete && view.storageSummary.count > 0
             Layout.fillWidth: true
-            text: i18n("%1 total · %2 used · %3 free",
+            text: i18n("Mounted volumes: %1 total · %2 used · %3 free",
                        view.formatSize(view.storageSummary.total),
                        view.formatSize(view.storageSummary.used),
                        view.formatSize(view.storageSummary.free))
