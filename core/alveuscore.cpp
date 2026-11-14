@@ -1140,10 +1140,10 @@ void AlveusCore::load()
         return;
     }
     if (!validStateObject(root)
-        || (root.contains(QStringLiteral("settings")) && !root.value(QStringLiteral("settings")).isObject())
+        || (root.contains(QStringLiteral("settings")) && !validSettingsObject(root.value(QStringLiteral("settings"))))
         || (root.contains(QStringLiteral("welcomeDismissed")) && !root.value(QStringLiteral("welcomeDismissed")).isBool())
         || (root.contains(QStringLiteral("cleanupSnoozedUntil"))
-            && !isJsonNumber(root.value(QStringLiteral("cleanupSnoozedUntil"))))
+            && !isJsonIntegerInRange(root.value(QStringLiteral("cleanupSnoozedUntil")), 0, 9007199254740991LL))
         || (root.contains(QStringLiteral("snapshots")) && !validSnapshots(root.value(QStringLiteral("snapshots"))))) {
         preserveCorruptStore(QStringLiteral("bad-structure"));
         return;
@@ -2989,7 +2989,13 @@ QVariant AlveusCore::setting(const QString &key) const
 
 void AlveusCore::setSetting(const QString &key, const QVariant &value)
 {
-    m_settings.insert(key, QJsonValue::fromVariant(value));
+    const QJsonValue jsonValue = QJsonValue::fromVariant(value);
+    if (!validSettingValue(key, jsonValue)) {
+        Q_EMIT message(QStringLiteral("settings-invalid-value"), key);
+        return;
+    }
+
+    m_settings.insert(key, jsonValue);
     if (key == QLatin1String("autoPrivacy")) {
         m_integrations->setWatchScreenShare(value.toBool());
         Q_EMIT privacyChanged();
