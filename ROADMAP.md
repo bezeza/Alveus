@@ -66,18 +66,18 @@ PR #16 is not a separate release gate: a build-and-test workflow is already
 present in `main` through the merged work. Compare it for any unique changes
 before closing or superseding it; do not merge the stale workflow blindly.
 
-The current heads of PR #14, PR #15, and PR #17 are each one commit behind
-`main` after PR #18 was merged. Their descriptions link successful workflow
-runs from earlier SHAs; the current head SHAs have no check runs recorded.
-Sync each branch with the current base and rerun the full workflow on its final
-head before merging. A successful run on an earlier commit is not current
-verification.
+The original successful CI runs linked in PR #14, PR #15, and PR #17
+were attached to earlier SHAs. On 2026-11-14, all three branches were synced
+with the current `main` after PR #18; fresh GitHub Actions runs were then
+observed in progress on the updated heads. Do not merge until those current
+runs complete successfully. A successful run on an earlier commit is not
+current verification.
 
-A review of PR #15 also found a cache-invalidation gap in `mergeFences()`:
-source fences inherit the target's activity scope, but the subsequent tab
-activation does not rebuild the per-activity file-model caches. Add coverage
-for merging fences with different activity scopes and verify the cached file
-placement in both activities before merging PR #15.
+A review of PR #15 found a cache-invalidation gap in `mergeFences()`: source
+fences inherit the target's activity scope, but the subsequent tab activation
+does not rebuild the per-activity file-model caches. Add coverage for merging
+fences with different activity scopes and verify cached file placement in both
+activities before merging PR #15.
 
 ## Near-term execution plan
 
