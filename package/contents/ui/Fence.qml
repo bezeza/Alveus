@@ -16,6 +16,7 @@ import "utils.js" as Utils
 
 Item {
     id: fence
+    objectName: "fence-" + fid
 
     // from the fence model
     property string fid
