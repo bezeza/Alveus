@@ -59,8 +59,8 @@ These changes are proposed in PR #21 and are not shipped until merged.
   actual Alveus desktop UI instead of saving an empty wallpaper.
 
 - Removed the preview-only bound-component pragma after it exposed a model
-  context mismatch. The harness now attaches its i18n mock to newly-created QML
-  contexts, which mirrors KDE's translation helpers without changing app logic.
+  context mismatch. The harness now exposes its i18n mock as global JavaScript helpers, matching
+  KDE's translation functions in both normal and inline QML components.
 
 - Added the new hicolor SVG icon to the RPM file manifest so the packaged
   Plasma metadata and KRunner icon name resolve after installation.

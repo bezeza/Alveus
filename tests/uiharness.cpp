@@ -94,14 +94,14 @@ int main(int argc, char **argv)
     QQuickView view;
     I18n i18n;
     view.engine()->rootContext()->setContextObject(&i18n);
-    QObject::connect(view.engine(), &QQmlEngine::objectCreated, &app,
-                     [&i18n](QObject *object, const QUrl &) {
-        if (QQmlContext *context = QQmlEngine::contextForObject(object)) {
-            if (!context->contextObject()) {
-                context->setContextObject(&i18n);
-            }
-        }
-    });
+    QQmlEngine::setObjectOwnership(&i18n, QQmlEngine::CppOwnership);
+    view.engine()->globalObject().setProperty("__alveusI18n", view.engine()->newQObject(&i18n));
+    view.engine()->globalObject().setProperty("i18n", view.engine()->evaluate(
+        "(function(s,a,b,c){return __alveusI18n.i18n(s,a,b,c);})"));
+    view.engine()->globalObject().setProperty("i18nc", view.engine()->evaluate(
+        "(function(context,s,a,b){return __alveusI18n.i18nc(context,s,a,b);})"));
+    view.engine()->globalObject().setProperty("i18np", view.engine()->evaluate(
+        "(function(one,many,n,b){return __alveusI18n.i18np(one,many,n,b);})"));
     bool hadQmlWarnings = false;
     QObject::connect(view.engine(), &QQmlEngine::warnings, [&hadQmlWarnings](const QList<QQmlError> &list) {
         hadQmlWarnings = true;
