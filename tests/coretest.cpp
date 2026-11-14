@@ -28,6 +28,8 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include <algorithm>
+
 #include <sys/stat.h>
 #include <sys/xattr.h>
 #include <unistd.h>
@@ -1548,6 +1550,16 @@ private Q_SLOTS:
         QVERIFY(!isUserMount(QStringLiteral("/run/user/1000"), QStringLiteral("tmpfs"), QStringLiteral("tmpfs")));
         QVERIFY(!isUserMount(QStringLiteral("/var/lib/flatpak"), QStringLiteral("ext4"), QStringLiteral("/dev/sda1")));
         QVERIFY(!isUserMount(QStringLiteral("/sys/fs/cgroup"), QStringLiteral("cgroup2"), QStringLiteral("cgroup2")));
+
+        Drive msr;
+        msr.partType = QStringLiteral("e3c9e316-0b5c-4db8-817d-f92df00215ae");
+        QCOMPARE(servicePartitionKind(msr), QStringLiteral("microsoftReserved"));
+        Drive biosBoot;
+        biosBoot.partType = QStringLiteral("21686148-6449-6e6f-744e-656564454649");
+        QCOMPARE(servicePartitionKind(biosBoot), QStringLiteral("biosBoot"));
+        Drive labelOnly;
+        labelOnly.label = QStringLiteral("Recovery");
+        QCOMPARE(servicePartitionKind(labelOnly), QString()); // labels alone never hide user data
 
         // lsblk: discover all partitions; known service partitions are hidden by the visibility policy
         const QByteArray json = R"({"blockdevices":[
