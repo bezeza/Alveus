@@ -227,7 +227,8 @@ already shipped in `main`.
 
 ### Stage C — Hierarchical drive interface
 
-- [ ] Review and merge the Stage C PR, stacked on PR #37.
+- [ ] Review and merge [PR #38](https://github.com/bezeza/Alveus/pull/38),
+  stacked on PR #37.
 - [x] Render physical disks as parent cards with expandable partitions and
   logical volumes.
 - [x] Distinguish NVMe, USB, SSD, and HDD using lsblk transport and ROTA data;
