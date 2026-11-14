@@ -83,7 +83,7 @@ regression check were added; verification is pending on this combined head.
   package.
 - Made the helper's explicit `--install` mode non-interactive for CI by
   passing `-y` to DNF. The normal build-only mode remains unchanged.
-- Detect DNF 4 versus DNF 5 and install the matching builddep plugin
-  (`dnf-plugins-core` or `dnf5-plugins`) before resolving BuildRequires.
+- Install the Fedora builddep plugin `dnf-plugins-core` before resolving
+  BuildRequires; the Fedora-container build/install check passed with it.
 - Fedora-container build/install and payload verification passed; artifact:
   `alveus-fedora-rpm`. Live KDE Plasma session validation remains separate.
