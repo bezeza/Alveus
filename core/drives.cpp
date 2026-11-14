@@ -395,7 +395,11 @@ QVariantMap toMap(const Drive &d)
     m.insert(QStringLiteral("parentDevice"), d.parentDevice);
     m.insert(QStringLiteral("label"), d.label);
     m.insert(QStringLiteral("mountPoint"), d.mountPoint);
-    m.insert(QStringLiteral("mountPoints"), d.mountPoints);
+    QStringList mountPoints = d.mountPoints;
+    if (mountPoints.isEmpty() && !d.mountPoint.isEmpty()) {
+        mountPoints << d.mountPoint;
+    }
+    m.insert(QStringLiteral("mountPoints"), mountPoints);
     m.insert(QStringLiteral("fsType"), d.fsType);
     m.insert(QStringLiteral("type"), d.type);
     m.insert(QStringLiteral("model"), d.model);
@@ -414,7 +418,7 @@ QVariantMap toMap(const Drive &d)
     m.insert(QStringLiteral("physical"), d.physical);
     m.insert(QStringLiteral("network"), d.network);
     m.insert(QStringLiteral("system"), d.system);
-    m.insert(QStringLiteral("mounted"), !d.mountPoints.isEmpty());
+    m.insert(QStringLiteral("mounted"), !mountPoints.isEmpty());
 
     QString name = d.label;
     if (name.isEmpty() && d.physical && !d.model.isEmpty()) {
@@ -632,7 +636,7 @@ QVariantList DriveWatcher::buildDeviceList() const
         const QString mountPoint = volume.rootPath();
         const QString fsType = QString::fromLatin1(volume.fileSystemType());
         const QString device = QString::fromLocal8Bit(volume.device());
-        if (!Alveus::isUserMount(mountPoint, fsType, device)) {
+        if (mountPoint.isEmpty() || !Alveus::isUserMount(mountPoint, fsType, device)) {
             continue;
         }
 
@@ -662,8 +666,10 @@ QVariantList DriveWatcher::buildDeviceList() const
         target->readOnly = volume.isReadOnly();
         target->network = target->network || !device.startsWith(QLatin1String("/dev/"));
         appendUnique(target->mountPoints, mountPoint);
-        target->mountPoint = target->mountPoints.contains(QStringLiteral("/"))
-            ? QStringLiteral("/") : target->mountPoints.first();
+        if (!target->mountPoints.isEmpty()) {
+            target->mountPoint = target->mountPoints.contains(QStringLiteral("/"))
+                ? QStringLiteral("/") : target->mountPoints.first();
+        }
         target->system = target->system || mountPoint == QLatin1String("/");
     }
 
