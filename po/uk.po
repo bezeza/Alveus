@@ -1272,3 +1272,7 @@ msgstr "Розгортати розділи за замовчуванням"
 #: package/contents/ui/drive-layout-settings
 msgid "%1 total · %2 used · %3 free"
 msgstr "%1 загалом · %2 зайнято · %3 вільно"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Use default expansion"
+msgstr "Використовувати типове розгортання"
