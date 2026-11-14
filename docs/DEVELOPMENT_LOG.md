@@ -47,3 +47,7 @@ CI run for the diagnostics-only commit passed build, core tests, shell checks,
 QML lint, and whitespace validation. The combined changes are subject to a new
 CI run on the current PR head. Nothing in this section is shipped until PR #19
 is merged.
+
+The branch was synchronized with the merged performance and UI foundation on
+2026-11-14. A thread-local message-handler reentrancy guard and a path-redaction
+regression check were added; verification is pending on this combined head.

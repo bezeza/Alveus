@@ -69,6 +69,20 @@ static QStringList ids(const QVariantList &fences)
     return out;
 }
 
+static QtMessageHandler s_testDefaultMessageHandler = nullptr;
+static bool s_triggerNestedDiagnostic = false;
+
+static void testPreviousMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message)
+{
+    if (s_triggerNestedDiagnostic) {
+        s_triggerNestedDiagnostic = false;
+        qWarning("nested diagnostics test warning");
+    }
+    if (s_testDefaultMessageHandler) {
+        s_testDefaultMessageHandler(type, context, message);
+    }
+}
+
 class CoreTest : public QObject
 {
     Q_OBJECT
@@ -81,6 +95,7 @@ class CoreTest : public QObject
 private Q_SLOTS:
     void initTestCase()
     {
+        s_testDefaultMessageHandler = qInstallMessageHandler(testPreviousMessageHandler);
         qputenv("ALVEUS_NO_DBUS", "1");
     }
 
@@ -937,16 +952,37 @@ private Q_SLOTS:
         core.clearDiagnostics();
 
         qWarning("Alveus diagnostics test warning");
+        const QString privatePath = QDir::homePath() + QStringLiteral("/alveus-private-diagnostic.txt");
+        qWarning().noquote() << privatePath;
         const QVariantList entries = core.recentDiagnostics(10);
-        QVERIFY(!entries.isEmpty());
+        QVERIFY(entries.size() >= 2);
         const QVariantMap latest = entries.first().toMap();
         QCOMPARE(latest.value(QStringLiteral("level")).toString(), QStringLiteral("warning"));
-        QVERIFY(latest.value(QStringLiteral("message")).toString()
-                    .contains(QStringLiteral("Alveus diagnostics test warning")));
+        const QString latestMessage = latest.value(QStringLiteral("message")).toString();
+        QVERIFY(latestMessage.contains(QStringLiteral("~")));
+        QVERIFY(!latestMessage.contains(QDir::homePath()));
         QVERIFY(QFileInfo::exists(core.diagnosticsPath()));
 
         core.clearDiagnostics();
         QVERIFY(core.recentDiagnostics().isEmpty());
+    }
+
+    void diagnosticsHandlerIsReentrant()
+    {
+        AlveusCore core(desk(), store());
+        core.clearDiagnostics();
+        s_triggerNestedDiagnostic = true;
+        qWarning("outer diagnostics reentrancy test");
+
+        bool outerFound = false;
+        bool nestedFound = false;
+        for (const QVariant &value : core.recentDiagnostics(10)) {
+            const QString message = value.toMap().value(QStringLiteral("message")).toString();
+            outerFound = outerFound || message.contains(QStringLiteral("outer diagnostics reentrancy test"));
+            nestedFound = nestedFound || message.contains(QStringLiteral("nested diagnostics test warning"));
+        }
+        QVERIFY(outerFound);
+        QVERIFY(!nestedFound);
     }
 
     void diagnosticsCaptureApplicationErrors()

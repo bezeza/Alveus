@@ -59,6 +59,7 @@ QString s_diagnosticsDesktopPath;
 QString s_diagnosticsSettingsPath;
 QtMessageHandler s_previousMessageHandler = nullptr;
 bool s_diagnosticsHandlerInstalled = false;
+thread_local bool s_insideDiagnosticsHandler = false;
 
 constexpr qint64 kDiagnosticsMaxBytes = 1024 * 1024;
 constexpr int kDiagnosticsRotations = 3;
@@ -145,6 +146,18 @@ void appendDiagnostic(const QString &level, const QString &category, const QStri
 
 void alveusMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message)
 {
+    // Logging can itself trigger a Qt warning (for example, a filesystem error).
+    // Do not recurse into the logger or try to lock its non-recursive mutex again.
+    if (s_insideDiagnosticsHandler) {
+        if (type != QtDebugMsg && type != QtInfoMsg) {
+            const QByteArray output = message.toLocal8Bit();
+            std::fprintf(stderr, "%s\n", output.constData());
+            std::fflush(stderr);
+        }
+        return;
+    }
+
+    s_insideDiagnosticsHandler = true;
     if (type != QtDebugMsg && type != QtInfoMsg) {
         const QString category = context.category ? QString::fromUtf8(context.category) : QString();
         const QString source = context.file ? QString::fromUtf8(context.file) : QString();
@@ -166,6 +179,7 @@ void alveusMessageHandler(QtMsgType type, const QMessageLogContext &context, con
         std::fprintf(stderr, "%s\n", output.constData());
         std::fflush(stderr);
     }
+    s_insideDiagnosticsHandler = false;
 }
 
 void initializeDiagnostics(const QString &desktopPath, const QString &settingsPath)
