@@ -55,9 +55,8 @@ jobs:
           for catalog in po/*.po; do
             msgfmt --check --check-format -o /dev/null "$catalog"
           done
-          msgcmp po/en.po po/uk.po
           msgcmp po/ru.po po/uk.po
-          for catalog in po/en.po po/ru.po; do
+          for catalog in po/ru.po; do
             if msgattrib --untranslated --no-obsolete "$catalog" | grep -q '^msgid "'; then
               echo "::error::Untranslated entries found in $catalog"
               exit 1
