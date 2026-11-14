@@ -168,8 +168,8 @@ QQC2.Popup {
                         }
                         QQC2.ToolButton {
                             icon.name: "edit-undo"
-                            enabled: dialog.driveOverrides.groups
-                                && dialog.driveOverrides.groups[modelData.key] !== undefined
+                            enabled: !!(dialog.driveOverrides.groups
+                                && dialog.driveOverrides.groups[modelData.key] !== undefined)
                             onClicked: Core.resetDriveOption(dialog.fid, "groups." + modelData.key)
                         }
                     }
