@@ -1750,7 +1750,7 @@ private Q_SLOTS:
         QCOMPARE(fallback.size(), 1);
         QCOMPARE(fallback.first().id, QStringLiteral("device:/dev/sdd"));
         QVERIFY(driveHierarchyFromLsblk(QByteArrayLiteral("not json")).isEmpty());
-        QVERIFY(driveHierarchyFromLsblk(QByteArrayLiteral(R"({"devices":[]})")).isEmpty());
+        QVERIFY(driveHierarchyFromLsblk(QByteArray(R"({"devices":[]})")).isEmpty());
     }
 
     void thumbnails()
