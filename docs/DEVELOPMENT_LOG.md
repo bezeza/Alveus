@@ -75,3 +75,9 @@ These changes are proposed in PR #21 and are not shipped until merged.
 - CI exercises the RPM script's help and invalid-option paths. Full RPM build
   and DNF installation require a Fedora environment and are not run on the
   Ubuntu CI runner.
+
+- CI caught that `packaging/build-rpm.sh` was tracked without its executable
+  bit even though the documented commands invoke it directly. Mark the script
+  executable; the CLI smoke test now verifies that the documented entrypoint
+  can actually run. The first attempt stopped at this permission error before
+  reaching the option checks.
