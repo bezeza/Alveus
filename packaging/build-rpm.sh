@@ -83,7 +83,7 @@ printf '\nBuilt RPM / Зібраний RPM: %s\n' "$rpm_file"
 
 if (( install_after_build )); then
     echo "==> Installing with DNF (DNF will resolve runtime dependencies)"
-    sudo dnf install "$rpm_file"
+    sudo dnf install -y "$rpm_file"
     echo
     echo "Alveus is installed. To activate it, choose Layout: Alveus in Configure Desktop and Wallpaper."
 else

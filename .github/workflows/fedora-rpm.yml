@@ -1,0 +1,77 @@
+name: Fedora RPM build and DNF smoke test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'CMakeLists.txt'
+      - 'core/**'
+      - 'package/**'
+      - 'data/**'
+      - 'po/**'
+      - 'packaging/**'
+      - '.github/workflows/fedora-rpm.yml'
+  pull_request:
+    paths:
+      - 'CMakeLists.txt'
+      - 'core/**'
+      - 'package/**'
+      - 'data/**'
+      - 'po/**'
+      - 'packaging/**'
+      - '.github/workflows/fedora-rpm.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fedora-rpm-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-install-remove:
+    name: Fedora RPM build, DNF install and remove
+    runs-on: ubuntu-latest
+    container: fedora:43
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install sudo for the package helper
+        run: dnf install -y sudo
+
+      - name: Build and install the RPM
+        run: ./packaging/build-rpm.sh --install
+
+      - name: Verify installed package payload
+        run: |
+          rpm -q alveus
+          rpm -qi alveus
+          rpm -ql alveus | grep -Fx '/usr/share/plasma/plasmoids/ua.bezeza.alveus/metadata.json'
+          rpm -ql alveus | grep -Fx '/usr/share/icons/hicolor/scalable/apps/alveus.svg'
+          rpm -ql alveus | grep -E '/ua/bezeza/alveus/qmldir$'
+
+      - name: Preserve RPM artifact
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          find "$HOME/rpmbuild/RPMS" -type f -name 'alveus-*.rpm' \
+            -exec cp {} "$GITHUB_WORKSPACE/artifacts/" \;
+          test -n "$(find "$GITHUB_WORKSPACE/artifacts" -type f -name '*.rpm' -print -quit)"
+
+      - name: Upload Fedora RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: alveus-fedora-43-rpm
+          path: artifacts/*.rpm
+          if-no-files-found: error
+
+      - name: Remove package with DNF
+        run: |
+          sudo dnf remove -y alveus
+          if rpm -q alveus >/dev/null 2>&1; then
+            echo "::error::Alveus is still installed after DNF removal"
+            exit 1
+          fi
