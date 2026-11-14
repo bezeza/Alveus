@@ -732,6 +732,10 @@ private Q_SLOTS:
                             R"({"version":2,"fences":[{}]})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-snapshot.json"),
                             R"({"version":2,"fences":[],"files":{},"pages":{},"snapshots":[{"id":"x","name":"bad","state":{"fences":[{}]}}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-options.json"),
+                            R"({"version":2,"fences":[{"id":"d","title":"Disks","portal":"drives:","driveOptions":{"partitionMode":"unknown"}}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-defaults.json"),
+                            R"({"version":2,"fences":[],"settings":{"drives":{"groups":{"usb":"yes"}}}})");
     }
 
     void newerSettingsAreNeverOverwritten()
@@ -1545,7 +1549,7 @@ private Q_SLOTS:
         QVERIFY(!isUserMount(QStringLiteral("/var/lib/flatpak"), QStringLiteral("ext4"), QStringLiteral("/dev/sda1")));
         QVERIFY(!isUserMount(QStringLiteral("/sys/fs/cgroup"), QStringLiteral("cgroup2"), QStringLiteral("cgroup2")));
 
-        // lsblk: an unmounted NTFS disk shows; EFI, Windows recovery, swap and mounted ones don't
+        // lsblk: discover all partitions; known service partitions are hidden by the visibility policy
         const QByteArray json = R"({"blockdevices":[
           {"name":"sda","path":"/dev/sda","label":null,"fstype":null,"mountpoints":[null],"size":1000204886016,"rm":false,"hotplug":false,"type":"disk",
            "children":[
@@ -1586,8 +1590,8 @@ private Q_SLOTS:
         QCOMPARE(m.value(QStringLiteral("name")).toString(), QStringLiteral("Data"));
         QCOMPARE(m.value(QStringLiteral("mounted")).toBool(), true);
         QCOMPARE(m.value(QStringLiteral("icon")).toString(), QStringLiteral("drive-harddisk"));
-        QCOMPARE(toMap(un[0]).value(QStringLiteral("name")).toString(), QStringLiteral("Фільми"));
-        QCOMPARE(toMap(un[1]).value(QStringLiteral("icon")).toString(), QStringLiteral("drive-removable-media-usb"));
+        QCOMPARE(toMap(un[1]).value(QStringLiteral("name")).toString(), QStringLiteral("Фільми"));
+        QCOMPARE(toMap(un[3]).value(QStringLiteral("icon")).toString(), QStringLiteral("drive-removable-media-usb"));
 
         // the real machine: the system disk is always there, first
         const QList<Drive> live = fromMounts(QStorageInfo::mountedVolumes());
@@ -1861,6 +1865,7 @@ private Q_SLOTS:
         QCOMPARE(nvme.children.size(), 5);
 
         const Drive &efi = nvme.children.at(0);
+        QCOMPARE(servicePartitionKind(efi), QStringLiteral("efi"));
         QCOMPARE(efi.total, qint64(536870912)); // small service partitions remain discoverable
         QCOMPARE(efi.partUuid, QStringLiteral("1111-AAAA"));
         QCOMPARE(efi.partType, QStringLiteral("c12a7328-f81f-11d2-ba4b-00a0c93ec93b"));
