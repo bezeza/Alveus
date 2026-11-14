@@ -5,6 +5,15 @@ MockApplet *MockApplet::instance()
     static MockApplet *a = new MockApplet;
     return a;
 }
+void MockApplet::setEditMode(bool value)
+{
+    if (m_editMode == value) {
+        return;
+    }
+    m_editMode = value;
+    Q_EMIT editModeChanged();
+}
+
 int MockApplet::screen() const { return qEnvironmentVariableIntValue("ALVEUS_MOCK_SCREEN"); }
 QString MockApplet::activity() const { return qEnvironmentVariable("ALVEUS_MOCK_ACTIVITY"); }
 QString MockApplet::activityName() const { return qEnvironmentVariable("ALVEUS_MOCK_ACTIVITY_NAME"); }
