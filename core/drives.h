@@ -14,6 +14,7 @@
 #include <QStringList>
 #include <QTimer>
 #include <QVariantList>
+#include <QVariantMap>
 
 class QProcess;
 
@@ -52,6 +53,8 @@ struct Drive {
 // Is this mount something a person would call "a disk"?
 bool isUserMount(const QString &mountPoint, const QString &fsType, const QString &device);
 bool isNetworkMount(const QString &fsType, const QString &device);
+QString servicePartitionKind(const Drive &drive);
+QVariantList filterDriveList(const QVariantList &drives, const QVariantMap &options, bool showHiddenTemporarily = false);
 QList<Drive> fromMounts(const QList<QStorageInfo> &volumes);
 // Flat compatibility helpers used by the current drive-fence UI.
 QList<Drive> unmountedFromLsblk(const QByteArray &json);

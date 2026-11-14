@@ -882,3 +882,151 @@ msgstr "Предупреждений и ошибок пока нет."
 #: package/contents/ui/AlveusSettings.qml
 msgid "The log rotates automatically. File names and paths can appear in third-party error messages, so review the log before sharing it."
 msgstr "Журнал автоматически ротируется. В сообщениях сторонних компонентов могут встречаться имена файлов и пути, поэтому проверьте журнал перед тем, как делиться им."
+
+#: package/contents/ui/drive-settings
+msgid "0 disables the size filter"
+msgstr "0 отключает фильтр по размеру"
+
+#: package/contents/ui/drive-settings
+msgid "All partitions"
+msgstr "Все разделы"
+
+#: package/contents/ui/drive-settings
+msgid "Always show this item"
+msgstr "Всегда показывать этот элемент"
+
+#: package/contents/ui/drive-settings
+msgid "Always shown"
+msgstr "Всегда показывается"
+
+#: package/contents/ui/drive-settings
+msgid "Automatic service-partition filters"
+msgstr "Автоматические фильтры служебных разделов"
+
+#: package/contents/ui/drive-settings
+msgid "Drive visibility defaults"
+msgstr "Общие параметры видимости дисков"
+
+#: package/contents/ui/drive-settings
+msgid "Drive-specific settings"
+msgstr "Настройки дисков для этого забора"
+
+#: package/contents/ui/drive-settings
+msgid "Hidden"
+msgstr "Скрыто"
+
+#: package/contents/ui/drive-settings
+msgid "Hidden items and exceptions"
+msgstr "Скрытые элементы и исключения"
+
+#: package/contents/ui/drive-settings
+msgid "Hide BIOS boot partitions"
+msgstr "Скрывать загрузочные разделы BIOS"
+
+#: package/contents/ui/drive-settings
+msgid "Hide EFI System partitions"
+msgstr "Скрывать системные разделы EFI"
+
+#: package/contents/ui/drive-settings
+msgid "Hide Linux swap partitions"
+msgstr "Скрывать разделы подкачки Linux"
+
+#: package/contents/ui/drive-settings
+msgid "Hide Microsoft Reserved partitions"
+msgstr "Скрывать зарезервированные разделы Microsoft"
+
+#: package/contents/ui/drive-settings
+msgid "Hide Windows Recovery partitions"
+msgstr "Скрывать разделы восстановления Windows"
+
+#: package/contents/ui/drive-settings
+msgid "Hide this item"
+msgstr "Скрыть этот элемент"
+
+#: package/contents/ui/drive-settings
+msgid "Internal devices"
+msgstr "Внутренние устройства"
+
+#: package/contents/ui/drive-settings
+msgid "Manually selected"
+msgstr "Выбранные вручную"
+
+#: package/contents/ui/drive-settings
+msgid "Minimum partition size (MiB)"
+msgstr "Минимальный размер раздела (МиБ)"
+
+#: package/contents/ui/drive-settings
+msgid "Mounted only"
+msgstr "Только смонтированные"
+
+#: package/contents/ui/drive-settings
+msgid "Network storage"
+msgstr "Сетевые хранилища"
+
+#: package/contents/ui/drive-settings
+msgid "No drives match the current filters"
+msgstr "Нет дисков, соответствующих текущим фильтрам"
+
+#: package/contents/ui/drive-settings
+msgid "No hidden items or exceptions."
+msgstr "Нет скрытых элементов или исключений."
+
+#: package/contents/ui/drive-settings
+msgid "Not currently connected"
+msgstr "Сейчас не подключено"
+
+#: package/contents/ui/drive-settings
+msgid "Optical drives"
+msgstr "Оптические диски"
+
+#: package/contents/ui/drive-settings
+msgid "Other removable devices"
+msgstr "Другие съёмные устройства"
+
+#: package/contents/ui/drive-settings
+msgid "Partition visibility"
+msgstr "Видимость разделов"
+
+#: package/contents/ui/drive-settings
+msgid "Reset all drive settings"
+msgstr "Сбросить все настройки дисков"
+
+#: package/contents/ui/drive-settings
+msgid "Reset global defaults"
+msgstr "Сбросить общие параметры"
+
+#: package/contents/ui/drive-settings
+msgid "Restore automatic visibility"
+msgstr "Восстановить автоматическую видимость"
+
+#: package/contents/ui/drive-settings
+msgid "Show hidden temporarily"
+msgstr "Временно показать скрытое"
+
+#: package/contents/ui/drive-settings
+msgid "Show unmounted volumes"
+msgstr "Показывать несмонтированные тома"
+
+#: package/contents/ui/drive-settings
+msgid "These defaults apply to every drive fence unless an individual fence overrides them."
+msgstr "Эти параметры применяются ко всем панелям дисков, если отдельная панель не задаёт свои."
+
+#: package/contents/ui/drive-settings
+msgid "These settings apply only to this fence. Unchanged options inherit the global defaults."
+msgstr "Эти настройки относятся только к этому забору. Неизменённые параметры наследуются из общих."
+
+#: package/contents/ui/drive-settings
+msgid "USB devices"
+msgstr "USB-устройства"
+
+#: package/contents/ui/drive-settings
+msgid "Use automatic visibility"
+msgstr "Использовать автоматическую видимость"
+
+#: package/contents/ui/drive-settings
+msgid "Virtual devices"
+msgstr "Виртуальные устройства"
+
+#: package/contents/ui/drive-settings
+msgid "Visibility groups"
+msgstr "Группы видимости"

@@ -331,6 +331,190 @@ const QHash<QString, QVariant> &defaultSettings()
     return d;
 }
 
+bool isJsonNumber(const QJsonValue &value);
+bool isJsonInteger(const QJsonValue &value);
+bool hasExpectedType(const QJsonObject &object, const QString &key, QJsonValue::Type type);
+
+const QJsonObject &defaultDriveOptions()
+{
+    static const QJsonObject defaults = {
+        {QStringLiteral("groups"), QJsonObject{
+            {QStringLiteral("internal"), true},
+            {QStringLiteral("usb"), true},
+            {QStringLiteral("external"), true},
+            {QStringLiteral("network"), true},
+            {QStringLiteral("virtual"), false},
+            {QStringLiteral("optical"), true},
+        }},
+        {QStringLiteral("hideEfi"), true},
+        {QStringLiteral("hideMicrosoftReserved"), true},
+        {QStringLiteral("hideRecovery"), true},
+        {QStringLiteral("hideSwap"), true},
+        {QStringLiteral("hideBiosBoot"), true},
+        {QStringLiteral("showUnmounted"), true},
+        {QStringLiteral("partitionMode"), QStringLiteral("all")},
+        {QStringLiteral("minimumPartitionSizeMiB"), 0},
+    };
+    return defaults;
+}
+
+bool validDriveOptions(const QJsonObject &options, bool allowExceptions)
+{
+    if (options.contains(QStringLiteral("groups"))) {
+        const QJsonValue groupsValue = options.value(QStringLiteral("groups"));
+        if (!groupsValue.isObject()) {
+            return false;
+        }
+        const QJsonObject groups = groupsValue.toObject();
+        const QStringList keys = {QStringLiteral("internal"), QStringLiteral("usb"), QStringLiteral("external"),
+                                  QStringLiteral("network"), QStringLiteral("virtual"), QStringLiteral("optical")};
+        for (const QString &key : keys) {
+            if (!hasExpectedType(groups, key, QJsonValue::Bool)) {
+                return false;
+            }
+        }
+    }
+
+    const QStringList boolKeys = {QStringLiteral("hideEfi"), QStringLiteral("hideMicrosoftReserved"),
+                                  QStringLiteral("hideRecovery"), QStringLiteral("hideSwap"),
+                                  QStringLiteral("hideBiosBoot"), QStringLiteral("showUnmounted")};
+    for (const QString &key : boolKeys) {
+        if (!hasExpectedType(options, key, QJsonValue::Bool)) {
+            return false;
+        }
+    }
+
+    if (options.contains(QStringLiteral("partitionMode"))) {
+        const QJsonValue mode = options.value(QStringLiteral("partitionMode"));
+        if (!mode.isString()) {
+            return false;
+        }
+        const QString value = mode.toString();
+        if (value != QLatin1String("all") && value != QLatin1String("mounted") && value != QLatin1String("selected")) {
+            return false;
+        }
+    }
+
+    if (options.contains(QStringLiteral("minimumPartitionSizeMiB"))) {
+        const QJsonValue size = options.value(QStringLiteral("minimumPartitionSizeMiB"));
+        if (!isJsonInteger(size) || size.toDouble() < 0 || size.toDouble() > 1048576) {
+            return false;
+        }
+    }
+
+    if (options.contains(QStringLiteral("visibilityExceptions"))) {
+        if (!allowExceptions || !options.value(QStringLiteral("visibilityExceptions")).isObject()) {
+            return false;
+        }
+        const QJsonObject exceptions = options.value(QStringLiteral("visibilityExceptions")).toObject();
+        for (auto it = exceptions.constBegin(); it != exceptions.constEnd(); ++it) {
+            if (it.key().trimmed().isEmpty() || !it.value().isString()) {
+                return false;
+            }
+            const QString mode = it.value().toString();
+            if (mode != QLatin1String("hide") && mode != QLatin1String("show")) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool validSettingsObject(const QJsonObject &settings)
+{
+    if (!settings.contains(QStringLiteral("drives"))) {
+        return true;
+    }
+    const QJsonValue drives = settings.value(QStringLiteral("drives"));
+    return drives.isObject() && validDriveOptions(drives.toObject(), false);
+}
+
+QJsonObject mergeDriveOptions(QJsonObject base, const QJsonObject &overrides)
+{
+    for (auto it = overrides.constBegin(); it != overrides.constEnd(); ++it) {
+        if (it.key() == QLatin1String("groups") && it.value().isObject()) {
+            QJsonObject groups = base.value(QStringLiteral("groups")).toObject();
+            const QJsonObject groupOverrides = it.value().toObject();
+            for (auto group = groupOverrides.constBegin(); group != groupOverrides.constEnd(); ++group) {
+                groups.insert(group.key(), group.value());
+            }
+            base.insert(QStringLiteral("groups"), groups);
+        } else {
+            base.insert(it.key(), it.value());
+        }
+    }
+    return base;
+}
+
+bool setDriveOptionValue(QJsonObject &options, const QString &key, const QJsonValue &value)
+{
+    if (key.startsWith(QLatin1String("groups."))) {
+        const QString group = key.mid(7);
+        static const QStringList allowed = {QStringLiteral("internal"), QStringLiteral("usb"), QStringLiteral("external"),
+                                            QStringLiteral("network"), QStringLiteral("virtual"), QStringLiteral("optical")};
+        if (!allowed.contains(group) || !value.isBool()) {
+            return false;
+        }
+        QJsonObject groups = options.value(QStringLiteral("groups")).toObject();
+        groups.insert(group, value);
+        options.insert(QStringLiteral("groups"), groups);
+        return true;
+    }
+
+    static const QStringList boolKeys = {QStringLiteral("hideEfi"), QStringLiteral("hideMicrosoftReserved"),
+                                         QStringLiteral("hideRecovery"), QStringLiteral("hideSwap"),
+                                         QStringLiteral("hideBiosBoot"), QStringLiteral("showUnmounted")};
+    if (boolKeys.contains(key)) {
+        if (!value.isBool()) {
+            return false;
+        }
+        options.insert(key, value);
+        return true;
+    }
+    if (key == QLatin1String("partitionMode")) {
+        if (!value.isString()) {
+            return false;
+        }
+        const QString mode = value.toString();
+        if (mode != QLatin1String("all") && mode != QLatin1String("mounted") && mode != QLatin1String("selected")) {
+            return false;
+        }
+        options.insert(key, value);
+        return true;
+    }
+    if (key == QLatin1String("minimumPartitionSizeMiB")) {
+        if (!isJsonInteger(value) || value.toDouble() < 0 || value.toDouble() > 1048576) {
+            return false;
+        }
+        options.insert(key, value);
+        return true;
+    }
+    return false;
+}
+
+bool removeDriveOptionValue(QJsonObject &options, const QString &key)
+{
+    if (key.startsWith(QLatin1String("groups."))) {
+        const QString group = key.mid(7);
+        QJsonObject groups = options.value(QStringLiteral("groups")).toObject();
+        if (!groups.contains(group)) {
+            return false;
+        }
+        groups.remove(group);
+        if (groups.isEmpty()) {
+            options.remove(QStringLiteral("groups"));
+        } else {
+            options.insert(QStringLiteral("groups"), groups);
+        }
+        return true;
+    }
+    if (!options.contains(key)) {
+        return false;
+    }
+    options.remove(key);
+    return true;
+}
+
 bool isJsonNumber(const QJsonValue &value)
 {
     return value.isDouble() && std::isfinite(value.toDouble());
@@ -414,6 +598,11 @@ bool validStateObject(const QJsonObject &root)
                     return false;
                 }
             }
+        }
+        if (fence.contains(QStringLiteral("driveOptions"))
+            && (!fence.value(QStringLiteral("driveOptions")).isObject()
+                || !validDriveOptions(fence.value(QStringLiteral("driveOptions")).toObject(), true))) {
+            return false;
         }
     }
 
@@ -841,6 +1030,9 @@ static QJsonObject fenceToJson(const auto &f)
     o.insert(QStringLiteral("view"), f.view);
     o.insert(QStringLiteral("iconSize"), f.iconSize);
     o.insert(QStringLiteral("created"), f.created);
+    if (!f.driveOptions.isEmpty()) {
+        o.insert(QStringLiteral("driveOptions"), f.driveOptions);
+    }
     return o;
 }
 
@@ -925,6 +1117,7 @@ void AlveusCore::applyState(const QJsonObject &root, bool includeSettings)
         f.view = o.value(QStringLiteral("view")).toString(QStringLiteral("grid"));
         f.iconSize = o.value(QStringLiteral("iconSize")).toInt();
         f.created = qint64(o.value(QStringLiteral("created")).toDouble());
+        f.driveOptions = o.value(QStringLiteral("driveOptions")).toObject();
         f.parsed = Alveus::Rules(f.rules);
         fenceNormalizeGeometry(f);
         m_fences << f;
@@ -1035,7 +1228,9 @@ void AlveusCore::load()
         return;
     }
     if (!validStateObject(root)
-        || (root.contains(QStringLiteral("settings")) && !root.value(QStringLiteral("settings")).isObject())
+        || (root.contains(QStringLiteral("settings"))
+            && (!root.value(QStringLiteral("settings")).isObject()
+                || !validSettingsObject(root.value(QStringLiteral("settings")).toObject())))
         || (root.contains(QStringLiteral("welcomeDismissed")) && !root.value(QStringLiteral("welcomeDismissed")).isBool())
         || (root.contains(QStringLiteral("cleanupSnoozedUntil"))
             && !isJsonNumber(root.value(QStringLiteral("cleanupSnoozedUntil"))))
@@ -1620,6 +1815,7 @@ QVariantMap AlveusCore::toMap(const Fence &f, const QString &activity) const
     m.insert(QStringLiteral("blur"), f.blur);
     m.insert(QStringLiteral("view"), f.view);
     m.insert(QStringLiteral("iconSize"), f.iconSize);
+    m.insert(QStringLiteral("driveOptions"), f.driveOptions.toVariantMap());
 
     QVariantList tabs;
     if (!f.group.isEmpty()) {
@@ -1699,7 +1895,8 @@ void AlveusCore::updateFence(const QString &id, const QVariantMap &patch)
         QStringLiteral("rules"), QStringLiteral("title"), QStringLiteral("portal"), QStringLiteral("screen"),
         QStringLiteral("page"), QStringLiteral("activity"), QStringLiteral("x"), QStringLiteral("y"),
         QStringLiteral("w"), QStringLiteral("h"), QStringLiteral("collapsed"), QStringLiteral("color"),
-        QStringLiteral("opacity"), QStringLiteral("blur"), QStringLiteral("view"), QStringLiteral("iconSize")
+        QStringLiteral("opacity"), QStringLiteral("blur"), QStringLiteral("view"), QStringLiteral("iconSize"),
+        QStringLiteral("driveOptions")
     };
     bool needsUndo = false;
     for (auto it = patch.cbegin(); it != patch.cend(); ++it) {
@@ -1763,6 +1960,8 @@ void AlveusCore::updateFence(const QString &id, const QVariantMap &patch)
                 f.view = v.toString();
             } else if (k == QLatin1String("iconSize")) {
                 f.iconSize = std::clamp(v.toInt(), 0, 256);
+            } else if (k == QLatin1String("driveOptions")) {
+                f.driveOptions = QJsonObject::fromVariantMap(v.toMap());
             } else if (k == QLatin1String("screen")) {
                 f.screen = v.toInt();
                 f.hasOrphanGeometry = false;
@@ -2891,6 +3090,190 @@ void AlveusCore::setSetting(const QString &key, const QVariant &value)
     }
     scheduleSave();
     bump();
+}
+
+QVariantMap AlveusCore::driveDefaults() const
+{
+    return mergeDriveOptions(defaultDriveOptions(), m_settings.value(QStringLiteral("drives")).toObject()).toVariantMap();
+}
+
+QVariantMap AlveusCore::driveOptions(const QString &fenceId) const
+{
+    QJsonObject effective = QJsonObject::fromVariantMap(driveDefaults());
+    if (const Fence *f = findFence(fenceId)) {
+        effective = mergeDriveOptions(effective, f->driveOptions);
+    }
+    return effective.toVariantMap();
+}
+
+QVariantMap AlveusCore::driveOptionOverrides(const QString &fenceId) const
+{
+    const Fence *f = findFence(fenceId);
+    return f ? f->driveOptions.toVariantMap() : QVariantMap();
+}
+
+bool AlveusCore::setDriveDefault(const QString &key, const QVariant &value)
+{
+    QJsonObject options = m_settings.value(QStringLiteral("drives")).toObject();
+    if (!setDriveOptionValue(options, key, QJsonValue::fromVariant(value))
+        || !validDriveOptions(options, false)) {
+        return false;
+    }
+    if (options == m_settings.value(QStringLiteral("drives")).toObject()) {
+        return true;
+    }
+    m_settings.insert(QStringLiteral("drives"), options);
+    scheduleSave();
+    bump();
+    return true;
+}
+
+bool AlveusCore::resetDriveDefault(const QString &key)
+{
+    QJsonObject options = m_settings.value(QStringLiteral("drives")).toObject();
+    if (!removeDriveOptionValue(options, key)) {
+        return false;
+    }
+    if (options.isEmpty()) {
+        m_settings.remove(QStringLiteral("drives"));
+    } else {
+        m_settings.insert(QStringLiteral("drives"), options);
+    }
+    scheduleSave();
+    bump();
+    return true;
+}
+
+void AlveusCore::resetDriveDefaults()
+{
+    if (!m_settings.contains(QStringLiteral("drives"))) {
+        return;
+    }
+    m_settings.remove(QStringLiteral("drives"));
+    scheduleSave();
+    bump();
+}
+
+bool AlveusCore::setDriveOption(const QString &fenceId, const QString &key, const QVariant &value)
+{
+    const int index = indexOfFence(fenceId);
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")) {
+        return false;
+    }
+
+    QJsonObject options = m_fences.at(index).driveOptions;
+    if (!setDriveOptionValue(options, key, QJsonValue::fromVariant(value))
+        || !validDriveOptions(options, true)) {
+        return false;
+    }
+    if (options == m_fences.at(index).driveOptions) {
+        return true;
+    }
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), options.toVariantMap()}});
+    return true;
+}
+
+bool AlveusCore::resetDriveOption(const QString &fenceId, const QString &key)
+{
+    const int index = indexOfFence(fenceId);
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")) {
+        return false;
+    }
+
+    QJsonObject options = m_fences.at(index).driveOptions;
+    if (!removeDriveOptionValue(options, key)) {
+        return false;
+    }
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), options.toVariantMap()}});
+    return true;
+}
+
+void AlveusCore::resetDriveOptions(const QString &fenceId)
+{
+    const int index = indexOfFence(fenceId);
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")
+        || m_fences.at(index).driveOptions.isEmpty()) {
+        return;
+    }
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), QVariantMap()}});
+}
+
+QVariantList AlveusCore::driveVisibilityExceptions(const QString &fenceId) const
+{
+    const Fence *f = findFence(fenceId);
+    if (!f) {
+        return {};
+    }
+
+    const QJsonObject exceptions = f->driveOptions.value(QStringLiteral("visibilityExceptions")).toObject();
+    QStringList keys = exceptions.keys();
+    keys.sort();
+
+    const QVariantList knownDrives = m_drives->drives();
+    QVariantList out;
+    out.reserve(keys.size());
+    for (const QString &id : std::as_const(keys)) {
+        QVariantMap item = {
+            {QStringLiteral("id"), id},
+            {QStringLiteral("mode"), exceptions.value(id).toString()},
+            {QStringLiteral("name"), id},
+            {QStringLiteral("device"), QString()},
+            {QStringLiteral("connected"), false},
+        };
+        for (const QVariant &value : knownDrives) {
+            const QVariantMap drive = value.toMap();
+            if (drive.value(QStringLiteral("id")).toString() == id) {
+                item.insert(QStringLiteral("name"), drive.value(QStringLiteral("name")));
+                item.insert(QStringLiteral("device"), drive.value(QStringLiteral("device")));
+                item.insert(QStringLiteral("connected"), true);
+                break;
+            }
+        }
+        if (privacy()) {
+            item.insert(QStringLiteral("name"), QStringLiteral("••••"));
+            item.insert(QStringLiteral("device"), QString());
+        }
+        out << item;
+    }
+    return out;
+}
+
+bool AlveusCore::setDriveVisibilityException(const QString &fenceId, const QString &stableId, const QString &mode)
+{
+    const int index = indexOfFence(fenceId);
+    const QString id = stableId.trimmed();
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")
+        || id.isEmpty() || id.size() > 1024
+        || (mode != QLatin1String("hide") && mode != QLatin1String("show") && !mode.isEmpty())) {
+        return false;
+    }
+
+    QJsonObject options = m_fences.at(index).driveOptions;
+    QJsonObject exceptions = options.value(QStringLiteral("visibilityExceptions")).toObject();
+    if (mode.isEmpty()) {
+        if (!exceptions.contains(id)) {
+            return false;
+        }
+        exceptions.remove(id);
+    } else {
+        if (exceptions.value(id).toString() == mode) {
+            return true;
+        }
+        exceptions.insert(id, mode);
+    }
+
+    if (exceptions.isEmpty()) {
+        options.remove(QStringLiteral("visibilityExceptions"));
+    } else {
+        options.insert(QStringLiteral("visibilityExceptions"), exceptions);
+    }
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), options.toVariantMap()}});
+    return true;
+}
+
+QVariantList AlveusCore::visibleDrives(const QString &fenceId, bool showHiddenTemporarily) const
+{
+    return Alveus::filterDriveList(m_drives->drives(), driveOptions(fenceId), showHiddenTemporarily);
 }
 
 void AlveusCore::setHidden(bool hidden)

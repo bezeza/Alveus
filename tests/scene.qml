@@ -89,6 +89,12 @@ Item {
             Core.snoozeCleanup(7)
             Core.createPortal(0, "", 0, 0.30, 0.05, 0.34, 0.30, "Диски", "drives:")
         }
+        if (s === "drivesettings" || s === "driveglobal") {
+            Core.snoozeCleanup(7)
+            const id = Core.createPortal(0, "", 0, 0.30, 0.05, 0.34, 0.30, "Disks", "drives:")
+            if (s === "drivesettings") d.openFenceSettings(id)
+            else d.openSettings(5)
+        }
         scene.prepared = true
     }
 

@@ -16,13 +16,41 @@ ListView {
     id: view
 
     property var desk
+    property string fenceId
+    property bool showHiddenTemporarily: false
     property color textColor: Kirigami.Theme.textColor
+    readonly property int discoveredCount: Core.drives.length
 
     clip: true
     boundsBehavior: Flickable.StopAtBounds
     spacing: Kirigami.Units.smallSpacing
-    model: Core.drives
+    model: []
     QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
+
+    function refreshModel() {
+        model = Core.visibleDrives(fenceId, showHiddenTemporarily)
+    }
+
+    Component.onCompleted: refreshModel()
+    onFenceIdChanged: refreshModel()
+    onShowHiddenTemporarilyChanged: refreshModel()
+
+    Connections {
+        target: Core
+        function onChanged() { view.refreshModel() }
+        function onDrivesChanged() { view.refreshModel() }
+    }
+
+    header: RowLayout {
+        width: view.width
+        height: implicitHeight
+        spacing: Kirigami.Units.smallSpacing
+        QQC2.CheckBox {
+            text: i18n("Show hidden temporarily")
+            checked: view.showHiddenTemporarily
+            onToggled: view.showHiddenTemporarily = checked
+        }
+    }
 
     delegate: Item {
         id: row
@@ -182,6 +210,25 @@ ListView {
             }
             QQC2.MenuSeparator {}
             QQC2.MenuItem {
+                text: i18n("Hide this item")
+                icon.name: "view-hidden"
+                enabled: row.modelData.id !== ""
+                onTriggered: Core.setDriveVisibilityException(view.fenceId, row.modelData.id, "hide")
+            }
+            QQC2.MenuItem {
+                text: i18n("Always show this item")
+                icon.name: "view-visible"
+                enabled: row.modelData.id !== ""
+                onTriggered: Core.setDriveVisibilityException(view.fenceId, row.modelData.id, "show")
+            }
+            QQC2.MenuItem {
+                text: i18n("Use automatic visibility")
+                icon.name: "edit-undo"
+                enabled: row.modelData.id !== ""
+                onTriggered: Core.setDriveVisibilityException(view.fenceId, row.modelData.id, "")
+            }
+            QQC2.MenuSeparator {}
+            QQC2.MenuItem {
                 text: i18n("Refresh")
                 icon.name: "view-refresh"
                 onTriggered: Core.refreshDrives()
@@ -192,7 +239,9 @@ ListView {
     PlasmaComponents.Label {
         anchors.centerIn: parent
         visible: view.count === 0
-        text: i18n("Looking for drives…")
+        text: view.discoveredCount === 0
+              ? i18n("Looking for drives…")
+              : i18n("No drives match the current filters")
         color: view.textColor
         opacity: 0.6
     }

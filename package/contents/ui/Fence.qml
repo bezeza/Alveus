@@ -518,6 +518,7 @@ Item {
                 anchors.fill: parent
                 visible: fence.isDrives
                 desk: fence.desk
+                fenceId: fence.fid
                 textColor: fence.textColor
             }
 

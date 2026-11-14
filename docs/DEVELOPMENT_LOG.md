@@ -182,14 +182,14 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - No live PipeWire, KDE Connect, udisksctl, or Plasma session was exercised by
   CI; those remain manual desktop validation tasks.
 
-### In progress — Stage 1 / feat/drives-hierarchy-core
+### Implemented in open PR #35 — Stage 1 / feat/drives-hierarchy-core
 
-- Introduce a recursive drive model that preserves physical devices, nested
+- Add a recursive drive model that preserves physical devices, nested
   partitions/logical volumes, parent relationships, multiple mount points,
   filesystem metadata, model/vendor, transport, WWN, UUID, PARTUUID, and
   partition type metadata.
-- Expose the new hierarchy as the additive Core.driveDevices property while
-  retaining Core.drives and the existing flat QML view for compatibility.
+- Expose the hierarchy as the additive Core.driveDevices property while
+  retaining Core.drives and the existing flat QML API.
 - Request optional lsblk columns and fall back to the known baseline column
   set when an older util-linux version rejects them. Keep the existing bounded
   process timeout and last-valid-output behavior.
@@ -197,10 +197,40 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   removable media without USB transport metadata, stable-ID fallbacks,
   multiple mount points, the legacy singular mountpoint field, and small
   partitions.
-- The legacy flat helper retains its historical 2 GiB display cutoff until the
-  UI switches to the new hierarchy and configurable visibility filters. The
-  new hierarchy parser itself does not discard partitions by size.
-- Verification: local build and CTest have not been run because this execution
-  workspace has no Qt 6 development toolchain or repository checkout. GitHub
-  Actions verification is pending. No live KDE Plasma or physical-drive test
-  has been performed.
+- Standard CI passed build, core tests, QML lint, translation validation,
+  preview rendering, and whitespace checks:
+  [run 43614548395](https://github.com/bezeza/Alveus/actions/runs/43614548395).
+- Fedora RPM build, package payload verification, artifact upload, DNF install,
+  and DNF removal passed:
+  [run 43614548392](https://github.com/bezeza/Alveus/actions/runs/43614548392).
+- No live KDE Plasma session or physical-drive test has been performed.
+
+### In progress — Stage 2 / feat/drives-visibility-settings
+
+- Persist global drive defaults in the namespaced settings object and explicit
+  per-fence overrides in each drive fence. Merge inherited values without
+  discarding unknown future fields; validate known values when loading state.
+- Add visibility groups for internal, USB, other removable, network, virtual,
+  and optical devices.
+- Add metadata-based automatic filters for EFI, Microsoft Reserved, Windows
+  Recovery, Linux swap, and BIOS boot partitions. Do not hide partitions based
+  only on their display label.
+- Add partition modes (all, mounted, manually selected), optional minimum
+  partition size, and the unmounted-volume switch.
+- Add stable-ID per-fence hide/always-show exceptions, an automatic-visibility
+  reset, a temporary reveal switch, and a list of saved exceptions with
+  restore controls.
+- Remove the legacy 2 GiB discovery cutoff now that the visibility engine can
+  hide known service partitions without discarding them from discovery. Include
+  mounted /boot/efi and treat lsblk's [SWAP] marker as a non-mountpoint.
+- Add unit coverage for settings inheritance, persistence, schema validation,
+  metadata classification, filter precedence, and temporary reveal. Add
+  offscreen UI scenarios for both global and per-fence settings.
+- Standard CI passed build, core tests, translation validation, QML lint,
+  global/per-fence offscreen UI scenarios, preview rendering, and whitespace
+  checks:
+  [run 43617905829](https://github.com/bezeza/Alveus/actions/runs/43617905829).
+- Fedora RPM build, package payload verification, artifact upload, DNF install,
+  and DNF removal passed:
+  [run 43617905977](https://github.com/bezeza/Alveus/actions/runs/43617905977).
+- No live KDE Plasma session or physical storage hardware has been tested.
