@@ -19,8 +19,11 @@ Item {
     property int depth: 0
     property string displayMode: "large"
     property string informationLevel: "detailed"
+    property real cardWidth: -1
+    property bool showUsageBar: true
+    property bool expandPartitionsByDefault: false
     property color textColor: Kirigami.Theme.textColor
-    property bool expanded: depth === 0
+    property bool expanded: expandPartitionsByDefault
 
     readonly property var children: drive.children || []
     readonly property bool hasChildren: children.length > 0
@@ -64,7 +67,7 @@ Item {
         return i18n("Not mounted")
     }
 
-    width: parent ? parent.width : 0
+    width: cardWidth > 0 ? cardWidth : (parent ? parent.width : 0)
     implicitHeight: content.implicitHeight + (depth === 0 ? Kirigami.Units.smallSpacing * 2 : 0)
     height: implicitHeight
 
@@ -232,7 +235,7 @@ Item {
         }
 
         Rectangle {
-            visible: node.mounted && Number(node.drive.total) > 0
+            visible: node.showUsageBar && node.mounted && Number(node.drive.total) > 0
             Layout.fillWidth: true
             Layout.leftMargin: Kirigami.Units.gridUnit * 2 + Kirigami.Units.smallSpacing
             Layout.rightMargin: Kirigami.Units.smallSpacing
@@ -286,6 +289,8 @@ Item {
                     "depth": node.depth + 1,
                     "displayMode": node.displayMode,
                     "informationLevel": node.informationLevel,
+                    "showUsageBar": node.showUsageBar,
+                    "expandPartitionsByDefault": node.expandPartitionsByDefault,
                     "textColor": node.textColor
                 })
             }
