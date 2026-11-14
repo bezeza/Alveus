@@ -3378,7 +3378,8 @@ bool AlveusCore::driveExpanded(const QString &fenceId, const QString &stableId, 
 {
     const int index = indexOfFence(fenceId);
     const QString id = stableId.trimmed();
-    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:") || id.isEmpty()) {
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")
+        || id.isEmpty() || id.size() > 1024) {
         return defaultValue;
     }
     const QJsonObject expanded = m_fences.at(index).driveOptions.value(QStringLiteral("expandedDevices")).toObject();
@@ -3410,7 +3411,8 @@ bool AlveusCore::resetDriveExpanded(const QString &fenceId, const QString &stabl
 {
     const int index = indexOfFence(fenceId);
     const QString id = stableId.trimmed();
-    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:") || id.isEmpty()) {
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")
+        || id.isEmpty() || id.size() > 1024) {
         return false;
     }
 
