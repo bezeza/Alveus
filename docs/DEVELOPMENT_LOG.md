@@ -64,3 +64,14 @@ These changes are proposed in PR #21 and are not shipped until merged.
 
 - Added the new hicolor SVG icon to the RPM file manifest so the packaged
   Plasma metadata and KRunner icon name resolve after installation.
+
+- Add `--install` to `packaging/build-rpm.sh`: after a successful build it
+  locates the freshly produced RPM and installs that local package through
+  DNF, which resolves runtime dependencies. The default remains build-only;
+  no Plasma shell restart or desktop-layout change is performed.
+- Document build-and-install, build-only, and DNF removal commands in English,
+  Ukrainian, and Russian README sections. COPR remains a separate repository
+  distribution path and is not claimed to be published by this change.
+- CI exercises the RPM script's help and invalid-option paths. Full RPM build
+  and DNF installation require a Fedora environment and are not run on the
+  Ubuntu CI runner.

@@ -65,6 +65,18 @@ jobs:
             shellcheck --severity=error "${scripts[@]}"
           fi
 
+      - name: Check RPM build script command-line options
+        run: |
+          ./packaging/build-rpm.sh --help
+          set +e
+          ./packaging/build-rpm.sh --unknown-option
+          status=$?
+          set -e
+          if [[ "$status" -ne 2 ]]; then
+            echo "Expected unknown options to exit with status 2, got $status" >&2
+            exit 1
+          fi
+
       - name: Lint QML scene and effects
         shell: bash
         env:

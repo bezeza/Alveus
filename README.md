@@ -76,11 +76,22 @@ thumbnail generation retries after the source file changes.
 
 ## Install
 
-### Fedora (RPM)
+### Fedora (RPM / DNF)
+
+Build and install in one step. DNF resolves the package's runtime dependencies:
 
 ```sh
-./packaging/build-rpm.sh
-sudo dnf install ~/rpmbuild/RPMS/x86_64/alveus-0.03.1-*.rpm
+./packaging/build-rpm.sh --install
+```
+
+To build without installing, run `./packaging/build-rpm.sh`. The script prints
+the exact `sudo dnf install /path/to/alveus-….rpm` command for the package it
+just built. DNF asks for confirmation before installing.
+
+Uninstall with:
+
+```sh
+sudo dnf remove alveus
 ```
 
 or from COPR once it is published (see *Publishing* below):
@@ -171,8 +182,10 @@ plasma-desktop (LGPL-2.0-or-later).
 з'явиться паркан. Нові файли самі розкладаються за типом, назвою, сайтом чи датою.
 Файли нікуди не переміщуються: вони лишаються в теці «Стільниця».
 
-**Встановлення на Fedora:** `./packaging/build-rpm.sh`, потім
-`sudo dnf install ~/rpmbuild/RPMS/x86_64/alveus-0.03.1-*.rpm`.
+**Встановлення на Fedora:** `./packaging/build-rpm.sh --install` — скрипт
+збирає RPM і встановлює його через DNF із розв'язанням залежностей.
+Для окремої збірки без встановлення запустіть `./packaging/build-rpm.sh`;
+скрипт покаже точну команду DNF. Видалення: `sudo dnf remove alveus`.
 На інших дистрибутивах: `./install.sh`.
 
 **Увімкнути:** перезайдіть у систему, правий клік на столі →
@@ -206,6 +219,6 @@ plasma-desktop (LGPL-2.0-or-later).
 - режим конфиденциальности при демонстрации экрана;
 - отмена большинства действий и безопасное перемещение файлов в архив.
 
-**Установка:** на Fedora соберите RPM через `./packaging/build-rpm.sh`, затем установите пакет. На других дистрибутивах KDE Plasma 6 используйте `./install.sh`. После установки выберите раскладку **Alveus** в настройках рабочего стола.
+**Установка на Fedora:** выполните `./packaging/build-rpm.sh --install`. Скрипт соберёт RPM и установит его через DNF с автоматическим разрешением зависимостей. Для сборки без установки используйте `./packaging/build-rpm.sh`; скрипт выведет точную команду DNF. Удаление: `sudo dnf remove alveus`. На других дистрибутивах KDE Plasma 6 используйте `./install.sh`. После установки выберите раскладку **Alveus** в настройках рабочего стола.
 
 Интерфейс использует английский как исходный язык, а переводы выбираются автоматически по языку системы. Сейчас доступны украинский и русский переводы.
