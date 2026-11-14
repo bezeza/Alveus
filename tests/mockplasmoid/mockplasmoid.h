@@ -6,6 +6,25 @@
 #include <QQmlListProperty>
 #include <QRectF>
 
+class MockCorona : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool editMode READ editMode WRITE setEditMode NOTIFY editModeChanged)
+public:
+    static MockCorona *instance();
+    bool editMode() const { return m_editMode; }
+    void setEditMode(bool value)
+    {
+        if (m_editMode == value) return;
+        m_editMode = value;
+        Q_EMIT editModeChanged();
+    }
+Q_SIGNALS:
+    void editModeChanged();
+private:
+    bool m_editMode = false;
+};
+
 class MockApplet : public QObject
 {
     Q_OBJECT
@@ -18,6 +37,7 @@ class MockApplet : public QObject
     Q_PROPERTY(bool immutable READ immutable CONSTANT)
     Q_PROPERTY(bool isContainment READ isContainment CONSTANT)
     Q_PROPERTY(QObject *containment READ containment CONSTANT)
+    Q_PROPERTY(QObject *corona READ corona CONSTANT)
 public:
     static MockApplet *instance();
     int screen() const;
@@ -28,6 +48,7 @@ public:
     bool immutable() const { return false; }
     bool isContainment() const { return true; }
     QObject *containment() { return this; }
+    QObject *corona() const;
     QQmlListProperty<QObject> contextualActions();
     QList<QObject *> m_actions;
 Q_SIGNALS:

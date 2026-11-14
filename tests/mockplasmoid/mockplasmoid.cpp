@@ -1,10 +1,18 @@
 #include "mockplasmoid.h"
 
+MockCorona *MockCorona::instance()
+{
+    static MockCorona *c = new MockCorona;
+    return c;
+}
+
 MockApplet *MockApplet::instance()
 {
     static MockApplet *a = new MockApplet;
     return a;
 }
+
+QObject *MockApplet::corona() const { return MockCorona::instance(); }
 int MockApplet::screen() const { return qEnvironmentVariableIntValue("ALVEUS_MOCK_SCREEN"); }
 QString MockApplet::activity() const { return qEnvironmentVariable("ALVEUS_MOCK_ACTIVITY"); }
 QString MockApplet::activityName() const { return qEnvironmentVariable("ALVEUS_MOCK_ACTIVITY_NAME"); }

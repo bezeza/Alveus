@@ -36,9 +36,9 @@ QML lint, and whitespace validation. The combined changes are subject to a new
 CI run on the current PR head. Nothing in this section is shipped until PR #19
 is merged.
 
-### In progress — PR #20: branding and localization
+### In progress — PR #21: branding and localization
 
-- Add a dedicated Alveus honeycomb app icon in SVG and PNG formats; use the
+- Add a dedicated Alveus honeycomb app icon in SVG format; use the
   named icon in Plasma metadata, KRunner integration, and QML settings.
 - Add a complete Russian Qt/KDE translation catalog. English remains the
   source language in QML, and Ukrainian remains supported.
@@ -47,8 +47,13 @@ is merged.
   upload them as a GitHub Actions artifact; publish the verified previews in
   the repository README after the CI run.
 
-These changes are proposed in PR #20 and are not shipped until merged.
+These changes are proposed in PR #21 and are not shipped until merged.
 
 - The first CI preview exposed a missing Plasma Button mock and a blank render.
   Added the missing test component and strict QML-warning handling so CI refuses
   to publish screenshots when the UI did not load cleanly.
+
+- The second preview run exposed missing test-only KDE drag-and-drop and
+  containment-layout modules, plus inline-component context behavior. Added
+  lightweight mocks and bound inline components so the preview exercises the
+  actual Alveus desktop UI instead of saving an empty wallpaper.
