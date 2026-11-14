@@ -369,6 +369,13 @@ Item {
             enabled: node.drive.id !== ""
             onTriggered: Core.setDriveVisibilityException(node.fenceId, node.drive.id, "")
         }
+        QQC2.MenuItem {
+            visible: node.hasChildren
+            enabled: node.drive.id !== ""
+            text: i18n("Use default expansion")
+            icon.name: "edit-undo"
+            onTriggered: Core.resetDriveExpanded(node.fenceId, node.drive.id)
+        }
         QQC2.MenuSeparator {}
         QQC2.MenuItem {
             text: i18n("Refresh")
