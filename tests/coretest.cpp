@@ -1648,7 +1648,7 @@ private Q_SLOTS:
         QVERIFY(!defaultGroups.value(QStringLiteral("virtual")).toBool());
         QCOMPARE(defaults.value(QStringLiteral("partitionMode")).toString(), QStringLiteral("all"));
         QVERIFY(defaults.value(QStringLiteral("hideEfi")).toBool());
-        QCOMPARE(defaults.value(QStringLiteral("displayMode")).toString(), QStringLiteral("medium"));
+        QCOMPARE(defaults.value(QStringLiteral("displayMode")).toString(), QStringLiteral("large"));
         QVERIFY(defaults.value(QStringLiteral("separateUsb")).toBool());
         QCOMPARE(defaults.value(QStringLiteral("informationLevel")).toString(), QStringLiteral("detailed"));
 
@@ -1717,7 +1717,7 @@ private Q_SLOTS:
         QVERIFY(reloaded.driveOptionOverrides(fenceId).isEmpty());
         reloaded.resetDriveDefaults();
         QVERIFY(reloaded.driveDefaults().value(QStringLiteral("groups")).toMap().value(QStringLiteral("usb")).toBool());
-        QCOMPARE(reloaded.driveDefaults().value(QStringLiteral("displayMode")).toString(), QStringLiteral("medium"));
+        QCOMPARE(reloaded.driveDefaults().value(QStringLiteral("displayMode")).toString(), QStringLiteral("large"));
         QVERIFY(reloaded.driveDefaults().value(QStringLiteral("separateUsb")).toBool());
         QCOMPARE(reloaded.driveDefaults().value(QStringLiteral("informationLevel")).toString(), QStringLiteral("detailed"));
 
