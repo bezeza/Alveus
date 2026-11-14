@@ -78,7 +78,7 @@ bool boolValue(const QJsonValue &v)
     }
     if (v.isString()) {
         const QString value = v.toString().trimmed();
-        return value == QLatin1String("1") || value.compare(QLatin1String("true"), Qt::CaseInsensitive) == 0;
+        return value == QLatin1String("1") || value.compare(QStringLiteral("true"), Qt::CaseInsensitive) == 0;
     }
     return false;
 }
