@@ -227,6 +227,9 @@ bool isUserMount(const QString &mp, const QString &fsType, const QString &device
     if (mp == QLatin1String("/")) {
         return true; // shown as the system disk
     }
+    if (mp == QLatin1String("/boot/efi")) {
+        return true; // the visibility engine decides whether the EFI partition is shown
+    }
     static const QStringList hidden = {QStringLiteral("/proc"), QStringLiteral("/sys"), QStringLiteral("/dev"),
                                        QStringLiteral("/boot"), QStringLiteral("/snap"), QStringLiteral("/var"),
                                        QStringLiteral("/usr"), QStringLiteral("/tmp"), QStringLiteral("/opt"),
@@ -307,46 +310,59 @@ QList<Drive> unmountedFromLsblk(const QByteArray &json)
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
         return out;
     }
+
     const QJsonArray devices = document.object().value(QStringLiteral("blockdevices")).toArray();
-    walk(devices, [&out](const QJsonObject &o) {
-        const QString fs = o.value(QStringLiteral("fstype")).toString();
-        const QString type = o.value(QStringLiteral("type")).toString();
-        if (!mountableFs().contains(fs) || !mountpointsOf(o).isEmpty()) {
-            return;
+    std::function<void(const QJsonArray &, const Drive *)> visit;
+    visit = [&out, &visit](const QJsonArray &nodes, const Drive *parent) {
+        for (const QJsonValue &value : nodes) {
+            if (!value.isObject()) {
+                continue;
+            }
+            const QJsonObject o = value.toObject();
+            Drive d;
+            d.device = devicePathOf(o);
+            d.label = o.value(QStringLiteral("label")).toString();
+            d.fsType = o.value(QStringLiteral("fstype")).toString().trimmed().toLower();
+            d.type = o.value(QStringLiteral("type")).toString().trimmed().toLower();
+            d.total = num(o.value(QStringLiteral("size")));
+            d.hotplug = boolValue(o.value(QStringLiteral("hotplug"))) || (parent && parent->hotplug);
+            d.removable = boolValue(o.value(QStringLiteral("rm"))) || d.hotplug || (parent && parent->removable);
+            d.transport = o.value(QStringLiteral("tran")).toString().trimmed().toLower();
+            if (d.transport.isEmpty() && parent) {
+                d.transport = parent->transport;
+            }
+            d.usb = d.transport == QLatin1String("usb") || (parent && parent->usb);
+            d.model = o.value(QStringLiteral("model")).toString().trimmed();
+            d.vendor = o.value(QStringLiteral("vendor")).toString().trimmed();
+            d.uuid = o.value(QStringLiteral("uuid")).toString().trimmed();
+            d.partUuid = o.value(QStringLiteral("partuuid")).toString().trimmed();
+            d.partType = o.value(QStringLiteral("parttype")).toString().trimmed();
+            d.partLabel = o.value(QStringLiteral("partlabel")).toString().trimmed();
+            d.readOnly = boolValue(o.value(QStringLiteral("ro")));
+            if (parent) {
+                d.parentId = parent->id;
+                d.parentDevice = parent->device;
+            } else {
+                const QString parentName = o.value(QStringLiteral("pkname")).toString().trimmed();
+                d.parentDevice = parentName.isEmpty() ? QString()
+                    : (parentName.startsWith(QLatin1Char('/')) ? parentName : QStringLiteral("/dev/") + parentName);
+            }
+            const QString parentIdentity = parent ? parent->id : d.parentDevice;
+            d.id = stableIdFor(d.type, d.device, o.value(QStringLiteral("wwn")).toString(),
+                               d.partUuid, d.uuid, parentIdentity);
+
+            const bool supportedType = d.type == QLatin1String("part") || d.type == QLatin1String("disk")
+                || d.type == QLatin1String("crypt") || d.type == QLatin1String("lvm")
+                || d.type == QLatin1String("raid") || d.type.startsWith(QLatin1String("raid"))
+                || d.type == QLatin1String("loop") || d.type == QLatin1String("rom");
+            if (supportedType && mountableFs().contains(d.fsType) && mountpointsOf(o).isEmpty()) {
+                out << d;
+            }
+
+            visit(o.value(QStringLiteral("children")).toArray(), &d);
         }
-        if (type != QLatin1String("part") && type != QLatin1String("disk") && type != QLatin1String("crypt")) {
-            return;
-        }
-        const qint64 size = num(o.value(QStringLiteral("size")));
-        // Preserve the legacy flat view's historical helper-partition cutoff.
-        // The new hierarchy deliberately has no size-based discovery filter.
-        if (size > 0 && size < 2LL * 1024 * 1024 * 1024) {
-            return;
-        }
-        Drive d;
-        d.device = devicePathOf(o);
-        d.label = o.value(QStringLiteral("label")).toString();
-        d.fsType = fs;
-        d.type = type;
-        d.total = size;
-        d.removable = boolValue(o.value(QStringLiteral("rm"))) || boolValue(o.value(QStringLiteral("hotplug")));
-        d.hotplug = boolValue(o.value(QStringLiteral("hotplug")));
-        d.transport = o.value(QStringLiteral("tran")).toString().trimmed().toLower();
-        d.usb = d.transport == QLatin1String("usb");
-        d.model = o.value(QStringLiteral("model")).toString().trimmed();
-        d.vendor = o.value(QStringLiteral("vendor")).toString().trimmed();
-        d.uuid = o.value(QStringLiteral("uuid")).toString().trimmed();
-        d.partUuid = o.value(QStringLiteral("partuuid")).toString().trimmed();
-        d.partType = o.value(QStringLiteral("parttype")).toString().trimmed();
-        d.partLabel = o.value(QStringLiteral("partlabel")).toString().trimmed();
-        d.readOnly = boolValue(o.value(QStringLiteral("ro")));
-        const QString parentName = o.value(QStringLiteral("pkname")).toString().trimmed();
-        d.parentDevice = parentName.isEmpty() ? QString() : (parentName.startsWith(QLatin1Char('/'))
-                                                                  ? parentName : QStringLiteral("/dev/") + parentName);
-        d.id = stableIdFor(type, d.device, o.value(QStringLiteral("wwn")).toString(),
-                           d.partUuid, d.uuid, d.parentDevice);
-        out << d;
-    });
+    };
+    visit(devices, nullptr);
     return out;
 }
 
@@ -391,6 +407,32 @@ QList<Drive> driveHierarchyFromLsblk(const QByteArray &json)
     return out;
 }
 
+
+QString servicePartitionKind(const Drive &drive)
+{
+    QString guid = drive.partType.trimmed().toLower();
+    guid.remove(QLatin1Char('{'));
+    guid.remove(QLatin1Char('}'));
+
+    if (guid == QLatin1String("c12a7328-f81f-11d2-ba4b-00a0c93ec93b")) {
+        return QStringLiteral("efi");
+    }
+    if (guid == QLatin1String("e3c9e316-0b5c-4db8-817d-f92df00215ae")) {
+        return QStringLiteral("microsoftReserved");
+    }
+    if (guid == QLatin1String("de94bba4-06d1-4d40-a16a-bfd50179d6ac")) {
+        return QStringLiteral("recovery");
+    }
+    if (guid == QLatin1String("0657fd6d-a4ab-43c4-84e5-0933c84b4f4f")
+        || drive.fsType.compare(QLatin1String("swap"), Qt::CaseInsensitive) == 0) {
+        return QStringLiteral("swap");
+    }
+    if (guid == QLatin1String("21686148-6449-6e6f-744e-656564454649")) {
+        return QStringLiteral("biosBoot");
+    }
+    return QString();
+}
+
 QVariantMap toMap(const Drive &d)
 {
     QVariantMap m;
@@ -414,6 +456,7 @@ QVariantMap toMap(const Drive &d)
     m.insert(QStringLiteral("partUuid"), d.partUuid);
     m.insert(QStringLiteral("partType"), d.partType);
     m.insert(QStringLiteral("partLabel"), d.partLabel);
+    m.insert(QStringLiteral("serviceKind"), servicePartitionKind(d));
     m.insert(QStringLiteral("total"), double(d.total));
     m.insert(QStringLiteral("free"), double(d.free));
     m.insert(QStringLiteral("readOnly"), d.readOnly);
@@ -457,6 +500,101 @@ QVariantMap toMap(const Drive &d)
     m.insert(QStringLiteral("children"), children);
     m.insert(QStringLiteral("childCount"), children.size());
     return m;
+}
+
+
+QVariantList filterDriveList(const QVariantList &drives, const QVariantMap &options, bool showHiddenTemporarily)
+{
+    if (showHiddenTemporarily) {
+        return drives;
+    }
+
+    const QVariantMap groups = options.value(QStringLiteral("groups")).toMap();
+    const QVariantMap exceptions = options.value(QStringLiteral("visibilityExceptions")).toMap();
+    const QString partitionMode = options.value(QStringLiteral("partitionMode"), QStringLiteral("all")).toString();
+    const bool showUnmounted = options.value(QStringLiteral("showUnmounted"), true).toBool();
+    const qint64 minimumBytes = qMax<qint64>(0, options.value(QStringLiteral("minimumPartitionSizeMiB"), 0).toLongLong()) * 1024 * 1024;
+
+    const auto groupEnabled = [&groups](const QString &group, bool fallback) {
+        return groups.contains(group) ? groups.value(group).toBool() : fallback;
+    };
+    const auto groupForDrive = [](const QVariantMap &drive) {
+        const QString type = drive.value(QStringLiteral("type")).toString().toLower();
+        if (drive.value(QStringLiteral("network")).toBool()) {
+            return QStringLiteral("network");
+        }
+        if (drive.value(QStringLiteral("usb")).toBool()) {
+            return QStringLiteral("usb");
+        }
+        if (type == QLatin1String("rom")) {
+            return QStringLiteral("optical");
+        }
+        if (drive.value(QStringLiteral("removable")).toBool() || drive.value(QStringLiteral("hotplug")).toBool()) {
+            return QStringLiteral("external");
+        }
+        if (type == QLatin1String("loop") || type == QLatin1String("lvm") || type == QLatin1String("crypt")
+            || type == QLatin1String("raid") || type.startsWith(QLatin1String("raid"))
+            || type == QLatin1String("md") || type == QLatin1String("mpath") || type == QLatin1String("zram")) {
+            return QStringLiteral("virtual");
+        }
+        return QStringLiteral("internal");
+    };
+
+    QVariantList out;
+    out.reserve(drives.size());
+    for (const QVariant &value : drives) {
+        const QVariantMap drive = value.toMap();
+        const QString id = drive.value(QStringLiteral("id")).toString();
+        const QString exception = exceptions.value(id).toString();
+        if (exception == QLatin1String("hide")) {
+            continue;
+        }
+
+        const QString group = groupForDrive(drive);
+        const bool defaultEnabled = group != QLatin1String("virtual");
+        if (!groupEnabled(group, defaultEnabled)) {
+            continue;
+        }
+        // "Always show" bypasses automatic filters, but not a disabled group.
+        if (exception == QLatin1String("show")) {
+            out << value;
+            continue;
+        }
+
+        const bool mounted = drive.value(QStringLiteral("mounted")).toBool();
+        if (!showUnmounted && !mounted) {
+            continue;
+        }
+
+        const QString type = drive.value(QStringLiteral("type")).toString().toLower();
+        if (type == QLatin1String("part")) {
+            if (partitionMode == QLatin1String("mounted") && !mounted) {
+                continue;
+            }
+            if (partitionMode == QLatin1String("selected")) {
+                continue;
+            }
+            if (minimumBytes > 0) {
+                const qint64 size = drive.value(QStringLiteral("total")).toLongLong();
+                if (size > 0 && size < minimumBytes) {
+                    continue;
+                }
+            }
+        }
+
+        const QString serviceKind = drive.value(QStringLiteral("serviceKind")).toString();
+        const QString filterKey = serviceKind == QLatin1String("efi") ? QStringLiteral("hideEfi")
+            : serviceKind == QLatin1String("microsoftReserved") ? QStringLiteral("hideMicrosoftReserved")
+            : serviceKind == QLatin1String("recovery") ? QStringLiteral("hideRecovery")
+            : serviceKind == QLatin1String("swap") ? QStringLiteral("hideSwap")
+            : serviceKind == QLatin1String("biosBoot") ? QStringLiteral("hideBiosBoot") : QString();
+        if (!filterKey.isEmpty() && options.value(filterKey, true).toBool()) {
+            continue;
+        }
+
+        out << value;
+    }
+    return out;
 }
 
 } // namespace Alveus
@@ -605,10 +743,45 @@ void DriveWatcher::rebuild()
 QVariantList DriveWatcher::buildList() const
 {
     QList<Alveus::Drive> mounted = Alveus::fromMounts(QStorageInfo::mountedVolumes());
+    const QList<Alveus::Drive> hierarchy = Alveus::driveHierarchyFromLsblk(m_lsblkJson);
     const QHash<QString, bool> removable = Alveus::removableFromLsblk(m_lsblkJson);
+
+    std::function<const Alveus::Drive *(const QList<Alveus::Drive> &, const QString &)> findDevice;
+    findDevice = [&findDevice](const QList<Alveus::Drive> &items, const QString &path) -> const Alveus::Drive * {
+        for (const Alveus::Drive &item : items) {
+            if (item.device == path) {
+                return &item;
+            }
+            if (const Alveus::Drive *child = findDevice(item.children, path)) {
+                return child;
+            }
+        }
+        return nullptr;
+    };
+
     QVariantList list;
     for (Alveus::Drive &d : mounted) {
-        d.removable = removable.value(d.device, d.mountPoint.startsWith(QLatin1String("/run/media/")));
+        if (const Alveus::Drive *metadata = findDevice(hierarchy, d.device)) {
+            d.id = metadata->id;
+            d.parentId = metadata->parentId;
+            d.parentDevice = metadata->parentDevice;
+            d.label = d.label.isEmpty() ? metadata->label : d.label;
+            d.type = metadata->type;
+            d.model = metadata->model;
+            d.vendor = metadata->vendor;
+            d.transport = metadata->transport;
+            d.uuid = metadata->uuid;
+            d.partUuid = metadata->partUuid;
+            d.partType = metadata->partType;
+            d.partLabel = metadata->partLabel;
+            d.removable = metadata->removable;
+            d.hotplug = metadata->hotplug;
+            d.usb = metadata->usb;
+            d.physical = metadata->physical;
+            d.network = d.network || metadata->network;
+        } else {
+            d.removable = removable.value(d.device, d.mountPoint.startsWith(QLatin1String("/run/media/")));
+        }
         list << Alveus::toMap(d);
     }
     for (const Alveus::Drive &d : Alveus::unmountedFromLsblk(m_lsblkJson)) {
