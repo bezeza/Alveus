@@ -181,3 +181,14 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   [run 43606016299](https://github.com/bezeza/Alveus/actions/runs/43606016299).
 - No live PipeWire, KDE Connect, udisksctl, or Plasma session was exercised by
   CI; those remain manual desktop validation tasks.
+
+### In progress — allow empty fence titles
+
+- Make an empty fence title a valid intentional value in the visible title,
+  tab label, and move/merge menus; remove the automatic "Untitled fence"
+  replacement text.
+- Add an optional-field hint to the fence settings name field.
+- Add core persistence coverage and a dedicated offscreen UI-harness assertion
+  that an empty title remains empty after rendering.
+- Verification is pending current-head CI. No live KDE Plasma session has been
+  used for this change.
