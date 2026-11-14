@@ -75,11 +75,15 @@ static QString writeExecutable(const QString &directory, const QString &name, co
 {
     QDir().mkpath(directory);
     const QString path = directory + QLatin1Char('/') + name;
-    touch(path, contents);
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return QString();
+    }
+    file.write(contents);
+    file.close();
     const QFileDevice::Permissions permissions = QFile::permissions(path)
         | QFileDevice::ExeOwner | QFileDevice::ExeGroup | QFileDevice::ExeOther;
-    QVERIFY(QFile::setPermissions(path, permissions));
-    return path;
+    return QFile::setPermissions(path, permissions) ? path : QString();
 }
 
 class ScopedPath
