@@ -278,5 +278,14 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - Reject invalid values at the settings/fence/placement/snapshot entry points
   so the application does not write state that its loader would later reject.
 - Preserve the existing v1 migration path and corrupt-store backup behavior.
-- Verification is pending on this branch. No live KDE Plasma session was used;
-  manual desktop validation remains a separate release gate.
+- Standard CI passed on the implementation/test head: Qt build, all 7 CTest
+  targets, translation validation, shell checks, QML lint, UI preview, and
+  whitespace checks:
+  [run 43635841468](https://github.com/bezeza/Alveus/actions/runs/43635841468).
+- Fedora RPM build, package payload verification, artifact upload, DNF install,
+  and DNF removal passed:
+  [run 43635841493](https://github.com/bezeza/Alveus/actions/runs/43635841493).
+- The first standard CI attempt found a missing temporary directory in one
+  regression fixture. The fixture setup was corrected before the passing run.
+- No live KDE Plasma session was used; manual desktop validation remains a
+  separate release gate.
