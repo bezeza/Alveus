@@ -1592,6 +1592,7 @@ private Q_SLOTS:
         const QString id = core.createPortal(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Диски"), QStringLiteral("drives:"));
         QCOMPARE(core.fence(id).value(QStringLiteral("portal")).toString(), QStringLiteral("drives:"));
         QTRY_VERIFY_WITH_TIMEOUT(!core.drives().isEmpty(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!core.driveDevices().isEmpty(), 5000);
     }
 
     void driveHierarchyParserHandlesDevices()
