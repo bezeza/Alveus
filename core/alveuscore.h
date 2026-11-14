@@ -195,6 +195,7 @@ public:
     Q_INVOKABLE bool resetDriveExpanded(const QString &fenceId, const QString &stableId);
     Q_INVOKABLE QVariantList visibleDrives(const QString &fenceId, bool showHiddenTemporarily = false) const;
     Q_INVOKABLE QVariantList visibleDriveDevices(const QString &fenceId, bool showHiddenTemporarily = false) const;
+    Q_INVOKABLE QVariantMap driveSummary(const QString &fenceId, bool showHiddenTemporarily = false) const;
 
     // ---- integrations --------------------------------------------------------
     Q_INVOKABLE QString thumbnail(const QString &path); // "" while not ready
