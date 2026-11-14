@@ -225,10 +225,6 @@ msgstr "Поиск дисков…"
 msgid "Back"
 msgstr "Назад"
 
-#: package/contents/ui/Fence.qml:249 package/contents/ui/Fence.qml:275
-#: package/contents/ui/Fence.qml:674 package/contents/ui/FileIcon.qml:380
-msgid "Untitled fence"
-msgstr "Без названия"
 
 #: package/contents/ui/Fence.qml:353
 msgid "Merged into tabs"
@@ -337,6 +333,10 @@ msgstr "Настройки ограждения"
 #: package/contents/ui/FenceSettings.qml:87
 msgid "Name"
 msgstr "Название"
+
+#: package/contents/ui/FenceSettings.qml
+msgid "Optional — leave blank"
+msgstr "Необязательно — оставьте пустым"
 
 #: package/contents/ui/FenceSettings.qml:95
 msgid "What goes into this fence"

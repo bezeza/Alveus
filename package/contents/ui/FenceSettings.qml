@@ -88,6 +88,7 @@ QQC2.Popup {
             QQC2.TextField {
                 id: titleField
                 Layout.fillWidth: true
+                placeholderText: i18n("Optional — leave blank")
                 onAccepted: dialog.save()
             }
 

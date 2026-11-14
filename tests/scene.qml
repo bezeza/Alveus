@@ -12,6 +12,7 @@ Item {
 
     readonly property string step: Qt.application.arguments.length > 6 ? Qt.application.arguments[6] : "welcome"
     property bool prepared: false
+    property string blankFenceId: ""
 
     // The Loader-created desktop component inherits this scene context.
     function i18n(s, a, b, c) {
@@ -50,6 +51,7 @@ Item {
 
     Loader {
         id: desk
+        objectName: "desktopLoader"
         anchors.fill: parent
         source: Qt.resolvedUrl("../package/contents/ui/main.qml")
         onLoaded: Qt.callLater(scene.prepare)
@@ -88,6 +90,9 @@ Item {
         if (s === "drives") {
             Core.snoozeCleanup(7)
             Core.createPortal(0, "", 0, 0.30, 0.05, 0.34, 0.30, "Диски", "drives:")
+        }
+        if (s === "blanktitle") {
+            blankFenceId = d.createFenceAt(Qt.rect(d.width * 0.30, d.height * 0.10, d.width * 0.34, d.height * 0.30), "", "", false)
         }
         scene.prepared = true
     }

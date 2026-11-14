@@ -16,6 +16,7 @@ import "utils.js" as Utils
 
 Item {
     id: fence
+    objectName: "fence-" + fid
 
     // from the fence model
     property string fid
@@ -252,10 +253,11 @@ Item {
 
                 // a single title, or tabs
                 PlasmaComponents.Label {
+                    objectName: "fence-title-" + fence.fid
                     visible: !titleEdit.visible && fence.tabs.length === 0
                     text: fence.isPortal && fence.browsePath !== fence.portal
                           ? Core.folderName(fence.browsePath)
-                          : (fence.title !== "" ? fence.title : i18n("Untitled fence"))
+                          : fence.title
                     font.bold: true
                     color: fence.textColor
                     elide: Text.ElideRight
@@ -279,9 +281,10 @@ Item {
                             color: modelData.active ? Qt.rgba(1, 1, 1, 0.18) : (tabMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent")
                             PlasmaComponents.Label {
                                 id: tabLabel
+                                objectName: "fence-tab-title-" + modelData.id
                                 anchors.centerIn: parent
                                 width: Math.min(implicitWidth, parent.width - 8)
-                                text: modelData.title !== "" ? modelData.title : i18n("Untitled fence")
+                                text: modelData.title
                                 font.bold: modelData.active
                                 color: fence.textColor
                                 elide: Text.ElideRight
@@ -680,7 +683,7 @@ Item {
                 model: fence.desk ? fence.desk.fenceChoices : []
                 delegate: QQC2.MenuItem {
                     required property var modelData
-                    text: modelData.title !== "" ? modelData.title : i18n("Untitled fence")
+                    text: modelData.title
                     visible: modelData.fid !== fence.fid && (fence.group === "" || modelData.group !== fence.group)
                     height: visible ? implicitHeight : 0
                     onTriggered: Core.mergeFences(modelData.fid, fence.fid)

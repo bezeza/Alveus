@@ -270,10 +270,6 @@ msgstr "Шукаю диски…"
 msgid "Back"
 msgstr "Назад"
 
-#: package/contents/ui/Fence.qml:249 package/contents/ui/Fence.qml:275
-#: package/contents/ui/Fence.qml:674 package/contents/ui/FileIcon.qml:380
-msgid "Untitled fence"
-msgstr "Паркан без назви"
 
 #: package/contents/ui/Fence.qml:353
 msgid "Merged into tabs"
@@ -382,6 +378,10 @@ msgstr "Налаштування паркану"
 #: package/contents/ui/FenceSettings.qml:87
 msgid "Name"
 msgstr "Назва"
+
+#: package/contents/ui/FenceSettings.qml
+msgid "Optional — leave blank"
+msgstr "Необов’язково — залиште порожнім"
 
 #: package/contents/ui/FenceSettings.qml:95
 msgid "What goes into this fence"

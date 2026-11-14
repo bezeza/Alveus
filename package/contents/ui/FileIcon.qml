@@ -377,7 +377,7 @@ Item {
                 model: cell.desk ? cell.desk.fenceChoices : []
                 delegate: QQC2.MenuItem {
                     required property var modelData
-                    text: modelData.title !== "" ? modelData.title : i18n("Untitled fence")
+                    text: modelData.title
                     enabled: modelData.fid !== cell.fenceId
                     onTriggered: Core.assignFiles(cell.desk.selectedNames(), modelData.fid)
                 }

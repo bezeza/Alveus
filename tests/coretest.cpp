@@ -643,6 +643,22 @@ private Q_SLOTS:
         QCOMPARE(core.snapshots().size(), 1);
     }
 
+    void emptyFenceTitleIsPreservedAcrossSaveReload()
+    {
+        QString id;
+        {
+            AlveusCore core(desk(), store());
+            id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Temporary"), QString());
+            core.updateFence(id, {{QStringLiteral("title"), QString()}});
+            QCOMPARE(core.fence(id).value(QStringLiteral("title")).toString(), QString());
+            core.saveNow();
+        }
+
+        AlveusCore reloaded(desk(), store());
+        QVERIFY(!reloaded.fence(id).isEmpty());
+        QCOMPARE(reloaded.fence(id).value(QStringLiteral("title")).toString(), QString());
+    }
+
     void corruptSettingsAreBackedUpBeforeReplacement()
     {
         QDir().mkpath(QFileInfo(store()).absolutePath());
