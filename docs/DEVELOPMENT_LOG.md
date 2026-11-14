@@ -234,3 +234,26 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   and DNF removal passed:
   [run 43617905977](https://github.com/bezeza/Alveus/actions/runs/43617905977).
 - No live KDE Plasma session or physical storage hardware has been tested.
+
+
+### In progress — Stage 3 / feat/drives-hierarchical-ui
+
+- Replace the flat drive list in the fence with a recursive physical-device
+  hierarchy. Physical disks are parent cards; partitions and logical volumes
+  can be expanded and collapsed.
+- Filter the hierarchy using the Stage 2 per-fence/global rules. Preserve a
+  parent device when it has a visible mounted descendant, and update child
+  counts after filtering.
+- Read lsblk's ROTA metadata and expose whether rotation is known. Label NVMe,
+  USB, SSD, and HDD media only when the corresponding transport/rotation data
+  supports the classification; do not guess when ROTA is unavailable.
+- Show model/vendor, media type, capacity, mount points, filesystem, free
+  space, read-only state, and usage bars. Keep open, mount/unmount, properties,
+  terminal, drag/drop, hide, always-show, and automatic-visibility actions
+  available on the relevant volume rows.
+- Add compact, medium, and large card modes as global defaults with explicit
+  per-fence overrides and reset-to-inherited behavior.
+- Add Ukrainian and Russian translations, recursive filtering and ROTA parser
+  tests, persisted display-mode tests, and an offscreen drive-view scenario.
+- Verification is pending current-head CI. No live KDE Plasma session or
+  physical storage hardware has been tested.
