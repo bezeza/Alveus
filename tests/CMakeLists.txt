@@ -29,6 +29,16 @@ set_tests_properties(uiharness PROPERTIES
         "QT_QPA_PLATFORM=offscreen;ALVEUS_NO_DBUS=1;QML_IMPORT_PATH=${_uiharness_import_path};XDG_DATA_HOME=${CMAKE_BINARY_DIR}/uiharness-data;XDG_CACHE_HOME=${CMAKE_BINARY_DIR}/uiharness-cache;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/uiharness-config"
     TIMEOUT 30)
 
+# A blank fence title is a supported value, not a translated fallback label.
+add_test(NAME uiharness_empty_fence_title COMMAND uiharness
+    "${CMAKE_SOURCE_DIR}/tests/scene.qml"
+    "${CMAKE_BINARY_DIR}/uiharness-empty-fence-title.png"
+    400 1600 900 blanktitle)
+set_tests_properties(uiharness_empty_fence_title PROPERTIES
+    ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;ALVEUS_NO_DBUS=1;QML_IMPORT_PATH=${_uiharness_import_path};XDG_DATA_HOME=${CMAKE_BINARY_DIR}/uiharness-empty-title-data;XDG_CACHE_HOME=${CMAKE_BINARY_DIR}/uiharness-empty-title-cache;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/uiharness-empty-title-config"
+    TIMEOUT 30)
+
 
 # Exercise recovery without touching the user's live Plasma configuration.
 find_program(BASH_EXECUTABLE bash REQUIRED)
