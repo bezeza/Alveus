@@ -701,6 +701,78 @@ private Q_SLOTS:
                             R"({"version":2,"fences":[{}]})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-snapshot.json"),
                             R"({"version":2,"fences":[],"files":{},"pages":{},"snapshots":[{"id":"x","name":"bad","state":{"fences":[{}]}}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-view.json"),
+                            R"({"version":2,"fences":[{"id":"f","view":"cards"}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-opacity.json"),
+                            R"({"version":2,"fences":[{"id":"f","opacity":1.5}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-icon-size.json"),
+                            R"({"version":2,"fences":[{"id":"f","iconSize":512}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-page.json"),
+                            R"({"version":2,"fences":[{"id":"f","page":9}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-screen.json"),
+                            R"({"version":2,"fences":[{"id":"f","screen":-1}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-placement.json"),
+                            R"({"version":2,"fences":[],"files":{"notes":{"pos":[0,9,0,0]}}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-page-count.json"),
+                            R"({"version":2,"fences":[],"pages":{"|0":10}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-setting-type.json"),
+                            R"({"version":2,"fences":[],"settings":{"autoPrivacy":1}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/unknown-setting.json"),
+                            R"({"version":2,"fences":[],"settings":{"unknownSetting":true}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-placement-fence.json"),
+                            R"({"version":2,"fences":[],"files":{"notes":{"manual":true,"fence":"missing"}}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/duplicate-snapshot-id.json"),
+                            R"({"version":2,"fences":[],"snapshots":[{"id":"x","name":"one","state":{"fences":[]}},{"id":"x","name":"two","state":{"fences":[]}}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/empty-snapshot-name.json"),
+                            R"({"version":2,"fences":[],"snapshots":[{"id":"x","name":" ","state":{"fences":[]}}]})");
+    }
+
+    void persistedGeometryIsSafelyNormalized()
+    {
+        QDir().mkpath(QFileInfo(store()).absolutePath());
+        touch(store(), R"({"version":2,"fences":[{"id":"geometry","x":-2,"y":2,"w":2,"h":0.01,"orphan":[2,-1,3,0.01]}]})");
+
+        AlveusCore core(desk(), store());
+        const QVariantMap fence = core.fence(QStringLiteral("geometry"));
+        QCOMPARE(fence.value(QStringLiteral("x")).toReal(), 0.0);
+        QCOMPARE(fence.value(QStringLiteral("y")).toReal(), 0.97);
+        QCOMPARE(fence.value(QStringLiteral("w")).toReal(), 1.0);
+        QCOMPARE(fence.value(QStringLiteral("h")).toReal(), 0.03);
+        core.saveNow();
+
+        QFile repaired(store());
+        QVERIFY(repaired.open(QIODevice::ReadOnly));
+        const QJsonObject savedFence = QJsonDocument::fromJson(repaired.readAll()).object()
+                                           .value(QStringLiteral("fences")).toArray().first().toObject();
+        const QJsonArray orphan = savedFence.value(QStringLiteral("orphan")).toArray();
+        QCOMPARE(orphan.size(), 4);
+        QCOMPARE(orphan[0].toDouble(), 0.0);
+        QCOMPARE(orphan[1].toDouble(), 0.0);
+        QCOMPARE(orphan[2].toDouble(), 1.0);
+        QCOMPARE(orphan[3].toDouble(), 0.03);
+        const QStringList backups = QDir(QFileInfo(store()).absolutePath())
+            .entryList({QFileInfo(store()).fileName() + QStringLiteral(".corrupt-*")}, QDir::Files);
+        QVERIFY(backups.isEmpty()); // finite geometry is normalized, not treated as corruption
+    }
+
+    void settingSetterRejectsUnsupportedValues()
+    {
+        AlveusCore core(desk(), store());
+        QSignalSpy messages(&core, &AlveusCore::message);
+        core.setSetting(QStringLiteral("unknownSetting"), true);
+        core.setSetting(QStringLiteral("iconSize"), 129);
+        core.setSetting(QStringLiteral("autoPrivacy"), 1);
+        QCOMPARE(core.setting(QStringLiteral("iconSize")).toInt(), 48);
+        QVERIFY(!core.setting(QStringLiteral("unknownSetting")).isValid());
+
+        core.setSetting(QStringLiteral("iconSize"), 56);
+        core.setSetting(QStringLiteral("cleanupDays"), 30);
+        QCOMPARE(core.setting(QStringLiteral("iconSize")).toInt(), 56);
+        QCOMPARE(core.setting(QStringLiteral("cleanupDays")).toInt(), 30);
+        QCOMPARE(messages.size(), 3);
+        for (const QList<QVariant> &arguments : messages) {
+            QCOMPARE(arguments.first().toString(), QStringLiteral("settings-invalid-value"));
+        }
     }
 
     void newerSettingsAreNeverOverwritten()
@@ -1280,12 +1352,15 @@ private Q_SLOTS:
     {
         QDir().mkpath(m_tmp.path() + QStringLiteral("/store"));
         touch(store(), R"({"version":1,"welcomeDismissed":true,
+            "settings":{"iconSize":56,"cleanupDays":30,"autoPrivacy":false},
             "fences":[{"id":"abc","title":"Docs","screen":0,"x":0.1,"y":0.1,"w":0.2,"h":0.2,"collapsed":false,"extensions":["pdf","odt"]}],
             "files":{"notes":{"fence":"abc","manual":true},"song.mp3":{"fence":"","manual":false}}})");
         AlveusCore core(desk(), store());
         QCOMPARE(core.fence(QStringLiteral("abc")).value(QStringLiteral("rules")).toString(), QStringLiteral("pdf, odt"));
         QCOMPARE(names(core.filesInFence(QStringLiteral("abc"), QString())), (QStringList{QStringLiteral("notes"), QStringLiteral("report.pdf")}));
         QVERIFY(!core.showWelcome());
+        QCOMPARE(core.setting(QStringLiteral("iconSize")).toInt(), 56);
+        QCOMPARE(core.setting(QStringLiteral("cleanupDays")).toInt(), 30);
     }
 
     void snapshots()
