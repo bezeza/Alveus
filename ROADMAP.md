@@ -237,8 +237,10 @@ already shipped in `main`.
   read-only status with compact, medium, and large card sizes.
 - [x] Keep mount/unmount, open, properties, terminal, drag/drop, and visibility
   actions available on relevant volume rows.
-- [ ] Verify the current implementation with CI and on a live KDE Plasma system
-  with internal, USB, and removable storage.
+- [x] Pass current-head CI, including all CTest UI scenarios at narrow and
+  wide fence sizes, translation validation, QML lint, and Fedora RPM/DNF checks.
+- [ ] Test on a live KDE Plasma system with internal, USB, and removable
+  storage.
 
 **Exit criteria:** current CI passes; hierarchical filtering preserves parent/
 child relationships and visibility rules; the UI is usable at narrow and wide
