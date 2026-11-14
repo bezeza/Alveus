@@ -574,7 +574,7 @@ bool validSnapshots(const QJsonValue &value)
         const QJsonValue nameValue = snapshot.value(QStringLiteral("name"));
         const QString name = nameValue.toString();
         if (!idValue.isString() || id.trimmed().isEmpty() || id.size() > 64 || snapshotIds.contains(id)
-            || !nameValue.isString() || name.trimmed().isEmpty() || name.size() > 128
+            || !nameValue.isString() || name.trimmed().isEmpty() || name.size() > 256
             || (snapshot.contains(QStringLiteral("created"))
                 && !isJsonIntegerInRange(snapshot.value(QStringLiteral("created")), 0, 9007199254740991LL))) {
             return false;
@@ -2920,8 +2920,8 @@ QVariantList AlveusCore::snapshots() const
 
 QString AlveusCore::saveSnapshot(const QString &name)
 {
-    if (name.trimmed().isEmpty() || name.size() > 128) {
-        Q_EMIT message(QStringLiteral("snapshot-invalid-name"), QStringLiteral("Snapshot name must contain 1 to 128 characters"));
+    if (name.trimmed().isEmpty() || name.size() > 256) {
+        Q_EMIT message(QStringLiteral("snapshot-invalid-name"), QStringLiteral("Snapshot name must contain 1 to 256 characters"));
         return QString();
     }
     QJsonObject s;
