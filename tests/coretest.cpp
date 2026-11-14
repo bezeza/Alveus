@@ -1594,7 +1594,7 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(!core.drives().isEmpty(), 5000);
     }
 
-    void driveHierarchyFromLsblk()
+    void driveHierarchyParserHandlesDevices()
     {
         const QByteArray json = R"JSON(
         {
