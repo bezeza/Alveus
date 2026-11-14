@@ -203,6 +203,46 @@ desktop session.
 **Exit criteria:** no data-loss issue or release-blocking regression; recovery
 works; known limitations are documented; manual test results are recorded.
 
+## Drive interface feature track
+
+This is a separate, stacked feature track. These PRs remain proposals until
+they are reviewed and merged; a passing CI run does not mean the work is
+already shipped in \`main\`.
+
+### Stage A — Drive discovery core
+
+- [ ] Review and merge [PR #35](https://github.com/bezeza/Alveus/pull/35).
+- [x] Preserve physical-device and partition hierarchy, stable IDs, mount
+  points, filesystem and hardware metadata in the additive \`Core.driveDevices\`
+  API.
+- [x] Keep the legacy flat \`Core.drives\` API for compatibility.
+
+### Stage B — Visibility and filtering
+
+- [ ] Review and merge [PR #37](https://github.com/bezeza/Alveus/pull/37),
+  stacked on Stage A.
+- [x] Add global defaults, per-fence overrides, service-partition filters,
+  manual visibility exceptions, and temporary reveal.
+- [x] Test inheritance, persistence, filtering precedence, and UI settings.
+
+### Stage C — Hierarchical drive interface
+
+- [ ] Review and merge the Stage C PR, stacked on PR #37.
+- [x] Render physical disks as parent cards with expandable partitions and
+  logical volumes.
+- [x] Distinguish NVMe, USB, SSD, and HDD using lsblk transport and ROTA data;
+  leave media type generic when the hardware does not report enough metadata.
+- [x] Show capacity, mounted-volume usage, free space, mount state, and
+  read-only status with compact, medium, and large card sizes.
+- [x] Keep mount/unmount, open, properties, terminal, drag/drop, and visibility
+  actions available on relevant volume rows.
+- [ ] Verify the current implementation with CI and on a live KDE Plasma system
+  with internal, USB, and removable storage.
+
+**Exit criteria:** current CI passes; hierarchical filtering preserves parent/
+child relationships and visibility rules; the UI is usable at narrow and wide
+fence sizes; live device testing has no mount, unmount, or data-loss regression.
+
 ## Post-stabilization backlog
 
 These items follow the current PR sequence. Reprioritize only when new evidence,
