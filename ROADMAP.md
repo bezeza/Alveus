@@ -74,11 +74,18 @@ QML lint, and whitespace); PR #17 also passed, including its UI harness CTest
 (2/2 tests). The successful runs are linked in each PR's current validation
 section. These results validate the current heads, not a live Plasma session.
 
-A review of PR #15 found a cache-invalidation gap in `mergeFences()`: source
-fences inherit the target's activity scope, but the subsequent tab activation
-does not rebuild the per-activity file-model caches. Add coverage for merging
-fences with different activity scopes and verify cached file placement in both
-activities before merging PR #15.
+The PR #15 cache-invalidation finding has been addressed on its branch.
+`mergeFences()` now uses an internal cache-aware tab activation path, while
+the public QML `activateTab(id)` signature remains unchanged. A regression
+test covers both global-to-activity-specific and activity-specific-to-global
+merges with both activity caches populated. The implementation/test commit
+passed build, CTest (1/1), shell checks, QML lint, and whitespace validation.
+A subsequent development-log-only commit triggered another CI run, which is
+still in progress; PR #15 remains draft until that current head is green.
+
+PR #15 now introduces `docs/DEVELOPMENT_LOG.md`, while PR #19 also adds that
+file on its own branch. Reconcile the log contents before merging PR #19 so the
+two additions do not conflict or lose either entry.
 
 ## Near-term execution plan
 
