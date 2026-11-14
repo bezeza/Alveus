@@ -226,5 +226,11 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - Add unit coverage for settings inheritance, persistence, schema validation,
   metadata classification, filter precedence, and temporary reveal. Add
   offscreen UI scenarios for both global and per-fence settings.
-- Verification is pending current-head CI. No live KDE Plasma session or
-  physical storage hardware has been tested.
+- Standard CI passed build, core tests, translation validation, QML lint,
+  global/per-fence offscreen UI scenarios, preview rendering, and whitespace
+  checks:
+  [run 43617905829](https://github.com/bezeza/Alveus/actions/runs/43617905829).
+- Fedora RPM build, package payload verification, artifact upload, DNF install,
+  and DNF removal passed:
+  [run 43617905977](https://github.com/bezeza/Alveus/actions/runs/43617905977).
+- No live KDE Plasma session or physical storage hardware has been tested.
