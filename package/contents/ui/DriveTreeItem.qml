@@ -186,7 +186,7 @@ Item {
 
             QQC2.ToolButton {
                 visible: !node.hasChildren && !!node.drive.device
-                icon.name: node.mounted ? "document-open-folder" : "media-mount"
+                icon.name: node.mounted ? "document-open-folder" : "drive-harddisk"
                 QQC2.ToolTip.text: node.mounted ? i18n("Open") : i18n("Mount and open")
                 QQC2.ToolTip.visible: hovered
                 onClicked: node.open()
@@ -234,7 +234,7 @@ Item {
             visible: node.depth === 0 && node.hasChildren && node.displayMode === "compact"
             Layout.fillWidth: true
             Layout.leftMargin: Kirigami.Units.gridUnit * 2 + Kirigami.Units.smallSpacing
-            text: i18np("%1 partition", "%1 partitions", node.drive.childCount || node.children.length)
+            text: i18n("%1 partitions", node.drive.childCount || node.children.length)
             color: node.textColor
             opacity: 0.62
             font: Kirigami.Theme.smallFont
