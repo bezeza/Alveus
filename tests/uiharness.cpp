@@ -40,6 +40,22 @@ public:
     }
 };
 
+static QQuickItem *findVisualItem(QQuickItem *parent, const QString &objectName)
+{
+    if (!parent) {
+        return nullptr;
+    }
+    if (parent->objectName() == objectName) {
+        return parent;
+    }
+    for (QQuickItem *child : parent->childItems()) {
+        if (QQuickItem *found = findVisualItem(child, objectName)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
 static QList<int> nums(const QString &s)
 {
     QList<int> out;
@@ -155,7 +171,9 @@ int main(int argc, char **argv)
             const QString objectName = QStringLiteral("fence-title-") + id;
             QObject *loader = view.rootObject()->findChild<QObject *>(QStringLiteral("desktopLoader"));
             QObject *desktop = loader ? loader->property("item").value<QObject *>() : nullptr;
-            QQuickItem *title = desktop ? desktop->findChild<QQuickItem *>(objectName) : nullptr;
+            QQuickItem *desktopItem = qobject_cast<QQuickItem *>(desktop);
+            QQuickItem *fenceItem = findVisualItem(desktopItem, QStringLiteral("fence-") + id);
+            QQuickItem *title = findVisualItem(fenceItem, objectName);
             if (!title) {
                 fprintf(stderr, "ERROR: could not find the blank fence title label: %s\n", qPrintable(objectName));
                 app.exit(1);
