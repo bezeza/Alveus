@@ -222,9 +222,8 @@ private Q_SLOTS:
 
         integrations.refreshPhones();
         integrations.setWatchScreenShare(true);
-        QTRY_VERIFY_WITH_TIMEOUT(phones.count() == 1, 2000);
-        QVERIFY(phones.first().first().toList().isEmpty());
         QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("kdeconnect-timeout")), 2000);
+        QVERIFY(phones.isEmpty()); // timeout preserves the last known list instead of publishing a false empty result
         QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("screen-share-timeout")), 2000);
         QVERIFY(!shared.isEmpty());
         QCOMPARE(shared.last().first().toBool(), true);
@@ -236,8 +235,14 @@ private Q_SLOTS:
 
         writeExecutable(helpers.path(), QStringLiteral("kdeconnect-cli"), "#!/bin/sh\nexit 7\n");
         integrations.refreshPhones();
-        QTRY_VERIFY_WITH_TIMEOUT(phones.count() == 2, 2000);
         QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("kdeconnect-failed")), 2000);
+        QVERIFY(phones.isEmpty());
+        writeExecutable(helpers.path(), QStringLiteral("kdeconnect-cli"),
+                        "#!/bin/sh\\nprintf 'device-1 Pixel 8\\n'\\n");
+        integrations.refreshPhones();
+        QTRY_VERIFY_WITH_TIMEOUT(phones.count() == 1, 2000);
+        QCOMPARE(phones.last().first().toList().first().toMap().value(QStringLiteral("id")).toString(),
+                 QStringLiteral("device-1"));
         integrations.setWatchScreenShare(false);
         Q_UNUSED(pwDump)
         Q_UNUSED(kdeConnect)
