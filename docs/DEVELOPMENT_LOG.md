@@ -204,4 +204,3 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   workspace has no Qt 6 development toolchain or repository checkout. GitHub
   Actions verification is pending. No live KDE Plasma or physical-drive test
   has been performed.
-
