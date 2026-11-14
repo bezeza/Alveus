@@ -213,6 +213,12 @@ Drive parseDriveNode(const QJsonObject &o, const Drive *parent)
 
 } // namespace
 
+bool isNetworkMount(const QString &fsType, const QString &device)
+{
+    return networkFs().contains(fsType) || device.startsWith(QLatin1String("//"))
+        || (device.contains(QLatin1Char(':')) && !device.startsWith(QLatin1Char('/')));
+}
+
 bool isUserMount(const QString &mp, const QString &fsType, const QString &device)
 {
     if (pseudoFs().contains(fsType) || fsType.startsWith(QLatin1String("cgroup"))) {
@@ -239,8 +245,7 @@ bool isUserMount(const QString &mp, const QString &fsType, const QString &device
     if (mp == QLatin1String("/home") || mp == QDir::homePath()) {
         return false;
     }
-    return device.startsWith(QLatin1String("/dev/")) || networkFs().contains(fsType) || device.contains(QLatin1Char(':'))
-        || device.startsWith(QLatin1String("//"));
+    return device.startsWith(QLatin1String("/dev/")) || isNetworkMount(fsType, device);
 }
 
 QList<Drive> fromMounts(const QList<QStorageInfo> &volumes)
@@ -257,15 +262,22 @@ QList<Drive> fromMounts(const QList<QStorageInfo> &volumes)
         if (!isUserMount(mp, fs, dev)) {
             continue;
         }
-        // btrfs subvolumes etc.: one entry per device, the shortest path wins
-        if (dev.startsWith(QLatin1String("/dev/")) && seenDevices.contains(dev)) {
+        const bool network = isNetworkMount(fs, dev);
+        // btrfs subvolumes etc.: one entry per block device, the shortest path wins.
+        // FUSE network mounts can all report /dev/fuse, so keep those mount points separate.
+        if (!network && dev.startsWith(QLatin1String("/dev/")) && seenDevices.contains(dev)) {
             continue;
         }
-        seenDevices.insert(dev);
+        if (!network) {
+            seenDevices.insert(dev);
+        }
         Drive d;
         d.device = dev;
-        d.id = (dev.startsWith(QLatin1String("/dev/")) ? QStringLiteral("device:") : QStringLiteral("network:")) + dev;
-        d.type = dev.startsWith(QLatin1String("/dev/")) ? QStringLiteral("volume") : QStringLiteral("network");
+        d.id = (network ? QStringLiteral("network:") : QStringLiteral("device:")) + dev;
+        if (network && dev.startsWith(QLatin1String("/dev/"))) {
+            d.id += QLatin1Char('@') + mp;
+        }
+        d.type = network ? QStringLiteral("network") : QStringLiteral("volume");
         d.label = v.name();
         d.mountPoint = mp;
         d.mountPoints << mp;
@@ -273,8 +285,7 @@ QList<Drive> fromMounts(const QList<QStorageInfo> &volumes)
         d.total = v.bytesTotal();
         d.free = v.bytesAvailable();
         d.readOnly = v.isReadOnly();
-        d.network = networkFs().contains(fs) || dev.startsWith(QLatin1String("//"))
-            || (dev.contains(QLatin1Char(':')) && !dev.startsWith(QLatin1Char('/')));
+        d.network = network;
         d.system = (mp == QLatin1String("/"));
         out << d;
     }
@@ -633,15 +644,20 @@ QVariantList DriveWatcher::buildDeviceList() const
             continue;
         }
 
-        Alveus::Drive *target = findDevice(devices, device);
+        const bool network = Alveus::isNetworkMount(fsType, device);
+        const bool fuseNetwork = network && device.startsWith(QLatin1String("/dev/"));
+        Alveus::Drive *target = fuseNetwork ? nullptr : findDevice(devices, device);
         if (!target) {
             Alveus::Drive fallback;
             fallback.device = device;
             fallback.label = volume.name();
             fallback.fsType = fsType;
-            fallback.type = device.startsWith(QLatin1String("/dev/")) ? QStringLiteral("volume") : QStringLiteral("network");
-            fallback.network = !device.startsWith(QLatin1String("/dev/"));
-            fallback.id = (fallback.network ? QStringLiteral("network:") : QStringLiteral("device:")) + device;
+            fallback.type = network ? QStringLiteral("network") : QStringLiteral("volume");
+            fallback.network = network;
+            fallback.id = (network ? QStringLiteral("network:") : QStringLiteral("device:")) + device;
+            if (fuseNetwork) {
+                fallback.id += QLatin1Char('@') + mountPoint;
+            }
             devices << fallback;
             target = &devices.last();
         }
@@ -657,7 +673,7 @@ QVariantList DriveWatcher::buildDeviceList() const
         }
         target->free = volume.bytesAvailable();
         target->readOnly = volume.isReadOnly();
-        target->network = target->network || !device.startsWith(QLatin1String("/dev/"));
+        target->network = target->network || network;
         if (!target->mountPoints.contains(mountPoint)) {
             target->mountPoints << mountPoint;
         }
