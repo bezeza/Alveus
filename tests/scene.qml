@@ -92,7 +92,7 @@ Item {
             Core.createPortal(0, "", 0, 0.30, 0.05, 0.34, 0.30, "Диски", "drives:")
         }
         if (s === "blanktitle") {
-            blankFenceId = Core.createFence(0, "", 0, 0.30, 0.05, 0.34, 0.30, "", "")
+            blankFenceId = d.createFenceAt(Qt.rect(d.width * 0.30, d.height * 0.10, d.width * 0.34, d.height * 0.30), "", "", false)
         }
         scene.prepared = true
     }
