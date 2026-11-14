@@ -280,5 +280,13 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   non-rotational device is an SSD. Show USB HDD only when ROTA reports rotation.
 - Add Ukrainian/Russian translations, settings persistence and schema tests,
   and an offscreen grouped/detailed drive-view scenario.
-- Verification is pending current-head CI. No live KDE Plasma session or
-  physical USB storage test has been performed.
+- Standard CI passed compilation, all 8 CTest targets, translation
+  validation, QML lint, preview rendering, development-log enforcement, and
+  whitespace checks:
+  [run 43628437172](https://github.com/bezeza/Alveus/actions/runs/43628437172).
+- Fedora RPM build, package payload verification, artifact upload, DNF install,
+  and DNF removal passed:
+  [run 43628437174](https://github.com/bezeza/Alveus/actions/runs/43628437174).
+- The offscreen UI harness now treats invalid QML anchors as critical; the
+  previous drive-row anchor warning is fixed and no longer appears.
+- No live KDE Plasma session or physical USB storage test has been performed.
