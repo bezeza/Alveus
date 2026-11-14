@@ -165,6 +165,42 @@ QQC2.Popup {
                         onClicked: Core.resetDriveOption(dialog.fid, "displayMode")
                     }
                 }
+                RowLayout {
+                    Layout.fillWidth: true
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        text: i18n("USB device grouping")
+                    }
+                    QQC2.ComboBox {
+                        id: fenceUsbGrouping
+                        model: [i18n("Separate group"), i18n("Together with other drives")]
+                        currentIndex: dialog.effectiveDriveOptions.separateUsb === false ? 1 : 0
+                        onActivated: Core.setDriveOption(dialog.fid, "separateUsb", currentIndex === 0)
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "edit-undo"
+                        enabled: dialog.driveOverrides.separateUsb !== undefined
+                        onClicked: Core.resetDriveOption(dialog.fid, "separateUsb")
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        text: i18n("Device information")
+                    }
+                    QQC2.ComboBox {
+                        id: fenceDriveInformation
+                        model: [i18n("Detailed"), i18n("Basic")]
+                        currentIndex: dialog.effectiveDriveOptions.informationLevel === "basic" ? 1 : 0
+                        onActivated: Core.setDriveOption(dialog.fid, "informationLevel", currentIndex === 0 ? "detailed" : "basic")
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "edit-undo"
+                        enabled: dialog.driveOverrides.informationLevel !== undefined
+                        onClicked: Core.resetDriveOption(dialog.fid, "informationLevel")
+                    }
+                }
                 PlasmaComponents.Label {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
