@@ -105,3 +105,22 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   applets, transformation/validation failures, and SIGTERM interruption.
 - Verification is pending on the PR head. No live Plasma service is stopped or
   restarted by these tests.
+
+
+### Merged into `main` — PR #28 atomic and restart-safe recovery
+
+- Replaced direct redirection into the live Plasma applet config with a
+  same-directory temporary file, validation, and atomic rename after a
+  timestamped backup.
+- Added EXIT/INT/TERM/HUP cleanup so restart is attempted after normal
+  completion, transformation/validation errors, and interruption.
+- Added a temporary-fixture CTest target covering desktop containment
+  conversion, Alveus widget/subsection removal, unrelated applet preservation,
+  systemd and fallback startup, transformation/validation failures, and
+  SIGTERM interruption.
+- Current-head CI passed build, all three CTest targets (`coretest`,
+  `uiharness`, and `recover_script`), ShellCheck, QML lint, translation
+  validation, preview rendering/upload, and whitespace checks:
+  [run 43602359421](https://github.com/bezeza/Alveus/actions/runs/43602359421).
+- No live Plasma service was stopped or restarted by CI. A real desktop recovery
+  run remains part of the manual Plasma validation stage.
