@@ -45,6 +45,8 @@ struct Drive {
     bool hotplug = false;
     bool usb = false;      // True only when transport metadata identifies USB
     bool physical = false;
+    bool rotational = false;      // ROTA=1 means a rotating disk (HDD)
+    bool rotationalKnown = false; // false when the kernel/util-linux did not report ROTA
     bool network = false;
     bool system = false;   // This device or one of its child volumes contains /
     QList<Drive> children;
@@ -55,6 +57,7 @@ bool isUserMount(const QString &mountPoint, const QString &fsType, const QString
 bool isNetworkMount(const QString &fsType, const QString &device);
 QString servicePartitionKind(const Drive &drive);
 QVariantList filterDriveList(const QVariantList &drives, const QVariantMap &options, bool showHiddenTemporarily = false);
+QVariantList filterDriveHierarchy(const QVariantList &devices, const QVariantMap &options, bool showHiddenTemporarily = false);
 QList<Drive> fromMounts(const QList<QStorageInfo> &volumes);
 // Flat compatibility helpers used by the current drive-fence UI.
 QList<Drive> unmountedFromLsblk(const QByteArray &json);

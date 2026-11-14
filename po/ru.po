@@ -1030,3 +1030,107 @@ msgstr "Виртуальные устройства"
 #: package/contents/ui/drive-settings
 msgid "Visibility groups"
 msgstr "Группы видимости"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "%1 devices"
+msgstr "%1 устройств"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "%1 partitions"
+msgstr "%1 разделов"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Collapse partitions"
+msgstr "Свернуть разделы"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Compact"
+msgstr "Компактный"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Disk"
+msgstr "Диск"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Drive actions"
+msgstr "Действия с диском"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Drive card size"
+msgstr "Размер карточки диска"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Expand partitions"
+msgstr "Развернуть разделы"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "HDD"
+msgstr "HDD"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Large"
+msgstr "Большой"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Logical volume"
+msgstr "Логический том"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Medium"
+msgstr "Средний"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "NVMe"
+msgstr "NVMe"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Network"
+msgstr "Сетевой ресурс"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "No devices match the current filters"
+msgstr "Нет устройств, соответствующих текущим фильтрам"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Not mounted"
+msgstr "Не смонтировано"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Optical"
+msgstr "Оптический привод"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Partition"
+msgstr "Раздел"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Refresh storage devices"
+msgstr "Обновить список накопителей"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "SSD"
+msgstr "SSD"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Searching for storage devices…"
+msgstr "Поиск накопителей…"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "System disk"
+msgstr "Системный диск"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "USB"
+msgstr "USB"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "USB HDD"
+msgstr "USB HDD"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "USB SSD"
+msgstr "USB SSD"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Volume"
+msgstr "Том"

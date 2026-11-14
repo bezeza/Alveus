@@ -234,3 +234,33 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   and DNF removal passed:
   [run 43617905977](https://github.com/bezeza/Alveus/actions/runs/43617905977).
 - No live KDE Plasma session or physical storage hardware has been tested.
+
+
+### In progress — Stage 3 / feat/drives-hierarchical-ui
+
+- Replace the flat drive list in the fence with a recursive physical-device
+  hierarchy. Physical disks are parent cards; partitions and logical volumes
+  can be expanded and collapsed.
+- Filter the hierarchy using the Stage 2 per-fence/global rules. Preserve a
+  parent device when it has a visible mounted descendant, and update child
+  counts after filtering.
+- Read lsblk's ROTA metadata and expose whether rotation is known. Label NVMe,
+  USB, SSD, and HDD media only when the corresponding transport/rotation data
+  supports the classification; do not guess when ROTA is unavailable.
+- Show model/vendor, media type, capacity, mount points, filesystem, free
+  space, read-only state, and usage bars. Keep open, mount/unmount, properties,
+  terminal, drag/drop, hide, always-show, and automatic-visibility actions
+  available on the relevant volume rows.
+- Add compact, medium, and large card modes as global defaults with explicit
+  per-fence overrides and reset-to-inherited behavior.
+- Add Ukrainian and Russian translations, recursive filtering and ROTA parser
+  tests, persisted display-mode tests, and an offscreen drive-view scenario.
+- Standard CI passed compilation, all 7 CTest targets (including
+  global/per-fence settings and wide/narrow drive-view scenarios), translation
+  validation, QML lint, preview rendering, development-log enforcement, and
+  whitespace checks:
+  [run 43623269082](https://github.com/bezeza/Alveus/actions/runs/43623269082).
+- Fedora RPM build, package payload verification, artifact upload, DNF install,
+  and DNF removal passed:
+  [run 43623269086](https://github.com/bezeza/Alveus/actions/runs/43623269086).
+- No live KDE Plasma session or physical storage hardware has been tested.
