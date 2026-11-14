@@ -253,7 +253,7 @@ a reproducible bug, or user feedback justifies it.
 
 | Priority | Topic | Reference | Intended outcome |
 |---|---|---|---|
-| P2 | Persisted configuration validation | [Issue #13](https://github.com/bezeza/Alveus/issues/13) | Reject or recover safely from invalid saved state |
+| P2 | Persisted configuration validation | [Issue #13](https://github.com/bezeza/Alveus/issues/13) / branch `fix/persisted-state-validation-stacked` (stacked on PR #38) | Validate saved state without losing unknown fields or legacy v1 layouts |
 | P2 | Honeycomb view scalability | [Issue #7](https://github.com/bezeza/Alveus/issues/7) | Keep large fences responsive without unnecessary delegate work |
 
 ## Release direction
