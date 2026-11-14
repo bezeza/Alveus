@@ -13,6 +13,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QSet>
 #include <QStandardPaths>
 
@@ -278,7 +280,6 @@ void DriveWatcher::refresh()
         return;
     }
     if (QStandardPaths::findExecutable(QStringLiteral("lsblk")).isEmpty()) {
-        m_lsblkJson.clear();
         Q_EMIT message(QStringLiteral("drive-list-unavailable"), QStringLiteral("lsblk was not found"));
         rebuild();
         return;
@@ -292,15 +293,23 @@ void DriveWatcher::refresh()
             return;
         }
         if (Alveus::processTimedOut(process)) {
-            m_lsblkJson.clear();
             m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
             Q_EMIT message(QStringLiteral("drive-list-timeout"),
                            QStringLiteral("lsblk exceeded %1 ms").arg(m_lsblkTimeoutMs));
         } else if (status == QProcess::NormalExit && code == 0) {
-            m_lsblkJson = process->readAllStandardOutput();
-            m_timer.setInterval(15000);
+            const QByteArray output = process->readAllStandardOutput();
+            QJsonParseError parseError;
+            const QJsonDocument document = QJsonDocument::fromJson(output, &parseError);
+            if (parseError.error == QJsonParseError::NoError && document.isObject()
+                && document.object().value(QStringLiteral("blockdevices")).isArray()) {
+                m_lsblkJson = output;
+                m_timer.setInterval(15000);
+            } else {
+                m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
+                Q_EMIT message(QStringLiteral("drive-list-invalid-output"),
+                               QStringLiteral("lsblk returned invalid JSON; keeping the last known drive list"));
+            }
         } else {
-            m_lsblkJson.clear();
             m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
             QString detail = QString::fromUtf8(process->readAllStandardError()).trimmed();
             if (detail.isEmpty()) {
@@ -318,7 +327,6 @@ void DriveWatcher::refresh()
         }
         const QString detail = process->errorString();
         m_lsblk = nullptr;
-        m_lsblkJson.clear();
         m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
         process->deleteLater();
         Q_EMIT message(QStringLiteral("drive-list-failed"), detail);
