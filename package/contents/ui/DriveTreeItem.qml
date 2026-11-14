@@ -28,15 +28,17 @@ Item {
         ? Math.min(1, Math.max(0, 1 - Number(drive.free) / Number(drive.total))) : 0
     readonly property int rowHeight: displayMode === "compact" ? 38 : displayMode === "large" ? 66 : 52
     readonly property bool compactControls: displayMode === "compact" || width < Kirigami.Units.gridUnit * 15
-    readonly property int iconSize: displayMode === "compact" ? Kirigami.Units.iconSizes.small
+    readonly property int iconSize: compactControls ? Kirigami.Units.iconSizes.small
         : displayMode === "large" ? Kirigami.Units.iconSizes.large : Kirigami.Units.iconSizes.medium
     readonly property string title: drive.system
-        ? (drive.physical ? i18n("System disk") : (drive.name !== "" ? i18n("System (%1)", drive.name) : i18n("System")))
+        ? (drive.physical ? i18n("System disk") : (drive.name !== "" && drive.name !== "System" ? i18n("System (%1)", drive.name) : i18n("System")))
         : (drive.name !== "" ? drive.name : drive.device)
     readonly property string mediaLabel: {
         if (drive.network) return i18n("Network")
         if (drive.type === "rom") return i18n("Optical")
-        if (drive.type === "part") return i18n("Partition")
+        if (drive.type === "part") return drive.fsType
+            ? String(drive.fsType).toUpperCase().replace("NTFS3", "NTFS").replace("FUSEBLK", "NTFS")
+            : i18n("Partition")
         if (drive.type === "crypt" || drive.type === "lvm") return i18n("Logical volume")
         if (drive.physical && drive.transport === "nvme") return i18n("NVMe")
         if (drive.physical && drive.usb) {
@@ -104,7 +106,8 @@ Item {
             QQC2.ToolButton {
                 visible: node.hasChildren
                 enabled: visible
-                Layout.preferredWidth: Kirigami.Units.iconSizes.small + Kirigami.Units.smallSpacing
+                Layout.preferredWidth: node.compactControls ? Kirigami.Units.iconSizes.small
+                    : Kirigami.Units.iconSizes.small + Kirigami.Units.smallSpacing
                 Layout.preferredHeight: Kirigami.Units.iconSizes.small + Kirigami.Units.smallSpacing
                 icon.name: node.expanded ? "go-down" : "go-next"
                 QQC2.ToolTip.text: node.expanded ? i18n("Collapse partitions") : i18n("Expand partitions")
@@ -113,7 +116,8 @@ Item {
             }
             Item {
                 visible: !node.hasChildren
-                Layout.preferredWidth: Kirigami.Units.iconSizes.small + Kirigami.Units.smallSpacing
+                Layout.preferredWidth: node.compactControls ? Kirigami.Units.iconSizes.small
+                    : Kirigami.Units.iconSizes.small + Kirigami.Units.smallSpacing
                 Layout.preferredHeight: Kirigami.Units.iconSizes.small + Kirigami.Units.smallSpacing
             }
 
@@ -158,7 +162,7 @@ Item {
                 }
 
                 PlasmaComponents.Label {
-                    visible: node.displayMode !== "compact"
+                    visible: !node.compactControls
                     Layout.fillWidth: true
                     text: node.detailText
                     color: node.textColor
