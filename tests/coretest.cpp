@@ -1649,17 +1649,26 @@ private Q_SLOTS:
         QCOMPARE(defaults.value(QStringLiteral("partitionMode")).toString(), QStringLiteral("all"));
         QVERIFY(defaults.value(QStringLiteral("hideEfi")).toBool());
         QCOMPARE(defaults.value(QStringLiteral("displayMode")).toString(), QStringLiteral("medium"));
+        QVERIFY(defaults.value(QStringLiteral("separateUsb")).toBool());
+        QCOMPARE(defaults.value(QStringLiteral("informationLevel")).toString(), QStringLiteral("detailed"));
 
         QVERIFY(core.setDriveDefault(QStringLiteral("groups.usb"), false));
+        QVERIFY(core.setDriveDefault(QStringLiteral("separateUsb"), false));
+        QVERIFY(core.setDriveDefault(QStringLiteral("informationLevel"), QStringLiteral("basic")));
         QVERIFY(core.setDriveDefault(QStringLiteral("hideEfi"), false));
         QVERIFY(core.setDriveOption(fenceId, QStringLiteral("groups.network"), false));
         QVERIFY(core.setDriveOption(fenceId, QStringLiteral("partitionMode"), QStringLiteral("selected")));
         QVERIFY(core.setDriveDefault(QStringLiteral("displayMode"), QStringLiteral("compact")));
         QVERIFY(core.setDriveOption(fenceId, QStringLiteral("displayMode"), QStringLiteral("large")));
+        QVERIFY(core.setDriveOption(fenceId, QStringLiteral("separateUsb"), true));
+        QVERIFY(core.setDriveOption(fenceId, QStringLiteral("informationLevel"), QStringLiteral("detailed")));
         QVERIFY(core.setDriveVisibilityException(fenceId, QStringLiteral("partuuid:efi@wwn:test"), QStringLiteral("show")));
         QVERIFY(core.setDriveVisibilityException(fenceId, QStringLiteral("uuid:old-disk"), QStringLiteral("hide")));
         QVERIFY(!core.setDriveDefault(QStringLiteral("partitionMode"), QStringLiteral("unknown")));
         QVERIFY(!core.setDriveDefault(QStringLiteral("displayMode"), QStringLiteral("huge")));
+        QVERIFY(!core.setDriveDefault(QStringLiteral("informationLevel"), QStringLiteral("verbose")));
+        QVERIFY(!core.setDriveOption(fenceId, QStringLiteral("separateUsb"), QStringLiteral("yes")));
+        QVERIFY(!core.setDriveOption(fenceId, QStringLiteral("informationLevel"), QStringLiteral("verbose")));
         QVERIFY(!core.setDriveOption(fenceId, QStringLiteral("groups.unknown"), true));
         QVERIFY(!core.setDriveVisibilityException(fenceId, QStringLiteral("bad-id"), QStringLiteral("maybe")));
 
@@ -1670,6 +1679,10 @@ private Q_SLOTS:
         QCOMPARE(effective.value(QStringLiteral("partitionMode")).toString(), QStringLiteral("selected"));
         QCOMPARE(core.driveDefaults().value(QStringLiteral("displayMode")).toString(), QStringLiteral("compact"));
         QCOMPARE(effective.value(QStringLiteral("displayMode")).toString(), QStringLiteral("large"));
+        QVERIFY(!core.driveDefaults().value(QStringLiteral("separateUsb")).toBool());
+        QCOMPARE(core.driveDefaults().value(QStringLiteral("informationLevel")).toString(), QStringLiteral("basic"));
+        QVERIFY(effective.value(QStringLiteral("separateUsb")).toBool()); // per-fence override
+        QCOMPARE(effective.value(QStringLiteral("informationLevel")).toString(), QStringLiteral("detailed"));
         QCOMPARE(core.driveVisibilityExceptions(fenceId).size(), 2);
 
         core.saveNow();
@@ -1681,6 +1694,10 @@ private Q_SLOTS:
         QCOMPARE(savedOptions.value(QStringLiteral("partitionMode")).toString(), QStringLiteral("selected"));
         QCOMPARE(savedDefaults.value(QStringLiteral("displayMode")).toString(), QStringLiteral("compact"));
         QCOMPARE(savedOptions.value(QStringLiteral("displayMode")).toString(), QStringLiteral("large"));
+        QVERIFY(!savedDefaults.value(QStringLiteral("separateUsb")).toBool());
+        QCOMPARE(savedDefaults.value(QStringLiteral("informationLevel")).toString(), QStringLiteral("basic"));
+        QVERIFY(savedOptions.value(QStringLiteral("separateUsb")).toBool());
+        QCOMPARE(savedOptions.value(QStringLiteral("informationLevel")).toString(), QStringLiteral("detailed"));
         QCOMPARE(reloaded.driveVisibilityExceptions(fenceId).size(), 2);
 
         QVERIFY(reloaded.resetDriveOption(fenceId, QStringLiteral("groups.network")));
@@ -1690,6 +1707,10 @@ private Q_SLOTS:
         QCOMPARE(reloaded.driveOptions(fenceId).value(QStringLiteral("partitionMode")).toString(), QStringLiteral("all"));
         QVERIFY(reloaded.resetDriveOption(fenceId, QStringLiteral("displayMode")));
         QCOMPARE(reloaded.driveOptions(fenceId).value(QStringLiteral("displayMode")).toString(), QStringLiteral("compact"));
+        QVERIFY(reloaded.resetDriveOption(fenceId, QStringLiteral("separateUsb")));
+        QVERIFY(!reloaded.driveOptions(fenceId).value(QStringLiteral("separateUsb")).toBool());
+        QVERIFY(reloaded.resetDriveOption(fenceId, QStringLiteral("informationLevel")));
+        QCOMPARE(reloaded.driveOptions(fenceId).value(QStringLiteral("informationLevel")).toString(), QStringLiteral("basic"));
         QVERIFY(reloaded.setDriveVisibilityException(fenceId, QStringLiteral("uuid:old-disk"), QString()));
         QCOMPARE(reloaded.driveVisibilityExceptions(fenceId).size(), 1);
         reloaded.resetDriveOptions(fenceId);
@@ -1697,6 +1718,8 @@ private Q_SLOTS:
         reloaded.resetDriveDefaults();
         QVERIFY(reloaded.driveDefaults().value(QStringLiteral("groups")).toMap().value(QStringLiteral("usb")).toBool());
         QCOMPARE(reloaded.driveDefaults().value(QStringLiteral("displayMode")).toString(), QStringLiteral("medium"));
+        QVERIFY(reloaded.driveDefaults().value(QStringLiteral("separateUsb")).toBool());
+        QCOMPARE(reloaded.driveDefaults().value(QStringLiteral("informationLevel")).toString(), QStringLiteral("detailed"));
 
         const auto item = [](const QString &id, const QString &type, bool mounted, qint64 size,
                              const QString &serviceKind = QString(), bool usb = false,
