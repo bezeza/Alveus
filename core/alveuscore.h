@@ -90,6 +90,7 @@ public:
     QVariantList phones() const { return m_phones; }
     int staleCount() const;
     QVariantList drives() const;
+    QVariantList driveDevices() const;
 
     // ---- desktops (one per screen and activity) --------------------------
     Q_INVOKABLE void registerDesktop(int screen, const QString &activity);
