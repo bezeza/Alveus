@@ -82,6 +82,7 @@ remain proposals until GitHub confirms the merge.
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
+| P2 | Persisted configuration validation | [Issue #13](https://github.com/bezeza/Alveus/issues/13) | Validate settings keys/types, enums, ranges, page/screen placement, and snapshot contents while preserving v1 migration |
 | P1 | Live Fedora KDE/Plasma validation | planned | Install the built RPM on a supported Fedora KDE desktop, activate Alveus, and test file operations, recovery, activities, monitors, and session restart |
 
 PR #19 was synchronized with the merged performance and UI foundation before
@@ -148,6 +149,9 @@ validation remains separate.
   `docs/DEVELOPMENT_LOG.md` as the common engineering workflow.
 - [x] Bound external helper processes, define stale/error policies, and test
   timeout cleanup and retry behavior (PR #32).
+- [ ] Validate persisted settings keys/types, enums, numeric ranges, placement
+  references, and snapshot contents; preserve v1 migration and normalize finite
+  geometry safely (Issue #13).
 
 **Exit criteria:** merged CI passes; logging behavior, retention, and privacy
 limitations are documented. Live Plasma validation remains.
@@ -210,7 +214,6 @@ a reproducible bug, or user feedback justifies it.
 
 | Priority | Topic | Reference | Intended outcome |
 |---|---|---|---|
-| P2 | Persisted configuration validation | [Issue #13](https://github.com/bezeza/Alveus/issues/13) | Reject or recover safely from invalid saved state |
 | P2 | Honeycomb view scalability | [Issue #7](https://github.com/bezeza/Alveus/issues/7) | Keep large fences responsive without unnecessary delegate work |
 
 ## Release direction
