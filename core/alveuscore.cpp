@@ -1791,8 +1791,12 @@ QString AlveusCore::createFence(int screen, const QString &activity, int page, q
 QString AlveusCore::createPortal(int screen, const QString &activity, int page, qreal x, qreal y, qreal w, qreal h,
                                  const QString &title, const QString &path)
 {
+    if (path.size() > 4096) {
+        Q_EMIT message(QStringLiteral("fence-invalid-state"), QStringLiteral("Portal path exceeds supported limits"));
+        return QString();
+    }
     const QString id = createFence(screen, activity, page, x, y, w, h, title, QString());
-    if (id.isEmpty() || path.size() > 4096) {
+    if (id.isEmpty()) {
         return QString();
     }
     m_fences[indexOfFence(id)].portal = path.startsWith(QLatin1String("drives:")) ? QStringLiteral("drives:") : QDir::cleanPath(path);
