@@ -17,7 +17,7 @@ Item {
     property string fenceId
     property var drive: ({})
     property int depth: 0
-    property string displayMode: "medium"
+    property string displayMode: "large"
     property string informationLevel: "detailed"
     property color textColor: Kirigami.Theme.textColor
     property bool expanded: depth === 0
