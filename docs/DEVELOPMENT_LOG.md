@@ -19,6 +19,18 @@ open pull requests, so proposed code is not mistaken for shipped code.
 - **PR #16:** GitHub Actions build and test pipeline.
 - **PR #17:** headless UI harness and critical QML warning checks.
 
+### In progress — PR #15 follow-up
+
+- Rebuild per-activity file-model caches when `mergeFences()` changes the
+  source fence's activity scope.
+- Add regression coverage for both global-to-activity-specific and
+  activity-specific-to-global merges.
+- GitHub Actions on the updated implementation head passed: build, CTest
+  core suite (1/1), shell checks, QML lint, and patch-whitespace validation.
+  Runs: [43594527975](https://github.com/bezeza/Alveus/actions/runs/43594527975)
+  and [43594525739](https://github.com/bezeza/Alveus/actions/runs/43594525739).
+- Live KDE Plasma validation has not been run.
+
 ### In progress — PR #19
 
 - Persistent application diagnostics, a Settings → Diagnostics viewer, bounded
