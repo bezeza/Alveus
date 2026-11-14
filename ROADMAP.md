@@ -73,6 +73,7 @@ remain proposals until GitHub confirms the merge.
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
+| P1 | Qt compatibility baseline | [Issue #9](https://github.com/bezeza/Alveus/issues/9) | Enforce Qt 6.5+ consistently in CMake, RPM metadata, installer guidance, and CI |
 | P1 | Live Fedora KDE/Plasma validation | planned | Install the built RPM on a supported Fedora KDE desktop, activate Alveus, and test file operations, recovery, activities, monitors, and session restart |
 
 PR #19 was synchronized with the merged performance and UI foundation before
@@ -153,6 +154,8 @@ limitations are documented. Live Plasma validation remains.
   the current CI run uploaded the PNG artifact.
 - [x] Validate RPM helper argument handling, including build-only and
   `--install` selection, help, and invalid-option behavior.
+- [ ] Set the Qt minimum to 6.5+ across CMake, RPM metadata, installer guidance,
+  and CI; prove Qt 6.4 is rejected clearly (Issue #9).
 - [x] Add a Fedora 43 container CI smoke test that builds the RPM, installs it
   with DNF, verifies the installed payload, removes it, and uploads the RPM artifact (PR #26).
 - [ ] Run the package on a supported Fedora KDE desktop and verify runtime
