@@ -35,15 +35,15 @@ Item {
     readonly property string mediaLabel: {
         if (drive.network) return i18n("Network")
         if (drive.type === "rom") return i18n("Optical")
-        if (drive.transport === "nvme") return i18n("NVMe")
-        if (drive.usb) {
+        if (drive.type === "part") return i18n("Partition")
+        if (drive.type === "crypt" || drive.type === "lvm") return i18n("Logical volume")
+        if (drive.physical && drive.transport === "nvme") return i18n("NVMe")
+        if (drive.physical && drive.usb) {
             if (drive.rotationalKnown) return drive.rotational ? i18n("USB HDD") : i18n("USB SSD")
             return i18n("USB")
         }
-        if (drive.rotationalKnown) return drive.rotational ? i18n("HDD") : i18n("SSD")
+        if (drive.physical && drive.rotationalKnown) return drive.rotational ? i18n("HDD") : i18n("SSD")
         if (drive.type === "disk") return i18n("Disk")
-        if (drive.type === "part") return i18n("Partition")
-        if (drive.type === "crypt" || drive.type === "lvm") return i18n("Logical volume")
         return drive.type ? String(drive.type).toUpperCase() : i18n("Volume")
     }
     readonly property string detailText: {
@@ -135,6 +135,7 @@ Item {
             }
 
             ColumnLayout {
+                id: labelsColumn
                 Layout.fillWidth: true
                 spacing: 1
 
@@ -257,7 +258,7 @@ Item {
 
     MouseArea {
         id: rowMouse
-        anchors.fill: headerRow
+        anchors.fill: labelsColumn
         z: 1
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
