@@ -201,6 +201,66 @@ QQC2.Popup {
                         onClicked: Core.resetDriveOption(dialog.fid, "informationLevel")
                     }
                 }
+                RowLayout {
+                    Layout.fillWidth: true
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        text: i18n("Drive columns")
+                    }
+                    QQC2.ComboBox {
+                        id: fenceDriveColumns
+                        model: [i18n("Automatic"), i18n("1 column"), i18n("2 columns"), i18n("3 columns")]
+                        currentIndex: Math.max(0, ["auto", "1", "2", "3"].indexOf(dialog.effectiveDriveOptions.columnCount || "auto"))
+                        onActivated: Core.setDriveOption(dialog.fid, "columnCount", ["auto", "1", "2", "3"][currentIndex])
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "edit-undo"
+                        enabled: dialog.driveOverrides.columnCount !== undefined
+                        onClicked: Core.resetDriveOption(dialog.fid, "columnCount")
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.CheckBox {
+                        Layout.fillWidth: true
+                        text: i18n("Show storage summary")
+                        checked: dialog.effectiveDriveOptions.showSummary === true
+                        onToggled: Core.setDriveOption(dialog.fid, "showSummary", checked)
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "edit-undo"
+                        enabled: dialog.driveOverrides.showSummary !== undefined
+                        onClicked: Core.resetDriveOption(dialog.fid, "showSummary")
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.CheckBox {
+                        Layout.fillWidth: true
+                        text: i18n("Show usage bars")
+                        checked: dialog.effectiveDriveOptions.showUsageBar !== false
+                        onToggled: Core.setDriveOption(dialog.fid, "showUsageBar", checked)
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "edit-undo"
+                        enabled: dialog.driveOverrides.showUsageBar !== undefined
+                        onClicked: Core.resetDriveOption(dialog.fid, "showUsageBar")
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.CheckBox {
+                        Layout.fillWidth: true
+                        text: i18n("Expand partitions by default")
+                        checked: dialog.effectiveDriveOptions.expandPartitionsByDefault === true
+                        onToggled: Core.setDriveOption(dialog.fid, "expandPartitionsByDefault", checked)
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "edit-undo"
+                        enabled: dialog.driveOverrides.expandPartitionsByDefault !== undefined
+                        onClicked: Core.resetDriveOption(dialog.fid, "expandPartitionsByDefault")
+                    }
+                }
                 PlasmaComponents.Label {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
