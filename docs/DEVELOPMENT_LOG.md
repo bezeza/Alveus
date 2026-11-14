@@ -61,3 +61,6 @@ These changes are proposed in PR #21 and are not shipped until merged.
 - Removed the preview-only bound-component pragma after it exposed a model
   context mismatch. The harness now attaches its i18n mock to newly-created QML
   contexts, which mirrors KDE's translation helpers without changing app logic.
+
+- Added the new hicolor SVG icon to the RPM file manifest so the packaged
+  Plasma metadata and KRunner icon name resolve after installation.
