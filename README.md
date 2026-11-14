@@ -127,6 +127,8 @@ Remove completely: `./uninstall.sh` (or `sudo dnf remove alveus`).
 
 ## Development
 
+See the [development roadmap](ROADMAP.md) for planned work, priorities, and release criteria.
+
 ```sh
 cmake -B build -DALVEUS_BUILD_TESTS=ON && cmake --build build
 QT_QPA_PLATFORM=offscreen dbus-run-session -- build/tests/coretest  # 38 test cases
