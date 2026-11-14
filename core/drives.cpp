@@ -211,13 +211,6 @@ Drive parseDriveNode(const QJsonObject &o, const Drive *parent)
     return d;
 }
 
-void appendUnique(QStringList &list, const QString &value)
-{
-    if (!value.isEmpty() && !list.contains(value)) {
-        list << value;
-    }
-}
-
 } // namespace
 
 bool isUserMount(const QString &mp, const QString &fsType, const QString &device)
