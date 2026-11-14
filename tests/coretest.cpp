@@ -714,7 +714,7 @@ private Q_SLOTS:
 
             const QStringList backups = QDir(QFileInfo(path).absolutePath())
                 .entryList({QFileInfo(path).fileName() + QStringLiteral(".corrupt-*")}, QDir::Files);
-            QVERIFY2(!backups.isEmpty(), "Structurally invalid settings must be preserved before replacement");
+            QVERIFY2(!backups.isEmpty(), "Invalid persisted state must be preserved before replacement");
             QFile backup(QFileInfo(path).absolutePath() + QLatin1Char('/') + backups.first());
             QVERIFY(backup.open(QIODevice::ReadOnly));
             QCOMPARE(backup.readAll(), original);
@@ -734,6 +734,34 @@ private Q_SLOTS:
                             R"({"version":2,"fences":[{}]})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-snapshot.json"),
                             R"({"version":2,"fences":[],"files":{},"pages":{},"snapshots":[{"id":"x","name":"bad","state":{"fences":[{}]}}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-view.json"),
+                            R"({"version":2,"fences":[{"id":"f","view":"cards"}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-opacity.json"),
+                            R"({"version":2,"fences":[{"id":"f","opacity":1.5}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-icon-size.json"),
+                            R"({"version":2,"fences":[{"id":"f","iconSize":136}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-icon-step.json"),
+                            R"({"version":2,"fences":[{"id":"f","iconSize":42}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-page.json"),
+                            R"({"version":2,"fences":[{"id":"f","page":9}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-screen.json"),
+                            R"({"version":2,"fences":[{"id":"f","screen":-1}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-placement-page.json"),
+                            R"({"version":2,"fences":[],"files":{"notes":{"pos":[0,9,0,0]}}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-placement-screen.json"),
+                            R"({"version":2,"fences":[],"files":{"notes":{"pos":[-1,0,0,0]}}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-placement-cell.json"),
+                            R"({"version":2,"fences":[],"files":{"notes":{"pos":[0,0,10001,0]}}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-page-count.json"),
+                            R"({"version":2,"fences":[],"pages":{"|0":10}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-page-key.json"),
+                            R"({"version":2,"fences":[],"pages":{"broken":2}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-setting-type.json"),
+                            R"({"version":2,"fences":[],"settings":{"autoPrivacy":1}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-setting-icon-size.json"),
+                            R"({"version":2,"fences":[],"settings":{"iconSize":129}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-cleanup-days.json"),
+                            R"({"version":2,"fences":[],"settings":{"cleanupDays":0}})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-options.json"),
                             R"({"version":2,"fences":[{"id":"d","title":"Disks","portal":"drives:","driveOptions":{"partitionMode":"unknown"}}]})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-card-size.json"),
@@ -742,6 +770,80 @@ private Q_SLOTS:
                             R"({"version":2,"fences":[],"settings":{"drives":{"groups":{"usb":"yes"}}}})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-display-mode.json"),
                             R"({"version":2,"fences":[],"settings":{"drives":{"displayMode":"huge"}}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-placement-fence.json"),
+                            R"({"version":2,"fences":[],"files":{"notes":{"manual":true,"fence":"missing"}}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/duplicate-snapshot-id.json"),
+                            R"({"version":2,"fences":[],"snapshots":[{"id":"x","name":"one","state":{"fences":[]}},{"id":"x","name":"two","state":{"fences":[]}}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/empty-snapshot-name.json"),
+                            R"({"version":2,"fences":[],"snapshots":[{"id":"x","name":" ","state":{"fences":[]}}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-snapshot-created.json"),
+                            R"({"version":2,"fences":[],"snapshots":[{"id":"x","name":"one","created":1.5,"state":{"fences":[]}}]})");
+    }
+
+    void persistedGeometryIsSafelyNormalized()
+    {
+        QDir().mkpath(QFileInfo(store()).absolutePath());
+        touch(store(), R"({"version":2,"fences":[{"id":"geometry","x":-2,"y":2,"w":2,"h":0.01,"orphan":[2,-1,3,0.01]}]})");
+
+        AlveusCore core(desk(), store());
+        const QVariantMap fence = core.fence(QStringLiteral("geometry"));
+        QCOMPARE(fence.value(QStringLiteral("x")).toDouble(), 0.0);
+        QCOMPARE(fence.value(QStringLiteral("y")).toDouble(), 0.97);
+        QCOMPARE(fence.value(QStringLiteral("w")).toDouble(), 1.0);
+        QCOMPARE(fence.value(QStringLiteral("h")).toDouble(), 0.03);
+        core.saveNow();
+
+        QFile repaired(store());
+        QVERIFY(repaired.open(QIODevice::ReadOnly));
+        const QJsonObject savedFence = QJsonDocument::fromJson(repaired.readAll()).object()
+                                           .value(QStringLiteral("fences")).toArray().first().toObject();
+        const QJsonArray orphan = savedFence.value(QStringLiteral("orphan")).toArray();
+        QCOMPARE(orphan.size(), 4);
+        QCOMPARE(orphan[0].toDouble(), 0.0);
+        QCOMPARE(orphan[1].toDouble(), 0.0);
+        QCOMPARE(orphan[2].toDouble(), 1.0);
+        QCOMPARE(orphan[3].toDouble(), 0.03);
+        const QStringList backups = QDir(QFileInfo(store()).absolutePath())
+            .entryList({QFileInfo(store()).fileName() + QStringLiteral(".corrupt-*")}, QDir::Files);
+        QVERIFY(backups.isEmpty()); // finite geometry is normalized, not treated as corruption
+    }
+
+    void unknownSettingsFieldsArePreserved()
+    {
+        touch(store(), R"({"version":2,"fences":[],"settings":{"futureOption":{"enabled":true}}})");
+        AlveusCore core(desk(), store());
+        QVERIFY(core.setting(QStringLiteral("futureOption")).toMap().value(QStringLiteral("enabled")).toBool());
+        core.saveNow();
+
+        QFile saved(store());
+        QVERIFY(saved.open(QIODevice::ReadOnly));
+        const QJsonObject settings = QJsonDocument::fromJson(saved.readAll()).object()
+                                         .value(QStringLiteral("settings")).toObject();
+        QVERIFY(settings.value(QStringLiteral("futureOption")).toObject()
+                    .value(QStringLiteral("enabled")).toBool());
+    }
+
+    void settingSetterRejectsUnsupportedValues()
+    {
+        AlveusCore core(desk(), store());
+        QSignalSpy messages(&core, &AlveusCore::message);
+        core.setSetting(QStringLiteral("iconSize"), 129);
+        core.setSetting(QStringLiteral("autoPrivacy"), 1);
+        core.setSetting(QStringLiteral("cleanupDays"), 0);
+        QCOMPARE(core.setting(QStringLiteral("iconSize")).toInt(), 48);
+        QVERIFY(!core.setting(QStringLiteral("autoPrivacy")).toBool());
+        QCOMPARE(core.setting(QStringLiteral("cleanupDays")).toInt(), 60);
+
+        core.setSetting(QStringLiteral("futureOption"), true);
+        QVERIFY(core.setting(QStringLiteral("futureOption")).toBool());
+        core.setSetting(QStringLiteral("iconSize"), 56);
+        core.setSetting(QStringLiteral("cleanupDays"), 30);
+        QCOMPARE(core.setting(QStringLiteral("iconSize")).toInt(), 56);
+        QCOMPARE(core.setting(QStringLiteral("cleanupDays")).toInt(), 30);
+        QCOMPARE(messages.size(), 3);
+        for (const QList<QVariant> &arguments : messages) {
+            QCOMPARE(arguments.first().toString(), QStringLiteral("settings-invalid-value"));
+        }
     }
 
     void newerSettingsAreNeverOverwritten()
