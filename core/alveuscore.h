@@ -60,6 +60,7 @@ class AlveusCore : public QObject
     Q_PROPERTY(QVariantList phones READ phones NOTIFY phonesChanged)
     Q_PROPERTY(int staleCount READ staleCount NOTIFY changed)
     Q_PROPERTY(QVariantList drives READ drives NOTIFY drivesChanged)
+    Q_PROPERTY(QVariantList driveDevices READ driveDevices NOTIFY drivesChanged)
     // Copy/move running in the background: {active, kind, name, index, count,
     // progress (0..1, -1 = unknown), queued, elapsed (ms)}
     Q_PROPERTY(QVariantMap fileJob READ fileJob NOTIFY fileJobChanged)
@@ -89,6 +90,7 @@ public:
     QVariantList phones() const { return m_phones; }
     int staleCount() const;
     QVariantList drives() const;
+    QVariantList driveDevices() const;
 
     // ---- desktops (one per screen and activity) --------------------------
     Q_INVOKABLE void registerDesktop(int screen, const QString &activity);

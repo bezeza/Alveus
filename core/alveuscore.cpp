@@ -2953,6 +2953,11 @@ QVariantList AlveusCore::drives() const
     return m_drives->drives();
 }
 
+QVariantList AlveusCore::driveDevices() const
+{
+    return m_drives->devices();
+}
+
 
 void AlveusCore::refreshDrives()
 {

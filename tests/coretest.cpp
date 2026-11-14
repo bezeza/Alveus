@@ -257,6 +257,37 @@ private Q_SLOTS:
         integrations.setWatchScreenShare(false);
     }
 
+    void driveDiscoveryFallsBackForOlderLsblk()
+    {
+        QTemporaryDir helpers;
+        QVERIFY(helpers.isValid());
+        const QString log = helpers.path() + QStringLiteral("/lsblk-columns.log");
+        const QByteArray script = QStringLiteral(
+            "#!/bin/sh\n"
+            "printf '%s\\n' \"$4\" >> '%1'\n"
+            "case \"$4\" in *TRAN*) echo 'unknown column: TRAN' >&2; exit 1;; esac\n"
+            "printf '{\"blockdevices\":[{\"name\":\"sdd\",\"path\":\"/dev/sdd\",\"type\":\"disk\",\"size\":1000}]}\\n'\n")
+                                      .arg(log).toUtf8();
+        QVERIFY(!writeExecutable(helpers.path(), QStringLiteral("lsblk"), script).isEmpty());
+        ScopedPath path(helpers.path());
+
+        DriveWatcher watcher(nullptr, 2000, 1000);
+        QSignalSpy messages(&watcher, &DriveWatcher::message);
+        watcher.devices(); // starts discovery with the extended column set
+
+        QTRY_COMPARE_WITH_TIMEOUT(lineCount(log), 2, 4000);
+        const auto hasSdd = [&watcher]() {
+            for (const QVariant &value : watcher.devices()) {
+                if (value.toMap().value(QStringLiteral("device")).toString() == QStringLiteral("/dev/sdd")) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(hasSdd(), 4000);
+        QVERIFY(!hasMessageKind(messages, QStringLiteral("drive-list-failed")));
+    }
+
     void driveHelpersTimeoutAndCanRetry()
     {
         QTemporaryDir helpers;
@@ -1504,6 +1535,9 @@ private Q_SLOTS:
         QVERIFY(isUserMount(QStringLiteral("/mnt/Data"), QStringLiteral("ntfs3"), QStringLiteral("/dev/sdb2")));
         QVERIFY(isUserMount(QStringLiteral("/run/media/user/USB"), QStringLiteral("vfat"), QStringLiteral("/dev/sdc1")));
         QVERIFY(isUserMount(QStringLiteral("/mnt/nas"), QStringLiteral("cifs"), QStringLiteral("//nas/share")));
+        QVERIFY(isNetworkMount(QStringLiteral("fuse.sshfs"), QStringLiteral("/dev/fuse")));
+        QVERIFY(isNetworkMount(QStringLiteral("nfs4"), QStringLiteral("server:/share")));
+        QVERIFY(!isNetworkMount(QStringLiteral("ntfs3"), QStringLiteral("/dev/sdb2")));
         QVERIFY(isUserMount(QStringLiteral("/media/Windows"), QStringLiteral("fuseblk"), QStringLiteral("/dev/sda3"))); // ntfs-3g
         QVERIFY(!isUserMount(QStringLiteral("/boot/efi"), QStringLiteral("vfat"), QStringLiteral("/dev/nvme0n1p1")));
         QVERIFY(!isUserMount(QStringLiteral("/home"), QStringLiteral("btrfs"), QStringLiteral("/dev/nvme0n1p3")));
@@ -1561,6 +1595,166 @@ private Q_SLOTS:
         const QString id = core.createPortal(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Диски"), QStringLiteral("drives:"));
         QCOMPARE(core.fence(id).value(QStringLiteral("portal")).toString(), QStringLiteral("drives:"));
         QTRY_VERIFY_WITH_TIMEOUT(!core.drives().isEmpty(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!core.driveDevices().isEmpty(), 5000);
+    }
+
+    void driveHierarchyParserHandlesDevices()
+    {
+        const QByteArray json = R"JSON(
+        {
+          "blockdevices": [
+            {
+              "name": "nvme0n1",
+              "path": "/dev/nvme0n1",
+              "type": "disk",
+              "size": 1000204886016,
+              "model": "990 PRO 1TB",
+              "vendor": "Samsung",
+              "tran": "nvme",
+              "wwn": "eui.0025381234567890",
+              "rm": false,
+              "hotplug": false,
+              "ro": false,
+              "children": [
+                {
+                  "name": "nvme0n1p1",
+                  "path": "/dev/nvme0n1p1",
+                  "type": "part",
+                  "size": 536870912,
+                  "label": "EFI",
+                  "fstype": "vfat",
+                  "partuuid": "1111-AAAA",
+                  "parttype": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+                  "mountpoints": ["/boot/efi"]
+                },
+                {
+                  "name": "nvme0n1p2",
+                  "path": "/dev/nvme0n1p2",
+                  "type": "part",
+                  "size": 499000000000,
+                  "label": "System",
+                  "fstype": "btrfs",
+                  "uuid": "ABCD-1234",
+                  "mountpoints": ["/", "/home"]
+                },
+                {
+                  "name": "nvme0n1p3",
+                  "path": "/dev/nvme0n1p3",
+                  "type": "part",
+                  "size": 1000000000,
+                  "label": "Data",
+                  "fstype": "ntfs3",
+                  "mountpoint": "/mnt/data"
+                },
+                {
+                  "name": "nvme0n1p4",
+                  "path": "/dev/nvme0n1p4",
+                  "type": "part",
+                  "size": 500000000000,
+                  "fstype": "ext4",
+                  "uuid": "DEAD-BEEF",
+                  "mountpoints": [null]
+                },
+                {
+                  "name": "nvme0n1p5",
+                  "path": "/dev/nvme0n1p5",
+                  "type": "part",
+                  "size": 104857600,
+                  "mountpoints": [null]
+                }
+              ]
+            },
+            {
+              "name": "sdb",
+              "path": "/dev/sdb",
+              "type": "disk",
+              "size": 32000000000,
+              "model": "Flash Disk",
+              "vendor": "Generic",
+              "tran": "usb",
+              "rm": true,
+              "hotplug": true,
+              "children": [
+                {
+                  "name": "sdb1",
+                  "path": "/dev/sdb1",
+                  "type": "part",
+                  "size": 31900000000,
+                  "label": "BACKUP",
+                  "fstype": "exfat",
+                  "rm": false,
+                  "hotplug": false,
+                  "mountpoints": [null]
+                }
+              ]
+            },
+            {
+              "name": "sdc",
+              "path": "/dev/sdc",
+              "type": "disk",
+              "size": 1000000000,
+              "rm": true,
+              "tran": null
+            }
+          ]
+        })JSON";
+
+        const QList<Drive> devices = driveHierarchyFromLsblk(json);
+        QCOMPARE(devices.size(), 3);
+
+        const Drive &nvme = devices.at(0);
+        QCOMPARE(nvme.id, QStringLiteral("wwn:eui.0025381234567890"));
+        QCOMPARE(nvme.device, QStringLiteral("/dev/nvme0n1"));
+        QCOMPARE(nvme.type, QStringLiteral("disk"));
+        QVERIFY(nvme.physical);
+        QCOMPARE(nvme.vendor, QStringLiteral("Samsung"));
+        QCOMPARE(nvme.model, QStringLiteral("990 PRO 1TB"));
+        QCOMPARE(nvme.transport, QStringLiteral("nvme"));
+        QVERIFY(nvme.system);
+        QCOMPARE(nvme.children.size(), 5);
+
+        const Drive &efi = nvme.children.at(0);
+        QCOMPARE(efi.total, qint64(536870912)); // small service partitions remain discoverable
+        QCOMPARE(efi.partUuid, QStringLiteral("1111-AAAA"));
+        QCOMPARE(efi.partType, QStringLiteral("c12a7328-f81f-11d2-ba4b-00a0c93ec93b"));
+        QCOMPARE(efi.parentId, nvme.id);
+        QCOMPARE(efi.parentDevice, nvme.device);
+        QCOMPARE(efi.id, QStringLiteral("partuuid:1111-aaaa@wwn:eui.0025381234567890"));
+
+        const Drive &system = nvme.children.at(1);
+        QCOMPARE(system.uuid, QStringLiteral("ABCD-1234"));
+        QCOMPARE(system.id, QStringLiteral("uuid:abcd-1234@wwn:eui.0025381234567890"));
+        QCOMPARE(system.mountPoints, QStringList({QStringLiteral("/"), QStringLiteral("/home")}));
+        QCOMPARE(system.mountPoint, QStringLiteral("/"));
+        QVERIFY(!system.mountPoints.isEmpty());
+        QVERIFY(system.system);
+
+        const Drive &data = nvme.children.at(2);
+        QCOMPARE(data.mountPoints, QStringList({QStringLiteral("/mnt/data")}));
+        QCOMPARE(data.mountPoint, QStringLiteral("/mnt/data"));
+
+        const QVariantMap mapped = toMap(nvme);
+        QCOMPARE(mapped.value(QStringLiteral("children")).toList().size(), 5);
+        QCOMPARE(mapped.value(QStringLiteral("model")).toString(), QStringLiteral("990 PRO 1TB"));
+        QCOMPARE(mapped.value(QStringLiteral("physical")).toBool(), true);
+
+        const Drive &usb = devices.at(1);
+        QVERIFY(usb.usb);
+        QVERIFY(usb.removable);
+        QCOMPARE(usb.transport, QStringLiteral("usb"));
+        QVERIFY(usb.children.first().usb);
+        QVERIFY(usb.children.first().removable);
+
+        const Drive &removableWithoutTransport = devices.at(2);
+        QVERIFY(removableWithoutTransport.removable);
+        QVERIFY(!removableWithoutTransport.usb); // RM alone is not proof of USB transport
+
+        const QList<Drive> fallback = driveHierarchyFromLsblk(
+            R"({"blockdevices":[{"name":"sdd","path":"/dev/sdd","type":"disk","size":"100"}]})");
+        QCOMPARE(fallback.size(), 1);
+        QCOMPARE(fallback.first().id, QStringLiteral("device:/dev/sdd"));
+        QVERIFY(driveHierarchyFromLsblk(QByteArrayLiteral("not json")).isEmpty());
+        QVERIFY(driveHierarchyFromLsblk(QByteArray(R"({"devices":[]})")).isEmpty());
     }
 
     void thumbnails()

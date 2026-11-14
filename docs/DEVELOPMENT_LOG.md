@@ -181,3 +181,26 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   [run 43606016299](https://github.com/bezeza/Alveus/actions/runs/43606016299).
 - No live PipeWire, KDE Connect, udisksctl, or Plasma session was exercised by
   CI; those remain manual desktop validation tasks.
+
+### In progress — Stage 1 / feat/drives-hierarchy-core
+
+- Introduce a recursive drive model that preserves physical devices, nested
+  partitions/logical volumes, parent relationships, multiple mount points,
+  filesystem metadata, model/vendor, transport, WWN, UUID, PARTUUID, and
+  partition type metadata.
+- Expose the new hierarchy as the additive Core.driveDevices property while
+  retaining Core.drives and the existing flat QML view for compatibility.
+- Request optional lsblk columns and fall back to the known baseline column
+  set when an older util-linux version rejects them. Keep the existing bounded
+  process timeout and last-valid-output behavior.
+- Add parser fixtures for a five-partition NVMe device, USB transport,
+  removable media without USB transport metadata, stable-ID fallbacks,
+  multiple mount points, the legacy singular mountpoint field, and small
+  partitions.
+- The legacy flat helper retains its historical 2 GiB display cutoff until the
+  UI switches to the new hierarchy and configurable visibility filters. The
+  new hierarchy parser itself does not discard partitions by size.
+- Verification: local build and CTest have not been run because this execution
+  workspace has no Qt 6 development toolchain or repository checkout. GitHub
+  Actions verification is pending. No live KDE Plasma or physical-drive test
+  has been performed.
