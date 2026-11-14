@@ -48,36 +48,6 @@ ListView {
     model: []
     QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
 
-    function hasMountedDescendant(children) {
-        for (const child of children) {
-            if (child.mounted || hasMountedDescendant(child.children || [])) {
-                return true
-            }
-        }
-        return false
-    }
-
-    function accumulateSummary(devices, totals, seen) {
-        for (const device of devices) {
-            const children = device.children || []
-            const hasMountedChild = hasMountedDescendant(children)
-            const total = Number(device.total)
-            const free = Number(device.free)
-            const id = String(device.id || device.device || "")
-            if (device.mounted && !hasMountedChild) {
-                if (total > 0 && id !== "" && !seen[id] && isFinite(free) && free >= 0) {
-                    totals.total += total
-                    totals.free += Math.min(total, free)
-                    totals.count += 1
-                    seen[id] = true
-                } else if (id === "" || !isFinite(total) || total <= 0 || !isFinite(free) || free < 0) {
-                    totals.complete = false
-                }
-            }
-            accumulateSummary(children, totals, seen)
-        }
-    }
-
     function formatSize(bytes) {
         if (desk && desk.formatSize) return desk.formatSize(Number(bytes))
         return Number(bytes).toString()
@@ -87,10 +57,7 @@ ListView {
         const devices = Core.visibleDriveDevices(fenceId, showHiddenTemporarily)
         visibleDevices = devices
 
-        const totals = { total: 0, free: 0, used: 0, count: 0, complete: true }
-        accumulateSummary(devices, totals, ({}))
-        totals.used = Math.max(0, totals.total - totals.free)
-        storageSummary = totals
+        storageSummary = Core.driveSummary(fenceId, showHiddenTemporarily)
 
         const groups = []
         if (separateUsb) {
