@@ -346,11 +346,64 @@ bool hasExpectedType(const QJsonObject &object, const QString &key, QJsonValue::
     return !object.contains(key) || object.value(key).type() == type;
 }
 
+bool isJsonIntegerInRange(const QJsonValue &value, qint64 minimum, qint64 maximum)
+{
+    return isJsonInteger(value) && value.toDouble() >= double(minimum)
+        && value.toDouble() <= double(maximum);
+}
+
+bool validSettingValue(const QString &key, const QJsonValue &value)
+{
+    if (!defaultSettings().contains(key)) {
+        return false;
+    }
+    if (key == QLatin1String("iconSize")) {
+        if (!isJsonIntegerInRange(value, 24, 128)) {
+            return false;
+        }
+        return (value.toInt() - 24) % 8 == 0;
+    }
+    if (key == QLatin1String("cleanupDays")) {
+        return isJsonIntegerInRange(value, 1, 3650);
+    }
+    return value.isBool(); // autoPrivacy, cleanupReminder, singleClick, showDonate
+}
+
+bool validSettingsObject(const QJsonValue &value)
+{
+    if (!value.isObject()) {
+        return false;
+    }
+    const QJsonObject settings = value.toObject();
+    for (auto it = settings.constBegin(); it != settings.constEnd(); ++it) {
+        if (!validSettingValue(it.key(), it.value())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool validPageKey(const QString &key)
+{
+    const int separator = key.lastIndexOf(QLatin1Char('|'));
+    if (separator < 0 || key.indexOf(QLatin1Char('|')) != separator) {
+        return false;
+    }
+    const QString activity = key.left(separator);
+    const QString screenText = key.mid(separator + 1);
+    bool ok = false;
+    const int screen = screenText.toInt(&ok);
+    return ok && screen >= 0 && screen <= 255
+        && QString::number(screen) == screenText && activity.size() <= 128;
+}
+
 bool validStateObject(const QJsonObject &root)
 {
-    // `fences` is the one mandatory state collection in every released layout.
-    // Accept older v1 layouts that omitted the newer `pages`/`files` fields.
+    // v1 layouts may omit the newer files/pages collections and settings.
     if (!root.value(QStringLiteral("fences")).isArray()) {
+        return false;
+    }
+    if (root.contains(QStringLiteral("settings")) && !validSettingsObject(root.value(QStringLiteral("settings")))) {
         return false;
     }
 
@@ -362,38 +415,67 @@ bool validStateObject(const QJsonObject &root)
         }
         const QJsonObject fence = value.toObject();
         const QJsonValue idValue = fence.value(QStringLiteral("id"));
-        if (!idValue.isString() || idValue.toString().trimmed().isEmpty() || fenceIds.contains(idValue.toString())) {
+        const QString id = idValue.toString();
+        if (!idValue.isString() || id.trimmed().isEmpty() || id.size() > 64 || fenceIds.contains(id)) {
             return false;
         }
-        fenceIds.insert(idValue.toString());
+        fenceIds.insert(id);
 
         const QStringList stringKeys = {QStringLiteral("title"), QStringLiteral("activity"), QStringLiteral("rules"),
                                         QStringLiteral("portal"), QStringLiteral("group"), QStringLiteral("color"),
                                         QStringLiteral("view")};
+        const QHash<QString, int> stringLimits = {
+            {QStringLiteral("title"), 256}, {QStringLiteral("activity"), 128},
+            {QStringLiteral("rules"), 4096}, {QStringLiteral("portal"), 4096},
+            {QStringLiteral("group"), 128}, {QStringLiteral("color"), 64},
+            {QStringLiteral("view"), 16}
+        };
         for (const QString &key : stringKeys) {
-            if (!hasExpectedType(fence, key, QJsonValue::String)) {
+            if (!hasExpectedType(fence, key, QJsonValue::String)
+                || fence.value(key).toString().size() > stringLimits.value(key)) {
                 return false;
             }
         }
+        if (fence.contains(QStringLiteral("view"))) {
+            const QString view = fence.value(QStringLiteral("view")).toString();
+            if (view != QLatin1String("grid") && view != QLatin1String("list")
+                && view != QLatin1String("honeycomb")) {
+                return false;
+            }
+        }
+
         const QStringList boolKeys = {QStringLiteral("collapsed"), QStringLiteral("activeTab"), QStringLiteral("blur")};
         for (const QString &key : boolKeys) {
             if (!hasExpectedType(fence, key, QJsonValue::Bool)) {
                 return false;
             }
         }
-        const QStringList integerKeys = {QStringLiteral("screen"), QStringLiteral("page"), QStringLiteral("iconSize")};
-        for (const QString &key : integerKeys) {
-            if (fence.contains(key) && !isJsonInteger(fence.value(key))) {
-                return false;
-            }
+
+        if ((fence.contains(QStringLiteral("screen"))
+             && !isJsonIntegerInRange(fence.value(QStringLiteral("screen")), 0, 255))
+            || (fence.contains(QStringLiteral("page"))
+                && !isJsonIntegerInRange(fence.value(QStringLiteral("page")), 0, 8))
+            || (fence.contains(QStringLiteral("iconSize"))
+                && !isJsonIntegerInRange(fence.value(QStringLiteral("iconSize")), 0, 256))
+            || (fence.contains(QStringLiteral("created"))
+                && !isJsonIntegerInRange(fence.value(QStringLiteral("created")), 0, 9007199254740991LL))) {
+            return false;
         }
-        const QStringList numberKeys = {QStringLiteral("x"), QStringLiteral("y"), QStringLiteral("w"),
-                                         QStringLiteral("h"), QStringLiteral("opacity"), QStringLiteral("created")};
-        for (const QString &key : numberKeys) {
+
+        const QStringList geometryKeys = {QStringLiteral("x"), QStringLiteral("y"),
+                                          QStringLiteral("w"), QStringLiteral("h")};
+        for (const QString &key : geometryKeys) {
             if (fence.contains(key) && !isJsonNumber(fence.value(key))) {
                 return false;
             }
         }
+        if (fence.contains(QStringLiteral("opacity"))
+            && (!isJsonNumber(fence.value(QStringLiteral("opacity")))
+                || fence.value(QStringLiteral("opacity")).toDouble() < 0.0
+                || fence.value(QStringLiteral("opacity")).toDouble() > 1.0)) {
+            return false;
+        }
+
         if (fence.contains(QStringLiteral("orphan"))) {
             const QJsonValue orphanValue = fence.value(QStringLiteral("orphan"));
             if (!orphanValue.isArray()) {
@@ -409,8 +491,12 @@ bool validStateObject(const QJsonObject &root)
             if (!fence.value(QStringLiteral("extensions")).isArray()) {
                 return false;
             }
-            for (const QJsonValue &extension : fence.value(QStringLiteral("extensions")).toArray()) {
-                if (!extension.isString()) {
+            const QJsonArray extensions = fence.value(QStringLiteral("extensions")).toArray();
+            if (extensions.size() > 256) {
+                return false;
+            }
+            for (const QJsonValue &extension : extensions) {
+                if (!extension.isString() || extension.toString().size() > 64) {
                     return false;
                 }
             }
@@ -423,12 +509,22 @@ bool validStateObject(const QJsonObject &root)
         }
         const QJsonObject files = root.value(QStringLiteral("files")).toObject();
         for (auto it = files.constBegin(); it != files.constEnd(); ++it) {
-            if (!it.value().isObject()) {
+            const QString name = it.key();
+            if (name.isEmpty() || name.size() > 255 || name.contains(QLatin1Char('/'))
+                || name.contains(QChar::Null) || !it.value().isObject()) {
                 return false;
             }
             const QJsonObject placement = it.value().toObject();
             if (!hasExpectedType(placement, QStringLiteral("manual"), QJsonValue::Bool)
                 || !hasExpectedType(placement, QStringLiteral("fence"), QJsonValue::String)) {
+                return false;
+            }
+            if (placement.value(QStringLiteral("manual")).toBool()
+                && !placement.contains(QStringLiteral("fence"))) {
+                return false;
+            }
+            const QString fenceId = placement.value(QStringLiteral("fence")).toString();
+            if (!fenceId.isEmpty() && !fenceIds.contains(fenceId)) {
                 return false;
             }
             if (placement.contains(QStringLiteral("pos"))) {
@@ -437,8 +533,11 @@ bool validStateObject(const QJsonObject &root)
                     return false;
                 }
                 const QJsonArray pos = posValue.toArray();
-                if (pos.size() != 4 || !isJsonInteger(pos[0]) || !isJsonInteger(pos[1])
-                    || !isJsonInteger(pos[2]) || !isJsonInteger(pos[3])) {
+                if (pos.size() != 4
+                    || !isJsonIntegerInRange(pos[0], 0, 255)
+                    || !isJsonIntegerInRange(pos[1], 0, 8)
+                    || !isJsonIntegerInRange(pos[2], 0, 10000)
+                    || !isJsonIntegerInRange(pos[3], 0, 10000)) {
                     return false;
                 }
             }
@@ -451,7 +550,7 @@ bool validStateObject(const QJsonObject &root)
         }
         const QJsonObject pages = root.value(QStringLiteral("pages")).toObject();
         for (auto it = pages.constBegin(); it != pages.constEnd(); ++it) {
-            if (!isJsonInteger(it.value()) || it.value().toInt() < 1) {
+            if (!validPageKey(it.key()) || !isJsonIntegerInRange(it.value(), 1, 9)) {
                 return false;
             }
         }
@@ -464,17 +563,23 @@ bool validSnapshots(const QJsonValue &value)
     if (!value.isArray()) {
         return false;
     }
+    QSet<QString> snapshotIds;
     for (const QJsonValue &item : value.toArray()) {
         if (!item.isObject()) {
             return false;
         }
         const QJsonObject snapshot = item.toObject();
-        if (!snapshot.value(QStringLiteral("id")).isString()
-            || snapshot.value(QStringLiteral("id")).toString().trimmed().isEmpty()
-            || !snapshot.value(QStringLiteral("name")).isString()
-            || (snapshot.contains(QStringLiteral("created")) && !isJsonNumber(snapshot.value(QStringLiteral("created"))))) {
+        const QJsonValue idValue = snapshot.value(QStringLiteral("id"));
+        const QString id = idValue.toString();
+        const QJsonValue nameValue = snapshot.value(QStringLiteral("name"));
+        const QString name = nameValue.toString();
+        if (!idValue.isString() || id.trimmed().isEmpty() || id.size() > 64 || snapshotIds.contains(id)
+            || !nameValue.isString() || name.trimmed().isEmpty() || name.size() > 128
+            || (snapshot.contains(QStringLiteral("created"))
+                && !isJsonIntegerInRange(snapshot.value(QStringLiteral("created")), 0, 9007199254740991LL))) {
             return false;
         }
+        snapshotIds.insert(id);
         if (!snapshot.value(QStringLiteral("state")).isObject()
             || !validStateObject(snapshot.value(QStringLiteral("state")).toObject())) {
             return false;
