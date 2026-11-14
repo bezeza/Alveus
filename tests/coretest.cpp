@@ -736,6 +736,8 @@ private Q_SLOTS:
                             R"({"version":2,"fences":[],"files":{},"pages":{},"snapshots":[{"id":"x","name":"bad","state":{"fences":[{}]}}]})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-options.json"),
                             R"({"version":2,"fences":[{"id":"d","title":"Disks","portal":"drives:","driveOptions":{"partitionMode":"unknown"}}]})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-card-size.json"),
+                            R"({"version":2,"fences":[{"id":"d","title":"Disks","portal":"drives:","driveOptions":{"displayMode":"tiny"}}]})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-defaults.json"),
                             R"({"version":2,"fences":[],"settings":{"drives":{"groups":{"usb":"yes"}}}})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-display-mode.json"),
@@ -1619,6 +1621,9 @@ private Q_SLOTS:
         QCOMPARE(core.fence(id).value(QStringLiteral("portal")).toString(), QStringLiteral("drives:"));
         QTRY_VERIFY_WITH_TIMEOUT(!core.drives().isEmpty(), 5000);
         QTRY_VERIFY_WITH_TIMEOUT(!core.driveDevices().isEmpty(), 5000);
+        const QVariantList visibleDevices = core.visibleDriveDevices(id);
+        QVERIFY(!visibleDevices.isEmpty());
+        QVERIFY(visibleDevices.first().toMap().contains(QStringLiteral("children")));
     }
 
     void driveVisibilitySettingsPersistAndFilter()
