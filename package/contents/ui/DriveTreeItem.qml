@@ -53,7 +53,8 @@ Item {
         if (Core.privacy) return "•••••"
         if (depth === 0 && drive.physical) {
             const model = ((drive.vendor || "") + " " + (drive.model || "")).trim()
-            return model !== "" ? model : drive.device
+            if ((drive.system || drive.label) && model !== "") return model + " · " + drive.device
+            return drive.device
         }
         const mountPoints = drive.mountPoints || []
         if (mountPoints.length > 0) return mountPoints.join(" · ")
