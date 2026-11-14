@@ -439,6 +439,19 @@ QQC2.Popup {
                         font.bold: true
                         font.pointSize: Kirigami.Theme.defaultFont.pointSize * 1.1
                     }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        PlasmaComponents.Label {
+                            Layout.fillWidth: true
+                            text: i18n("Drive card size")
+                        }
+                        QQC2.ComboBox {
+                            id: globalDriveCardSize
+                            model: [i18n("Compact"), i18n("Medium"), i18n("Large")]
+                            currentIndex: Math.max(0, ["compact", "medium", "large"].indexOf(dialog.effectiveDriveDefaults.displayMode))
+                            onActivated: Core.setDriveDefault("displayMode", ["compact", "medium", "large"][currentIndex])
+                        }
+                    }
                     PlasmaComponents.Label {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
