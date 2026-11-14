@@ -1697,7 +1697,7 @@ private Q_SLOTS:
             item(QStringLiteral("optical"), QStringLiteral("rom"), false, 700LL * 1024 * 1024),
         };
 
-        const QVariantMap defaultOptions = core.driveDefaults();
+        const QVariantMap defaultOptions = reloaded.driveDefaults();
         const QVariantList visible = Alveus::filterDriveList(sample, defaultOptions);
         QStringList visibleIds;
         for (const QVariant &value : visible) {
