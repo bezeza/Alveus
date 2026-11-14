@@ -3,32 +3,47 @@
 // Keeps a ListModel in step with a JS array without recreating delegates,
 // so fences don't flicker or lose state when something else changes.
 function syncModel(model, items, key) {
-    const keys = items.map(function (i) { return i[key]; });
+    // Hash membership once instead of scanning the incoming array for every
+    // existing row. This makes the common unchanged/append/remove refresh O(n).
+    const wantedKeys = new Set();
+    for (let i = 0; i < items.length; ++i) {
+        wantedKeys.add(items[i][key]);
+    }
+
     for (let i = model.count - 1; i >= 0; --i) {
-        if (keys.indexOf(model.get(i)[key]) === -1) {
+        if (!wantedKeys.has(model.get(i)[key])) {
             model.remove(i);
         }
     }
+
+    // Keep key lookups constant-time while preserving delegates for rows that
+    // still exist. Only positions crossed by an insert/move need reindexing.
+    const indexByKey = new Map();
+    for (let i = 0; i < model.count; ++i) {
+        indexByKey.set(model.get(i)[key], i);
+    }
+
     for (let i = 0; i < items.length; ++i) {
         const item = items[i];
-        let found = -1;
-        for (let j = i; j < model.count; ++j) {
-            if (model.get(j)[key] === item[key]) {
-                found = j;
-                break;
+        const itemKey = item[key];
+        const found = indexByKey.get(itemKey);
+
+        if (found === undefined) {
+            model.insert(i, item);
+            for (let j = i; j < model.count; ++j) {
+                indexByKey.set(model.get(j)[key], j);
+            }
+        } else if (found !== i) {
+            model.move(found, i, 1);
+            for (let j = i; j <= found; ++j) {
+                indexByKey.set(model.get(j)[key], j);
             }
         }
-        if (found === -1) {
-            model.insert(i, item);
-            continue;
-        }
-        if (found !== i) {
-            model.move(found, i, 1);
-        }
-        const cur = model.get(i);
-        for (const k in item) {
-            if (cur[k] !== item[k]) {
-                model.setProperty(i, k, item[k]);
+
+        const current = model.get(i);
+        for (const role in item) {
+            if (current[role] !== item[role]) {
+                model.setProperty(i, role, item[role]);
             }
         }
     }
