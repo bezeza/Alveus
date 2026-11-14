@@ -54,8 +54,7 @@ void Integrations::refreshPhones()
         return;
     }
     if (QStandardPaths::findExecutable(QStringLiteral("kdeconnect-cli")).isEmpty()) {
-        Q_EMIT message(QStringLiteral("kdeconnect-unavailable"), QStringLiteral("kdeconnect-cli was not found"));
-        Q_EMIT phonesChanged({});
+        Q_EMIT message(QStringLiteral("kdeconnect-unavailable"), QStringLiteral("kdeconnect-cli was not found; keeping the last known device list"));
         return;
     }
 
@@ -71,9 +70,10 @@ void Integrations::refreshPhones()
             m_phoneProc = nullptr;
         }
         if (!kind.isEmpty()) {
-            Q_EMIT message(kind, detail);
+            Q_EMIT message(kind, detail + QStringLiteral("; keeping the last known device list"));
+        } else {
+            Q_EMIT phonesChanged(phones);
         }
-        Q_EMIT phonesChanged(phones);
         proc->deleteLater();
     };
     connect(proc, &QProcess::finished, this, [proc, complete, this](int code, QProcess::ExitStatus status) {
