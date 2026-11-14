@@ -52,3 +52,28 @@ A helper timeout is not interpreted as a successful empty result. Screen-share
 detection is deliberately privacy-conservative; drive and phone discovery keep
 their last successful data and log that it may be stale. User-requested mount
 and unmount operations are bounded but not replayed automatically.
+
+
+## Persisted configuration safety
+
+Alveus validates a saved layout before applying it. A structurally malformed or
+semantically unsupported current-version store is preserved under a
+`.corrupt-*` backup name before the application starts with a fresh default
+layout. A store from a newer unsupported schema version is left untouched and
+is not overwritten. Valid v1 layouts remain supported; fields introduced later
+may be omitted and receive their documented defaults.
+
+Validation covers known settings keys and types, supported fence views
+(`grid`, `list`, `honeycomb`), opacity and icon-size ranges, screen/page indices,
+file placement coordinates and fence references, page counts, and snapshot IDs,
+names, and embedded state. Unknown settings keys and invalid references are
+rejected rather than silently applied. Runtime setters enforce the same
+supported settings and fence values before saving.
+
+Finite fence and orphan geometry is intentionally recoverable: coordinates
+and sizes are normalized to the desktop's 0–1 fractions, with a minimum size
+of 0.03. Non-finite geometry is rejected. Screen IDs are limited to 0–255,
+fence and placement page indices to 0–8, page counts to 1–9, and stored grid
+coordinates to 0–10000. Global icon size is 24–128 in steps of 8; cleanup age
+is 1–3650 days. These bounds keep corrupt values from reaching QML while
+preserving ordinary layouts and the v1 migration path.
