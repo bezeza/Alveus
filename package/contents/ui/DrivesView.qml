@@ -25,7 +25,6 @@ ListView {
     boundsBehavior: Flickable.StopAtBounds
     spacing: Kirigami.Units.smallSpacing
     model: []
-    headerPositioning: ListView.OverlayHeader
     QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
 
     function refreshModel() {
