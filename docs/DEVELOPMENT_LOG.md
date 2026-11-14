@@ -31,7 +31,7 @@ open pull requests, so proposed code is not mistaken for shipped code.
   same full CTest command as CI.
 
 The diagnostics and agent-governance changes are in the open PR #19. The first
-CI run for the diagnostics implementation passed build, core tests, shell
-checks, QML lint, and whitespace validation. The additional agent-policy and
-CI-enforcement changes still require a fresh CI run. Nothing in this section is
-shipped until PR #19 is merged.
+CI run for the diagnostics-only commit passed build, core tests, shell checks,
+QML lint, and whitespace validation. The combined changes are subject to a new
+CI run on the current PR head. Nothing in this section is shipped until PR #19
+is merged.
