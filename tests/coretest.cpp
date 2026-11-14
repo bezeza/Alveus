@@ -257,6 +257,37 @@ private Q_SLOTS:
         integrations.setWatchScreenShare(false);
     }
 
+    void driveDiscoveryFallsBackForOlderLsblk()
+    {
+        QTemporaryDir helpers;
+        QVERIFY(helpers.isValid());
+        const QString log = helpers.path() + QStringLiteral("/lsblk-columns.log");
+        const QByteArray script = QStringLiteral(
+            "#!/bin/sh\n"
+            "printf '%s\\n' \"$4\" >> '%1'\n"
+            "case \"$4\" in *TRAN*) echo 'unknown column: TRAN' >&2; exit 1;; esac\n"
+            "printf '{\"blockdevices\":[{\"name\":\"sdd\",\"path\":\"/dev/sdd\",\"type\":\"disk\",\"size\":1000}]}\\n'\n")
+                                      .arg(log).toUtf8();
+        QVERIFY(!writeExecutable(helpers.path(), QStringLiteral("lsblk"), script).isEmpty());
+        ScopedPath path(helpers.path());
+
+        DriveWatcher watcher(nullptr, 2000, 1000);
+        QSignalSpy messages(&watcher, &DriveWatcher::message);
+        watcher.devices(); // starts discovery with the extended column set
+
+        QTRY_COMPARE_WITH_TIMEOUT(lineCount(log), 2, 4000);
+        const auto hasSdd = [&watcher]() {
+            for (const QVariant &value : watcher.devices()) {
+                if (value.toMap().value(QStringLiteral("device")).toString() == QStringLiteral("/dev/sdd")) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(hasSdd(), 4000);
+        QVERIFY(!hasMessageKind(messages, QStringLiteral("drive-list-failed")));
+    }
+
     void driveHelpersTimeoutAndCanRetry()
     {
         QTemporaryDir helpers;
