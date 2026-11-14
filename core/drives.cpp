@@ -665,7 +665,9 @@ QVariantList DriveWatcher::buildDeviceList() const
         target->free = volume.bytesAvailable();
         target->readOnly = volume.isReadOnly();
         target->network = target->network || !device.startsWith(QLatin1String("/dev/"));
-        appendUnique(target->mountPoints, mountPoint);
+        if (!target->mountPoints.contains(mountPoint)) {
+            target->mountPoints << mountPoint;
+        }
         if (!target->mountPoints.isEmpty()) {
             target->mountPoint = target->mountPoints.contains(QStringLiteral("/"))
                 ? QStringLiteral("/") : target->mountPoints.first();
