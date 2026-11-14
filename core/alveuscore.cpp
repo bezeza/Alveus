@@ -1761,6 +1761,12 @@ QVariantMap AlveusCore::fence(const QString &id) const
 QString AlveusCore::createFence(int screen, const QString &activity, int page, qreal x, qreal y, qreal w, qreal h,
                                 const QString &title, const QString &rules)
 {
+    if (screen < 0 || screen > 255 || page < 0 || page > 8
+        || !std::isfinite(x) || !std::isfinite(y) || !std::isfinite(w) || !std::isfinite(h)
+        || title.size() > 256 || rules.size() > 4096 || activity.size() > 128) {
+        Q_EMIT message(QStringLiteral("fence-invalid-state"), QStringLiteral("Fence parameters are outside supported limits"));
+        return QString();
+    }
     pushUndo(QStringLiteral("create-fence|") + title);
     Fence f;
     f.id = newId();
@@ -1786,6 +1792,9 @@ QString AlveusCore::createPortal(int screen, const QString &activity, int page, 
                                  const QString &title, const QString &path)
 {
     const QString id = createFence(screen, activity, page, x, y, w, h, title, QString());
+    if (id.isEmpty() || path.size() > 4096) {
+        return QString();
+    }
     m_fences[indexOfFence(id)].portal = path.startsWith(QLatin1String("drives:")) ? QStringLiteral("drives:") : QDir::cleanPath(path);
     watchFolder(path);
     scheduleSave();
@@ -1797,6 +1806,41 @@ void AlveusCore::updateFence(const QString &id, const QVariantMap &patch)
 {
     const int i = indexOfFence(id);
     if (i < 0) {
+        return;
+    }
+    if (patch.contains(QStringLiteral("view"))) {
+        const QString view = patch.value(QStringLiteral("view")).toString();
+        if (view != QLatin1String("grid") && view != QLatin1String("list")
+            && view != QLatin1String("honeycomb")) {
+            Q_EMIT message(QStringLiteral("fence-invalid-view"), view);
+            return;
+        }
+    }
+    if (patch.contains(QStringLiteral("screen"))) {
+        bool ok = false;
+        const int screen = patch.value(QStringLiteral("screen")).toInt(&ok);
+        if (!ok || screen < 0 || screen > 255) {
+            Q_EMIT message(QStringLiteral("fence-invalid-screen"), patch.value(QStringLiteral("screen")).toString());
+            return;
+        }
+    }
+    const QStringList geometryKeys = {QStringLiteral("x"), QStringLiteral("y"),
+                                      QStringLiteral("w"), QStringLiteral("h")};
+    for (const QString &key : geometryKeys) {
+        if (patch.contains(key) && !std::isfinite(patch.value(key).toReal())) {
+            Q_EMIT message(QStringLiteral("fence-invalid-geometry"), key);
+            return;
+        }
+    }
+    if (patch.contains(QStringLiteral("opacity")) && !std::isfinite(patch.value(QStringLiteral("opacity")).toReal())) {
+        Q_EMIT message(QStringLiteral("fence-invalid-opacity"), QStringLiteral("opacity"));
+        return;
+    }
+    if ((patch.contains(QStringLiteral("title")) && patch.value(QStringLiteral("title")).toString().size() > 256)
+        || (patch.contains(QStringLiteral("rules")) && patch.value(QStringLiteral("rules")).toString().size() > 4096)
+        || (patch.contains(QStringLiteral("portal")) && patch.value(QStringLiteral("portal")).toString().size() > 4096)
+        || (patch.contains(QStringLiteral("activity")) && patch.value(QStringLiteral("activity")).toString().size() > 128)) {
+        Q_EMIT message(QStringLiteral("fence-invalid-state"), QStringLiteral("Fence text exceeds supported limits"));
         return;
     }
 
@@ -2166,18 +2210,37 @@ void AlveusCore::assignFiles(const QStringList &names, const QString &fenceId)
 
 void AlveusCore::setFilePositions(const QVariantList &items)
 {
-    if (items.isEmpty()) {
+    QVariantList validItems;
+    for (const QVariant &value : items) {
+        const QVariantMap item = value.toMap();
+        const QString name = item.value(QStringLiteral("name")).toString();
+        bool screenOk = false;
+        bool pageOk = false;
+        const int screen = item.value(QStringLiteral("screen")).toInt(&screenOk);
+        const int page = item.value(QStringLiteral("page")).toInt(&pageOk);
+        if (name.isEmpty() || name.size() > 255 || name.contains(QLatin1Char('/')) || name.contains(QChar::Null)
+            || !screenOk || screen < 0 || screen > 255 || !pageOk || page < 0 || page > 8) {
+            Q_EMIT message(QStringLiteral("desktop-position-invalid"), name);
+            continue;
+        }
+        QVariantMap normalized = item;
+        normalized.insert(QStringLiteral("col"), std::clamp(item.value(QStringLiteral("col")).toInt(), 0, 10000));
+        normalized.insert(QStringLiteral("row"), std::clamp(item.value(QStringLiteral("row")).toInt(), 0, 10000));
+        validItems << normalized;
+    }
+    if (validItems.isEmpty()) {
         return;
     }
-    pushUndo(QStringLiteral("move-icons|") + QString::number(items.size()));
-    for (const QVariant &v : items) {
-        const QVariantMap m = v.toMap();
-        Placement &p = m_place[m.value(QStringLiteral("name")).toString()];
+
+    pushUndo(QStringLiteral("move-icons|") + QString::number(validItems.size()));
+    for (const QVariant &value : validItems) {
+        const QVariantMap item = value.toMap();
+        Placement &p = m_place[item.value(QStringLiteral("name")).toString()];
         p.hasPos = true;
-        p.screen = m.value(QStringLiteral("screen")).toInt();
-        p.page = m.value(QStringLiteral("page")).toInt();
-        p.col = std::max(0, m.value(QStringLiteral("col")).toInt());
-        p.row = std::max(0, m.value(QStringLiteral("row")).toInt());
+        p.screen = item.value(QStringLiteral("screen")).toInt();
+        p.page = item.value(QStringLiteral("page")).toInt();
+        p.col = item.value(QStringLiteral("col")).toInt();
+        p.row = item.value(QStringLiteral("row")).toInt();
     }
     scheduleSave();
     bumpDesktopPositions();
@@ -2853,6 +2916,10 @@ QVariantList AlveusCore::snapshots() const
 
 QString AlveusCore::saveSnapshot(const QString &name)
 {
+    if (name.trimmed().isEmpty() || name.size() > 128) {
+        Q_EMIT message(QStringLiteral("snapshot-invalid-name"), QStringLiteral("Snapshot name must contain 1 to 128 characters"));
+        return QString();
+    }
     QJsonObject s;
     const QString id = newId();
     s.insert(QStringLiteral("id"), id);
