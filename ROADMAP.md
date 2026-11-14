@@ -45,7 +45,7 @@ features.
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
 | P1 | Background directory validation | [PR #14](https://github.com/bezeza/Alveus/pull/14) | Current-head CI passed; final code review and authorized merge remain |
-| P1 | Cached placement and targeted model updates | [PR #15](https://github.com/bezeza/Alveus/pull/15) | Activity-scope cache fix and two-way regression test added; final CI pending; reconcile development log with PR #19 |
+| P1 | Cached placement and targeted model updates | [PR #15](https://github.com/bezeza/Alveus/pull/15) | Activity-scope cache fix and two-way regression test added; current-head CI passed; review/merge after approval; reconcile log with PR #19 |
 | P2 | Offscreen UI harness and QML warning checks | [PR #17](https://github.com/bezeza/Alveus/pull/17) | Current-head CI passed, including UI harness CTest (2/2); live Plasma validation remains |
 | P2 | Runtime diagnostics and agent workflow | [PR #19](https://github.com/bezeza/Alveus/pull/19) | Finish review, verify privacy/rotation, and pass CI |
 | P2 | Icon, translations, previews, Fedora RPM workflow | [PR #20](https://github.com/bezeza/Alveus/pull/20), [PR #21](https://github.com/bezeza/Alveus/pull/21) | Consolidate overlapping work into one coherent change; fix the current UI-preview failure before considering it complete |
@@ -78,10 +78,10 @@ The PR #15 cache-invalidation finding has been addressed on its branch.
 `mergeFences()` now uses an internal cache-aware tab activation path, while
 the public QML `activateTab(id)` signature remains unchanged. A regression
 test covers both global-to-activity-specific and activity-specific-to-global
-merges with both activity caches populated. The implementation/test commit
-passed build, CTest (1/1), shell checks, QML lint, and whitespace validation.
-A subsequent development-log-only commit triggered another CI run, which is
-still in progress; PR #15 remains draft until that current head is green.
+merges with both activity caches populated. The implementation and current
+development-log head passed build, core CTest (1/1), shell checks, QML lint,
+and whitespace validation. PR #15 is ready for review; live Plasma validation
+has not been run.
 
 PR #15 now introduces `docs/DEVELOPMENT_LOG.md`, while PR #19 also adds that
 file on its own branch. Reconcile the log contents before merging PR #19 so the
