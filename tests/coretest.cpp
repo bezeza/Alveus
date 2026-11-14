@@ -117,6 +117,17 @@ static bool hasMessageKind(const QSignalSpy &spy, const QString &kind)
     return false;
 }
 
+static int messageKindCount(const QSignalSpy &spy, const QString &kind)
+{
+    int count = 0;
+    for (const QList<QVariant> &arguments : spy) {
+        if (!arguments.isEmpty() && arguments.first().toString() == kind) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 static int lineCount(const QString &path)
 {
     QFile file(path);
@@ -301,13 +312,7 @@ private Q_SLOTS:
 
         QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("thumbnail-timeout")), 5000);
         QTRY_COMPARE_WITH_TIMEOUT(lineCount(helperLog), 3, 5000);
-        int timeoutMessages = 0;
-        for (const QList<QVariant> &arguments : messages) {
-            if (!arguments.isEmpty() && arguments.first().toString() == QStringLiteral("thumbnail-timeout")) {
-                ++timeoutMessages;
-            }
-        }
-        QCOMPARE(timeoutMessages, 3);
+        QTRY_COMPARE_WITH_TIMEOUT(messageKindCount(messages, QStringLiteral("thumbnail-timeout")), 3, 2000);
 
         for (const QString &file : files) {
             QVERIFY(thumbnails.lookup(file, QStringLiteral("video/mp4")).isEmpty());
