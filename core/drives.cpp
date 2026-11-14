@@ -275,7 +275,8 @@ QList<Drive> fromMounts(const QList<QStorageInfo> &volumes)
         d.device = dev;
         d.id = (network ? QStringLiteral("network:") : QStringLiteral("device:")) + dev;
         if (network && dev.startsWith(QLatin1String("/dev/"))) {
-            d.id += QLatin1Char('@') + mp;
+            d.id += QLatin1Char('@');
+            d.id += mp;
         }
         d.type = network ? QStringLiteral("network") : QStringLiteral("volume");
         d.label = v.name();
@@ -656,7 +657,8 @@ QVariantList DriveWatcher::buildDeviceList() const
             fallback.network = network;
             fallback.id = (network ? QStringLiteral("network:") : QStringLiteral("device:")) + device;
             if (fuseNetwork) {
-                fallback.id += QLatin1Char('@') + mountPoint;
+                fallback.id += QLatin1Char('@');
+                fallback.id += mountPoint;
             }
             devices << fallback;
             target = &devices.last();
