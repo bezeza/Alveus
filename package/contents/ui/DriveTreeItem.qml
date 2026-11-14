@@ -23,7 +23,10 @@ Item {
     property bool showUsageBar: true
     property bool expandPartitionsByDefault: false
     property color textColor: Kirigami.Theme.textColor
-    property bool expanded: expandPartitionsByDefault
+    property bool expanded: {
+        const revision = Core.revision
+        return Core.driveExpanded(fenceId, drive.id || "", expandPartitionsByDefault)
+    }
 
     readonly property var children: drive.children || []
     readonly property bool hasChildren: children.length > 0
@@ -85,6 +88,13 @@ Item {
         }
     }
 
+    function toggleExpanded() {
+        expanded = !expanded
+        if (drive.id) {
+            Core.setDriveExpanded(fenceId, drive.id, expanded)
+        }
+    }
+
     Rectangle {
         anchors.fill: parent
         radius: depth === 0 ? Kirigami.Units.smallSpacing * 1.5 : Kirigami.Units.smallSpacing
@@ -118,7 +128,7 @@ Item {
                 icon.name: node.expanded ? "go-down" : "go-next"
                 QQC2.ToolTip.text: node.expanded ? i18n("Collapse partitions") : i18n("Expand partitions")
                 QQC2.ToolTip.visible: hovered
-                onClicked: node.expanded = !node.expanded
+                onClicked: node.toggleExpanded()
             }
             Item {
                 visible: !node.hasChildren
@@ -193,7 +203,7 @@ Item {
                         if (event.button === Qt.RightButton) {
                             menu.popup(rowMouse, event.x, event.y)
                         } else if (node.hasChildren) {
-                            node.expanded = !node.expanded
+                            node.toggleExpanded()
                         } else if (Core.setting("singleClick")) {
                             node.open()
                         }
