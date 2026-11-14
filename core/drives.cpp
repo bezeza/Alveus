@@ -621,36 +621,34 @@ QVariantList filterDriveHierarchy(const QVariantList &devices, const QVariantMap
         return devices;
     }
 
+    const auto hasMountedDescendant = [](const auto &self, const QVariantList &children) -> bool {
+        for (const QVariant &childValue : children) {
+            const QVariantMap child = childValue.toMap();
+            if (child.value(QStringLiteral("mounted")).toBool()
+                || self(self, child.value(QStringLiteral("children")).toList())) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     QVariantList out;
     out.reserve(devices.size());
     for (const QVariant &value : devices) {
         const QVariantMap original = value.toMap();
+        const QVariantList children = filterDriveHierarchy(original.value(QStringLiteral("children")).toList(), options);
         QVariantMap candidate = original;
 
         // A physical disk is not itself mounted, but it must remain visible
-        // when one of its descendant volumes is mounted.
-        std::function<bool(const QVariantList &)> hasMountedDescendant;
-        hasMountedDescendant = [&hasMountedDescendant](const QVariantList &children) {
-            for (const QVariant &childValue : children) {
-                const QVariantMap child = childValue.toMap();
-                if (child.value(QStringLiteral("mounted")).toBool()
-                    || hasMountedDescendant(child.value(QStringLiteral("children")).toList())) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        if (!candidate.value(QStringLiteral("mounted")).toBool()
-            && hasMountedDescendant(original.value(QStringLiteral("children")).toList())) {
+        // when a visible descendant volume is mounted.
+        if (!candidate.value(QStringLiteral("mounted")).toBool() && hasMountedDescendant(hasMountedDescendant, children)) {
             candidate.insert(QStringLiteral("mounted"), true);
         }
-
         if (filterDriveList({candidate}, options).isEmpty()) {
             continue;
         }
 
         QVariantMap filtered = original;
-        const QVariantList children = filterDriveHierarchy(original.value(QStringLiteral("children")).toList(), options);
         filtered.insert(QStringLiteral("children"), children);
         filtered.insert(QStringLiteral("childCount"), children.size());
         out << filtered;
