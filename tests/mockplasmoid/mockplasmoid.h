@@ -18,6 +18,8 @@ class MockApplet : public QObject
     Q_PROPERTY(bool immutable READ immutable CONSTANT)
     Q_PROPERTY(bool isContainment READ isContainment CONSTANT)
     Q_PROPERTY(QObject *containment READ containment CONSTANT)
+    Q_PROPERTY(QObject *corona READ corona CONSTANT)
+    Q_PROPERTY(bool editMode READ editMode WRITE setEditMode NOTIFY editModeChanged)
 public:
     static MockApplet *instance();
     int screen() const;
@@ -28,10 +30,17 @@ public:
     bool immutable() const { return false; }
     bool isContainment() const { return true; }
     QObject *containment() { return this; }
+    QObject *corona() { return this; }
+    bool editMode() const { return m_editMode; }
+    void setEditMode(bool value);
     QQmlListProperty<QObject> contextualActions();
     QList<QObject *> m_actions;
 Q_SIGNALS:
     void contextualActionsChanged();
+    void editModeChanged();
+
+private:
+    bool m_editMode = false;
 };
 
 class PlasmoidAttachedType : public QObject

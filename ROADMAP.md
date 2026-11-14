@@ -31,68 +31,49 @@ layer.
 
 ## Current baseline
 
-Status snapshot for 2026-11-14. Open pull requests are proposals, not shipped
-features.
+Status snapshot for 2026-11-14. Merged work is shipped in `main`; open PRs
+remain proposals until GitHub confirms the merge.
 
 ### Merged into `main`
 
-- **PR #18 — keyed ListModel synchronization.** Uses keyed lookups to reduce
-  repeated linear searches while preserving existing model rows and delegates.
+- **PR #18 — keyed ListModel synchronization.** Replaced repeated linear key
+  searches with keyed lookups while preserving existing model rows and delegates.
+- **PR #14 — background directory validation.** Same-filesystem directory
+  validation and moves now run in the worker for import, archive, and Undo;
+  redundant tree-size scans for rename-only moves are avoided.
+- **PR #15 — cached file placement and targeted model updates.** Per-activity
+  file models are cached and only affected models are refreshed. The merge
+  activity-scope cache invalidation bug is covered in both directions.
+- **PR #17 — offscreen UI harness.** The UI harness is part of CTest, with
+  Plasma API mocks and critical QML warning checks. The merged-head CI run
+  passed both CTest targets (coretest and uiharness).
 - The GitHub Actions build-and-test workflow is present in `main`.
 
 ### Open work
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P1 | Background directory validation | [PR #14](https://github.com/bezeza/Alveus/pull/14) | Current-head CI passed; final code review and authorized merge remain |
-| P1 | Cached placement and targeted model updates | [PR #15](https://github.com/bezeza/Alveus/pull/15) | Activity-scope cache fix and two-way regression test added; current-head CI passed; review/merge after approval |
-| P2 | Offscreen UI harness and QML warning checks | [PR #17](https://github.com/bezeza/Alveus/pull/17) | Current-head CI passed, including UI harness CTest (2/2); live Plasma validation remains |
-| P2 | Runtime diagnostics and agent workflow | [PR #19](https://github.com/bezeza/Alveus/pull/19) | Finish review, verify privacy/rotation, and pass CI |
-| P2 | Icon, translations, previews, Fedora RPM workflow | [PR #20](https://github.com/bezeza/Alveus/pull/20), [PR #21](https://github.com/bezeza/Alveus/pull/21) | Consolidate overlapping work into one coherent change; fix the current UI-preview failure before considering it complete |
+| P2 | Runtime diagnostics and agent workflow | [PR #19](https://github.com/bezeza/Alveus/pull/19) | Sync with the new `main`, inspect the combined core diff, improve diagnostics edge-case coverage, and rerun CI |
+| P2 | Icon, translations, previews, Fedora RPM workflow | [PR #20](https://github.com/bezeza/Alveus/pull/20), [PR #21](https://github.com/bezeza/Alveus/pull/21) | Consolidate into one PR: use the passing PR #20 preview/icon foundation and selectively bring over PR #21's stronger translation checks and RPM installer after review |
 
-PR #20 and PR #21 are based on the diagnostics branch and overlap in
-branding, translations, CI, README, and UI test support. Do not merge both
-blindly. Keep one authoritative implementation and carry over only the
-non-duplicated, verified changes.
+PR #19 was authored against the pre-performance `main`. It changes the same
+core files as PR #15, so it must be synchronized and reviewed against the
+merged cache implementation before it can be marked ready. Its development
+log currently matches the version merged by PR #15; preserve that history.
 
-PR #21's latest recorded CI run failed in the UI-preview step. The build,
-core tests, shell checks, translation validation, and QML lint completed, but
-the preview harness reported mock/API mismatches (including `DropArea`,
-`WidgetsHost`, and `i18n`). Fix the cause in the harness/mocks; do not
-suppress the warnings or mark the preview as successful without a rendered
-result.
+PR #20 and PR #21 are stacked on an earlier diagnostics-branch commit and
+overlap in branding, translations, CI, README, settings, and UI test support.
+PR #20's recorded CI run passed, including offscreen preview rendering, but
+it predates the current `main`. PR #21's recorded run failed in the preview
+step: the mock Plasma API lacks members used by the settings/desktop preview,
+including `configOverlaySource` and a callable `i18n`; qmllint also reports
+mock-type warnings. Fix the mock contract and verify a real rendered artifact.
+Do not merge both PRs or duplicate icon assets.
 
-PR #16 is not a separate release gate: a build-and-test workflow is already
-present in `main` through the merged work. Compare it for any unique changes
-before closing or superseding it; do not merge the stale workflow blindly.
-
-The original successful CI runs linked in PR #14, PR #15, and PR #17
-were attached to earlier SHAs. On 2026-11-14, all three branches were synced
-with the current `main` after PR #18 and fresh CI was run on the updated heads.
-The current runs passed for PR #14 and PR #15 (build, core tests, shell checks,
-QML lint, and whitespace); PR #17 also passed, including its UI harness CTest
-(2/2 tests). The successful runs are linked in each PR's current validation
-section. These results validate the current heads, not a live Plasma session.
-
-The PR #15 cache-invalidation finding has been addressed on its branch.
-`mergeFences()` now uses an internal cache-aware tab activation path, while
-the public QML `activateTab(id)` signature remains unchanged. A regression
-test covers both global-to-activity-specific and activity-specific-to-global
-merges with both activity caches populated. The implementation and current
-development-log head passed build, core CTest (1/1), shell checks, QML lint,
-and whitespace validation. PR #15 is ready for review; live Plasma validation
-has not been run.
-
-PR #15 and PR #19 both carry `docs/DEVELOPMENT_LOG.md`. The latest PR #15
-log was copied to the PR #19 branch so both branches currently contain the same
-content, including the cache-invalidation follow-up. Preserve that identical
-version when updating or merging the branches, and verify the file does not
-regress or lose either entry.
-
-PR #15 and PR #19 also both modify `core/alveuscore.cpp). After the performance
-PRs are merged, re-sync PR #19 with the updated `main`, inspect the combined
-diff for conflicts or regressions, and run CI on the final PR #19 head before
-marking it ready.
+PR #16 contains only an older CI workflow proposal. The current workflow is
+already in `main` through merged work; compare the unique workflow changes
+before closing #16 as superseded. Do not merge a stale workflow over the
+current one.
 
 ## Near-term execution plan
 
@@ -101,44 +82,42 @@ dependent work must be based on the correct updated branch.
 
 ### Stage 1 — Responsiveness and filesystem performance
 
-- [ ] Finish and validate PR #14: move expensive directory validation away
+- [x] Merge PR #14: move expensive same-filesystem directory validation away
   from the UI thread where required.
-- [ ] Finish and validate PR #15: cache file placement data and update only
-  affected fence models.
-- [ ] Test cache invalidation after file creation, rename, move, deletion,
-  mount/unmount, and changes made outside Alveus.
-- [ ] Exercise large folders and repeated filesystem events; check for stale
-  entries, duplicate rows, excessive rescans, and UI stalls.
+- [x] Merge PR #15: cache file placement data and update only affected fence
+  models.
+- [x] Add regression coverage for activity-scope cache invalidation in both
+  merge directions.
+- [x] Exercise cached retrieval across 600 files and multiple fences with a
+  benchmark path.
+- [ ] Stress-test repeated filesystem events, rename/move/delete sequences,
+  mount/unmount, and changes made outside Alveus on a real KDE session.
 
-**Exit criteria:** no known UI-thread filesystem bottleneck in the changed
-paths; correct model contents after external changes; focused regression tests
-and current CI pass.
+**Exit criteria:** the merged implementation builds and its core regression
+suite passes. Live Plasma stress testing remains a release gate.
 
 ### Stage 2 — Reliable UI regression checks
 
-- [ ] Complete PR #17 and integrate its UI harness with the repository's
-  standard test workflow.
-- [ ] Make test doubles model the actual Plasma properties and signals used by
-  Alveus.
-- [ ] Treat unexpected QML warnings and failed screenshot renders as failures.
-- [ ] Keep offscreen screenshots reproducible and clearly label them as test
-  renders, not screenshots of a live Plasma session.
+- [x] Merge PR #17 and integrate its UI harness with the standard CTest workflow.
+- [x] Provide test doubles for the Plasma APIs used by the harness.
+- [x] Make critical QML warnings fail the UI harness.
+- [ ] Keep offscreen preview screenshots reproducible and verify the generated
+  artifacts in the branding/translation PR.
 
-**Exit criteria:** core tests and UI harness pass on the current PR head;
-unexpected QML warnings are fixed rather than hidden; screenshot artifacts are
-produced only after successful rendering.
+**Exit criteria:** current CI passes both coretest and uiharness; live Plasma
+validation remains separate.
 
 ### Stage 3 — Diagnostics and contributor guardrails
 
-- [ ] Complete PR #19.
+- [ ] Synchronize and complete PR #19 against the merged performance and UI work.
 - [ ] Verify severity, timestamp, category, and source context for recorded
-  warnings/errors.
+  warnings/errors; add coverage for log rotation, path redaction, and handler reentrancy.
 - [ ] Verify bounded log rotation and path redaction; review copied reports for
   possible third-party paths before sharing.
 - [ ] Keep diagnostics local and user-controlled; no automatic upload or
   telemetry.
 - [ ] Establish `AGENTS.md`, provider-specific pointers, PR template, and
-  `docs/DEVELOPMENT_LOG.md) as the common engineering workflow.
+  `docs/DEVELOPMENT_LOG.md` as the common engineering workflow.
 
 **Exit criteria:** current CI passes; logging behavior and privacy limitations
 are documented; implementation PRs record the checks actually run.
