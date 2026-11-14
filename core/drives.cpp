@@ -54,7 +54,7 @@ const QSet<QString> &mountableFs()
                                     QStringLiteral("exfat"), QStringLiteral("ext4"), QStringLiteral("ext3"),
                                     QStringLiteral("ext2"), QStringLiteral("btrfs"), QStringLiteral("xfs"),
                                     QStringLiteral("f2fs"), QStringLiteral("hfsplus"), QStringLiteral("udf"),
-                                    QStringLiteral("iso9660")};
+                                    QStringLiteral("iso9660"), QStringLiteral("swap")};
     return s;
 }
 
@@ -101,7 +101,7 @@ QStringList mountpointsOf(const QJsonObject &o)
     QSet<QString> seen;
     const auto append = [&out, &seen](const QString &path) {
         const QString clean = path.trimmed();
-        if (!clean.isEmpty() && !seen.contains(clean)) {
+        if (!clean.isEmpty() && clean.compare(QLatin1String("[SWAP]"), Qt::CaseInsensitive) != 0 && !seen.contains(clean)) {
             seen.insert(clean);
             out << clean;
         }
