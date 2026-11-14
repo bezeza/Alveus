@@ -353,7 +353,7 @@ const QJsonObject &defaultDriveOptions()
         {QStringLiteral("hideBiosBoot"), true},
         {QStringLiteral("showUnmounted"), true},
         {QStringLiteral("partitionMode"), QStringLiteral("all")},
-        {QStringLiteral("displayMode"), QStringLiteral("medium")},
+        {QStringLiteral("displayMode"), QStringLiteral("large")},
         {QStringLiteral("separateUsb"), true},
         {QStringLiteral("informationLevel"), QStringLiteral("detailed")},
         {QStringLiteral("minimumPartitionSizeMiB"), 0},
