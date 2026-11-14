@@ -265,6 +265,26 @@ fence sizes; live device testing has no mount, unmount, or data-loss regression.
 global and per-fence settings persist correctly; USB devices are not
 misclassified when transport metadata is unavailable; current CI passes.
 
+### Stage E — Adaptive layout and navigation
+
+- [ ] Review and merge [PR #40](https://github.com/bezeza/Alveus/pull/40),
+  stacked on Stage D.
+- [x] Add automatic one/two-column layout and fixed one/two/three-column
+  choices, clamped to the available fence width.
+- [x] Add an optional storage summary based on unique mounted leaf volumes,
+  avoiding parent/partition and stacked-device double counting.
+- [x] Make usage bars independently configurable.
+- [x] Collapse partitions by default, with a global/per-fence default and
+  remembered per-device expansion state inside each fence.
+- [x] Persist the new settings with inheritance and reset-to-global controls.
+- [x] Add wide/narrow offscreen layout scenarios and settings persistence tests.
+- [ ] Verify adaptive layout and summary accuracy on a live KDE Plasma system
+  with several physical disks, USB devices, and mounted filesystems.
+
+**Exit criteria:** the layout never forces a fence wider than its available
+space; the summary counts each mounted leaf volume once; expansion state
+survives drive refreshes and application restarts; current CI passes.
+
 ## Post-stabilization backlog
 
 These items follow the current PR sequence. Reprioritize only when new evidence,
