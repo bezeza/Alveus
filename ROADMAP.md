@@ -111,9 +111,8 @@ validation remains separate.
 
 - [ ] Synchronize and complete PR #19 against the merged performance and UI work.
 - [ ] Verify severity, timestamp, category, and source context for recorded
-  warnings/errors; add coverage for log rotation, path redaction, and handler reentrancy.
-- [ ] Verify bounded log rotation and path redaction; review copied reports for
-  possible third-party paths before sharing.
+  warnings/errors; test log rotation, path redaction, and handler reentrancy.
+- [ ] Review copied reports for possible third-party paths before sharing.
 - [ ] Keep diagnostics local and user-controlled; no automatic upload or
   telemetry.
 - [ ] Establish `AGENTS.md`, provider-specific pointers, PR template, and
