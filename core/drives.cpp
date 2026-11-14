@@ -180,6 +180,14 @@ Drive parseDriveNode(const QJsonObject &o, const Drive *parent)
     d.partLabel = o.value(QStringLiteral("partlabel")).toString().trimmed();
     d.total = num(o.value(QStringLiteral("size")));
     d.readOnly = boolValue(o.value(QStringLiteral("ro")));
+    const QJsonValue rota = o.value(QStringLiteral("rota"));
+    if (!rota.isUndefined() && !rota.isNull()) {
+        d.rotationalKnown = true;
+        d.rotational = boolValue(rota);
+    } else if (parent && parent->rotationalKnown) {
+        d.rotationalKnown = true;
+        d.rotational = parent->rotational;
+    }
     d.hotplug = boolValue(o.value(QStringLiteral("hotplug"))) || (parent && parent->hotplug);
     d.removable = boolValue(o.value(QStringLiteral("rm"))) || d.hotplug || (parent && parent->removable);
     if (d.transport.isEmpty() && parent) {
@@ -339,6 +347,14 @@ QList<Drive> unmountedFromLsblk(const QByteArray &json)
             d.partType = o.value(QStringLiteral("parttype")).toString().trimmed();
             d.partLabel = o.value(QStringLiteral("partlabel")).toString().trimmed();
             d.readOnly = boolValue(o.value(QStringLiteral("ro")));
+            const QJsonValue rota = o.value(QStringLiteral("rota"));
+            if (!rota.isUndefined() && !rota.isNull()) {
+                d.rotationalKnown = true;
+                d.rotational = boolValue(rota);
+            } else if (parent && parent->rotationalKnown) {
+                d.rotationalKnown = true;
+                d.rotational = parent->rotational;
+            }
             if (parent) {
                 d.parentId = parent->id;
                 d.parentDevice = parent->device;
@@ -464,6 +480,8 @@ QVariantMap toMap(const Drive &d)
     m.insert(QStringLiteral("hotplug"), d.hotplug);
     m.insert(QStringLiteral("usb"), d.usb);
     m.insert(QStringLiteral("physical"), d.physical);
+    m.insert(QStringLiteral("rotational"), d.rotational);
+    m.insert(QStringLiteral("rotationalKnown"), d.rotationalKnown);
     m.insert(QStringLiteral("network"), d.network);
     m.insert(QStringLiteral("system"), d.system);
     m.insert(QStringLiteral("mounted"), !mountPoints.isEmpty());
@@ -597,6 +615,49 @@ QVariantList filterDriveList(const QVariantList &drives, const QVariantMap &opti
     return out;
 }
 
+QVariantList filterDriveHierarchy(const QVariantList &devices, const QVariantMap &options, bool showHiddenTemporarily)
+{
+    if (showHiddenTemporarily) {
+        return devices;
+    }
+
+    QVariantList out;
+    out.reserve(devices.size());
+    for (const QVariant &value : devices) {
+        const QVariantMap original = value.toMap();
+        QVariantMap candidate = original;
+
+        // A physical disk is not itself mounted, but it must remain visible
+        // when one of its descendant volumes is mounted.
+        std::function<bool(const QVariantList &)> hasMountedDescendant;
+        hasMountedDescendant = [&hasMountedDescendant](const QVariantList &children) {
+            for (const QVariant &childValue : children) {
+                const QVariantMap child = childValue.toMap();
+                if (child.value(QStringLiteral("mounted")).toBool()
+                    || hasMountedDescendant(child.value(QStringLiteral("children")).toList())) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        if (!candidate.value(QStringLiteral("mounted")).toBool()
+            && hasMountedDescendant(original.value(QStringLiteral("children")).toList())) {
+            candidate.insert(QStringLiteral("mounted"), true);
+        }
+
+        if (filterDriveList({candidate}, options).isEmpty()) {
+            continue;
+        }
+
+        QVariantMap filtered = original;
+        const QVariantList children = filterDriveHierarchy(original.value(QStringLiteral("children")).toList(), options);
+        filtered.insert(QStringLiteral("children"), children);
+        filtered.insert(QStringLiteral("childCount"), children.size());
+        out << filtered;
+    }
+    return out;
+}
+
 } // namespace Alveus
 
 // ---------------------------------------------------------------------------
@@ -724,7 +785,7 @@ void DriveWatcher::startLsblk(bool extendedColumns)
 
     Alveus::killAfterTimeout(process, m_lsblkTimeoutMs);
     const QString columns = extendedColumns
-        ? QStringLiteral("NAME,PATH,PKNAME,LABEL,FSTYPE,MOUNTPOINTS,SIZE,RM,HOTPLUG,RO,TYPE,TRAN,MODEL,VENDOR,WWN,UUID,PARTUUID,PARTTYPE,PARTLABEL")
+        ? QStringLiteral("NAME,PATH,PKNAME,LABEL,FSTYPE,MOUNTPOINTS,SIZE,RM,HOTPLUG,RO,ROTA,TYPE,TRAN,MODEL,VENDOR,WWN,UUID,PARTUUID,PARTTYPE,PARTLABEL")
         : QStringLiteral("NAME,PATH,LABEL,FSTYPE,MOUNTPOINTS,SIZE,RM,HOTPLUG,TYPE");
     process->start(QStringLiteral("lsblk"), {QStringLiteral("-J"), QStringLiteral("-b"), QStringLiteral("-o"), columns});
 }
