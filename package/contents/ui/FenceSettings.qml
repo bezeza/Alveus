@@ -147,6 +147,24 @@ QQC2.Popup {
                     text: i18n("Drive-specific settings")
                     font.bold: true
                 }
+                RowLayout {
+                    Layout.fillWidth: true
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        text: i18n("Drive card size")
+                    }
+                    QQC2.ComboBox {
+                        id: fenceDriveCardSize
+                        model: [i18n("Compact"), i18n("Medium"), i18n("Large")]
+                        currentIndex: Math.max(0, ["compact", "medium", "large"].indexOf(dialog.effectiveDriveOptions.displayMode))
+                        onActivated: Core.setDriveOption(dialog.fid, "displayMode", ["compact", "medium", "large"][currentIndex])
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "edit-undo"
+                        enabled: !!(dialog.driveOverrides.displayMode !== undefined)
+                        onClicked: Core.resetDriveOption(dialog.fid, "displayMode")
+                    }
+                }
                 PlasmaComponents.Label {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
