@@ -67,13 +67,16 @@ remain proposals until GitHub confirms the merge.
   live Plasma config with a validated temporary file and atomic rename after a
   timestamped backup. Added restart cleanup and isolated regression tests for
   normal, fallback, failure, and interruption paths. CTest passed 3/3.
+- **PR #30 — Qt 6.5 compatibility baseline.** Aligned CMake, RPM build/runtime
+  dependencies, installer ordering, README, and agent guidance with the Qt
+  Quick Effects / MultiEffect minimum. CI proves Qt 6.4.2 is rejected; Fedora
+  43 RPM build and DNF install/removal passed.
 - The GitHub Actions build-and-test workflow is present in `main`.
 
 ### Open work
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P1 | Qt compatibility baseline | [Issue #9](https://github.com/bezeza/Alveus/issues/9) | Enforce Qt 6.5+ consistently in CMake, RPM metadata, installer guidance, and CI |
 | P1 | Live Fedora KDE/Plasma validation | planned | Install the built RPM on a supported Fedora KDE desktop, activate Alveus, and test file operations, recovery, activities, monitors, and session restart |
 
 PR #19 was synchronized with the merged performance and UI foundation before
@@ -154,8 +157,9 @@ limitations are documented. Live Plasma validation remains.
   the current CI run uploaded the PNG artifact.
 - [x] Validate RPM helper argument handling, including build-only and
   `--install` selection, help, and invalid-option behavior.
-- [ ] Set the Qt minimum to 6.5+ across CMake, RPM metadata, installer guidance,
-  and CI; prove Qt 6.4 is rejected clearly (Issue #9).
+- [x] Set the Qt minimum to 6.5+ across CMake, RPM metadata, installer guidance,
+  and CI; the Ubuntu 24.04 / Qt 6.4.2 job confirms CMake rejects the old version
+  specifically for requesting Qt 6.5 (PR #30).
 - [x] Add a Fedora 43 container CI smoke test that builds the RPM, installs it
   with DNF, verifies the installed payload, removes it, and uploads the RPM artifact (PR #26).
 - [ ] Run the package on a supported Fedora KDE desktop and verify runtime
@@ -199,7 +203,6 @@ a reproducible bug, or user feedback justifies it.
 
 | Priority | Topic | Reference | Intended outcome |
 |---|---|---|---|
-| P1 | Qt compatibility baseline | [Issue #9](https://github.com/bezeza/Alveus/issues/9) | Define and test the minimum supported Qt version |
 | P2 | External-process timeouts | [Issue #10](https://github.com/bezeza/Alveus/issues/10) | Prevent a stalled helper process from hanging an operation |
 | P2 | Persisted configuration validation | [Issue #13](https://github.com/bezeza/Alveus/issues/13) | Reject or recover safely from invalid saved state |
 | P2 | Honeycomb view scalability | [Issue #7](https://github.com/bezeza/Alveus/issues/7) | Keep large fences responsive without unnecessary delegate work |
