@@ -212,6 +212,7 @@ a reproducible bug, or user feedback justifies it.
 |---|---|---|---|
 | P2 | Persisted configuration validation | [Issue #13](https://github.com/bezeza/Alveus/issues/13) | Reject or recover safely from invalid saved state |
 | P2 | Honeycomb view scalability | [Issue #7](https://github.com/bezeza/Alveus/issues/7) | Keep large fences responsive without unnecessary delegate work |
+| P2 | Configurable drive fence | [Drive design specification](docs/DRIVES_DESIGN.md) | Group physical devices and partitions, isolate USB, add configurable visibility filters, layouts, and per-fence settings |
 
 ## Release direction
 
