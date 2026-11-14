@@ -30,6 +30,10 @@ add_subdirectory(core)
 install(DIRECTORY package/
         DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/plasmoids/ua.bezeza.alveus)
 
+# App icon used by Plasma and the desktop integration.
+install(FILES package/contents/images/alveus.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+
 # KRunner (Alt+Space) finds fences and desktop files while Alveus is running
 install(FILES data/ua.bezeza.alveus.runner.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/krunner/dbusplugins)

@@ -65,7 +65,7 @@ QQC2.Popup {
 
         RowLayout {
             Kirigami.Icon {
-                source: "folder-favorites"
+                source: "alveus"
                 Layout.preferredWidth: Kirigami.Units.iconSizes.medium
                 Layout.preferredHeight: Kirigami.Units.iconSizes.medium
             }

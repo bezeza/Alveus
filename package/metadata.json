@@ -4,9 +4,11 @@
         "Id": "ua.bezeza.alveus",
         "Name": "Alveus",
         "Name[uk]": "Alveus",
+        "Name[ru]": "Alveus",
         "Description": "Desktop fences: draw a box to make a fence, files sort themselves by rules",
         "Description[uk]": "Паркани на стільниці: обведіть область — і є паркан, файли розкладаються самі за правилами",
-        "Icon": "folder-favorites",
+        "Description[ru]": "Ограждения рабочего стола: выделите область, чтобы создать ограждение; файлы сортируются автоматически по правилам",
+        "Icon": "alveus",
         "Category": "File System",
         "Authors": [
             {

@@ -101,5 +101,31 @@ jobs:
             fi
           fi
 
+      - name: Validate translation catalogs
+        run: |
+          python3 tests/check_translations.py
+          for catalog in po/*.po; do
+            msgfmt --check -o /dev/null "$catalog"
+          done
+
+      - name: Render Alveus UI previews
+        env:
+          QML_IMPORT_PATH: ${{ github.workspace }}/build/qml:${{ github.workspace }}/build/mocks:${{ github.workspace }}/tests/mocks
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          mkdir -p "$HOME/Desktop" docs/screenshots
+          printf 'Alveus demo document\\n' > "$HOME/Desktop/Project-notes.txt"
+          printf 'Alveus demo archive\\n' > "$HOME/Desktop/Photos.zip"
+          printf 'Alveus demo report\\n' > "$HOME/Desktop/Report.pdf"
+          ./build/tests/uiharness tests/scene.qml docs/screenshots/alveus-desktop.png 1200 1600 900 rich /tmp
+          ./build/tests/uiharness tests/scene.qml docs/screenshots/alveus-settings.png 1200 1600 900 alveus
+
+      - name: Upload Alveus UI previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: alveus-ui-previews
+          path: docs/screenshots/*.png
+          if-no-files-found: error
+
       - name: Check patch whitespace
         run: git diff --check HEAD^ HEAD

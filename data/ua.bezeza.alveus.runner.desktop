@@ -1,10 +1,12 @@
 [Desktop Entry]
 Name=Alveus
 Name[uk]=Alveus
+Name[ru]=Alveus
 Comment=Find desktop fences and files
 Comment[uk]=Пошук парканів і файлів на стільниці
+Comment[ru]=Поиск ограждений и файлов на рабочем столе
 Type=Service
-Icon=folder-favorites
+Icon=alveus
 X-KDE-PluginInfo-Author=bezeza
 X-KDE-PluginInfo-Name=ua.bezeza.alveus
 X-KDE-PluginInfo-Version=0.03.1

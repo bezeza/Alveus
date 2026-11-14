@@ -1,5 +1,9 @@
 # Alveus
 
+<p align="center">
+  <img src="assets/alveus.svg" alt="Alveus app icon" width="144">
+</p>
+
 **Desktop fences for KDE Plasma 6.** Drag a box on the desktop to make a fence;
 new files sort themselves into fences by type, name, download site or date.
 Your files never move: they stay in the Desktop folder, fences only group them.
@@ -7,7 +11,18 @@ Inspired by Stardock Fences on Windows.
 
 *Alveus* is Latin for "beehive": every fence is a cell, every file a bee.
 
+[English](#what-it-does) · [Українською](#українською) · [Русский](#по-русски)
+
 **Status: 0.03.1 beta.**
+
+## Screenshots
+
+The previews below are rendered from Alveus QML with the project's offscreen UI harness and mock Plasma APIs.
+
+![Alveus desktop with fences](docs/screenshots/alveus-desktop.webp)
+
+![Alveus settings](docs/screenshots/alveus-settings.webp)
+
 
 This beta focuses on reliability. File operations use GNU coreutils (`cp`, `mv`),
 which are standard on Linux desktops. Copies are staged and preserve metadata and
@@ -175,3 +190,22 @@ plasma-desktop (LGPL-2.0-or-later).
 - Ctrl+Z скасовує майже все
 
 **Якщо щось зламалося:** `./recover.sh` повертає стандартний стіл, нічого не втрачається.
+
+---
+
+## По-русски
+
+**Ограждения рабочего стола для KDE Plasma 6.** Выделите мышью область на пустом рабочем столе, чтобы создать ограждение. Новые файлы автоматически распределяются по типу, имени, сайту загрузки или дате. Файлы остаются в папке «Рабочий стол»: Alveus только группирует их.
+
+**Основные возможности:**
+- готовые ограждения для документов, фотографий, видео, музыки, архивов, программ и старых файлов;
+- правила сортировки по типу, имени, сайту, дате и размеру;
+- сворачивание ограждений, вкладки и порталы к папкам;
+- отображение дисков и свободного места;
+- несколько страниц рабочего стола, мониторы и активности;
+- режим конфиденциальности при демонстрации экрана;
+- отмена большинства действий и безопасное перемещение файлов в архив.
+
+**Установка:** на Fedora соберите RPM через `./packaging/build-rpm.sh`, затем установите пакет. На других дистрибутивах KDE Plasma 6 используйте `./install.sh`. После установки выберите раскладку **Alveus** в настройках рабочего стола.
+
+Интерфейс использует английский как исходный язык, а переводы выбираются автоматически по языку системы. Сейчас доступны украинский и русский переводы.

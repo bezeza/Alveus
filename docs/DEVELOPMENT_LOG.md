@@ -35,3 +35,16 @@ CI run for the diagnostics-only commit passed build, core tests, shell checks,
 QML lint, and whitespace validation. The combined changes are subject to a new
 CI run on the current PR head. Nothing in this section is shipped until PR #19
 is merged.
+
+### In progress — PR #20: branding and localization
+
+- Add a dedicated Alveus honeycomb app icon in SVG and PNG formats; use the
+  named icon in Plasma metadata, KRunner integration, and QML settings.
+- Add a complete Russian Qt/KDE translation catalog. English remains the
+  source language in QML, and Ukrainian remains supported.
+- Add translation catalog parity, placeholder, and markup checks to CI.
+- Render real Alveus QML UI previews with the existing offscreen harness and
+  upload them as a GitHub Actions artifact; publish the verified previews in
+  the repository README after the CI run.
+
+These changes are proposed in PR #20 and are not shipped until merged.

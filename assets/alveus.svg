@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Alveus</title>
+  <rect x="8" y="8" width="496" height="496" rx="92" fill="#061629"/>
+  <g fill="#081d30" stroke="#ffb91f" stroke-width="18" stroke-linejoin="round">
+    <path d="M256 72 344 123v102l-88 51-88-51V123z"/>
+    <path d="m168 225 88 51v102l-88 51-88-51V276z"/>
+    <path d="m344 225 88 51v102l-88 51-88-51V276z"/>
+  </g>
+  <g>
+    <path d="M211 145h35l13 13h43a9 9 0 0 1 9 9v35a10 10 0 0 1-10 10h-90a10 10 0 0 1-10-10v-47a10 10 0 0 1 10-10z" fill="#ffc94d"/>
+    <rect x="210" y="228" width="92" height="12" rx="6" fill="#b9c8d2"/><rect x="210" y="250" width="68" height="12" rx="6" fill="#b9c8d2"/>
+    <rect x="111" y="294" width="102" height="76" rx="14" fill="#75dce8"/><circle cx="187" cy="313" r="9" fill="#061629"/>
+    <path d="m111 352 31-30 20 20 19-19 32 34v13H111z" fill="#061629"/>
+    <rect x="112" y="382" width="99" height="12" rx="6" fill="#b9c8d2"/><rect x="112" y="405" width="72" height="12" rx="6" fill="#b9c8d2"/>
+    <path d="M305 284h47l28 28v72a12 12 0 0 1-12 12h-63a12 12 0 0 1-12-12v-88a12 12 0 0 1 12-12z" fill="#f4f7fa"/>
+    <path d="M352 284v23a7 7 0 0 0 7 7h21" fill="#c8d6df"/>
+    <rect x="303" y="334" width="61" height="10" rx="5" fill="#344b5b"/><rect x="303" y="354" width="61" height="10" rx="5" fill="#344b5b"/><rect x="303" y="374" width="42" height="10" rx="5" fill="#344b5b"/><rect x="303" y="405" width="73" height="11" rx="5.5" fill="#b9c8d2"/>
+  </g>
+  <path d="m256 359 48 28v55l-48 28-48-28v-55z" fill="#ff8b16" stroke="#ffb91f" stroke-width="17" stroke-linejoin="round"/>
+</svg>
