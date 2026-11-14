@@ -50,6 +50,32 @@ jobs:
       - name: Run core tests
         run: dbus-run-session -- ctest --test-dir build --output-on-failure
 
+      - name: Validate translation catalogs
+        run: |
+          for catalog in po/*.po; do
+            msgfmt --check --check-format -o /dev/null "$catalog"
+          done
+          msgcmp po/ru.po po/uk.po
+          for catalog in po/ru.po; do
+            if msgattrib --untranslated --no-obsolete "$catalog" | grep -q '^msgid "'; then
+              echo "::error::Untranslated entries found in $catalog"
+              exit 1
+            fi
+          done
+          python3 tests/check_translations.py
+
+      - name: Check RPM build script command-line options
+        run: |
+          ./packaging/build-rpm.sh --help
+          set +e
+          ./packaging/build-rpm.sh --unknown-option
+          status=$?
+          set -e
+          if [[ "$status" -ne 2 ]]; then
+            echo "Expected unknown options to exit with status 2, got $status" >&2
+            exit 1
+          fi
+
       - name: Check shell scripts
         shell: bash
         run: |
@@ -100,6 +126,34 @@ jobs:
               exit 1
             fi
           fi
+
+      - name: Render UI previews
+        env:
+          QML_IMPORT_PATH: ${{ github.workspace }}/build/qml:${{ github.workspace }}/build/mocks:${{ github.workspace }}/tests/mocks
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+          QT_QUICK_CONTROLS_STYLE: Fusion
+          HOME: ${{ runner.temp }}/alveus-preview-home
+          XDG_DATA_HOME: ${{ runner.temp }}/alveus-preview-data
+          XDG_CONFIG_HOME: ${{ runner.temp }}/alveus-preview-config
+        run: |
+          mkdir -p docs/assets "$HOME/Desktop" "$HOME/Downloads" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME"
+          printf 'XDG_DESKTOP_DIR="%s/Desktop"\nXDG_DOWNLOAD_DIR="%s/Downloads"\n' "$HOME" "$HOME" > "$XDG_CONFIG_HOME/user-dirs.dirs"
+          mkdir -p "$HOME/Desktop/Project folder"
+          printf 'Alveus release notes and project details.\n' > "$HOME/Desktop/Quarterly report.pdf"
+          printf 'Remember to review the next Alveus build.\n' > "$HOME/Desktop/Meeting notes.txt"
+          printf 'Project folder for the desktop layout.\n' > "$HOME/Desktop/Project folder/README.txt"
+          touch "$HOME/Desktop/Holiday photo.jpg" "$HOME/Desktop/Alveus screenshot.png" "$HOME/Desktop/Project archive.zip" "$HOME/Desktop/Release demo.mp4"
+          printf 'A sample download for the Alveus preview.\n' > "$HOME/Downloads/Alveus beta notes.txt"
+          touch "$HOME/Downloads/Camera sample.jpg"
+          build/tests/uiharness tests/scene.qml docs/assets/alveus-desktop-preview.png 1200 1600 900 rich "$HOME/Downloads"
+
+      - name: Upload desktop preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: alveus-desktop-preview
+          path: docs/assets/alveus-desktop-preview.png
+          if-no-files-found: error
 
       - name: Check patch whitespace
         run: git diff --check HEAD^ HEAD

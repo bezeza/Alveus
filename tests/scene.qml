@@ -11,6 +11,7 @@ Item {
     height: 900
 
     readonly property string step: Qt.application.arguments.length > 6 ? Qt.application.arguments[6] : "welcome"
+    property bool prepared: false
 
     // The Loader-created desktop component inherits this scene context.
     function i18n(s, a, b, c) {
@@ -88,6 +89,7 @@ Item {
             Core.snoozeCleanup(7)
             Core.createPortal(0, "", 0, 0.30, 0.05, 0.34, 0.30, "Диски", "drives:")
         }
+        scene.prepared = true
     }
 
     // what the KDE right-click menu would get from Alveus

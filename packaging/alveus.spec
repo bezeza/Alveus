@@ -59,6 +59,7 @@ sending files to a phone with KDE Connect.
 %{_qt6_qmldir}/ua/bezeza/alveus/
 %{_datadir}/plasma/plasmoids/%{plugin_id}/
 %{_datadir}/krunner/dbusplugins/%{plugin_id}.runner.desktop
+%{_datadir}/icons/hicolor/scalable/apps/alveus.svg
 
 %changelog
 * Sun Nov 01 2026 bezeza - 0.03.1-0.1.beta

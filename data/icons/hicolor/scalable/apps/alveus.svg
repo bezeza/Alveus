@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#08132d"/>
+      <stop offset="1" stop-color="#050b1c"/>
+    </linearGradient>
+    <linearGradient id="teal-a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#20b9aa"/>
+      <stop offset="1" stop-color="#078b83"/>
+    </linearGradient>
+    <linearGradient id="teal-b" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2bc7b7"/>
+      <stop offset="1" stop-color="#0a9b91"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd24a"/>
+      <stop offset="1" stop-color="#ffad13"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#background)"/>
+  <g>
+    <rect x="120" y="170" width="330" height="330" rx="78" fill="url(#teal-a)"/>
+    <rect x="574" y="170" width="330" height="330" rx="78" fill="url(#teal-b)"/>
+    <rect x="120" y="574" width="330" height="330" rx="78" fill="url(#teal-b)"/>
+    <rect x="574" y="574" width="330" height="330" rx="78" fill="url(#teal-a)"/>
+  </g>
+  <path d="M512 372 650 452 650 572 512 652 374 572 374 452Z" fill="#071129"/>
+  <path d="M512 402 622 466 622 558 512 622 402 558 402 466Z" fill="url(#gold)"/>
+</svg>

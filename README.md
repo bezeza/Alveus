@@ -1,5 +1,9 @@
 # Alveus
 
+<p align="center">
+  <img src="data/icons/hicolor/scalable/apps/alveus.svg" width="128" alt="Alveus app icon">
+</p>
+
 **Desktop fences for KDE Plasma 6.** Drag a box on the desktop to make a fence;
 new files sort themselves into fences by type, name, download site or date.
 Your files never move: they stay in the Desktop folder, fences only group them.
@@ -59,13 +63,34 @@ thumbnail generation retries after the source file changes.
 - Send to phone with KDE Connect
 - KRunner (Alt+Space) finds fences and desktop files
 
+## Screenshot
+
+### Desktop
+
+![Alveus desktop preview](docs/assets/alveus-desktop-preview.webp)
+
+This preview is rendered from Alveus' actual QML interface using the
+offscreen UI harness. Plasma shell chrome and the wallpaper are test fixtures,
+so a live desktop may look slightly different.
+
+## Languages
+
+Alveus uses the KDE desktop language:
+
+- English (default)
+- Russian
+- Ukrainian
+
+There is no separate in-app language selector; the interface follows the
+system locale.
+
 ## Install
 
 ### Fedora (RPM)
 
 ```sh
-./packaging/build-rpm.sh
-sudo dnf install ~/rpmbuild/RPMS/x86_64/alveus-0.03.1-*.rpm
+./packaging/build-rpm.sh              # build only
+./packaging/build-rpm.sh --install    # build and install via DNF
 ```
 
 or from COPR once it is published (see *Publishing* below):

@@ -6,7 +6,7 @@
         "Name[uk]": "Alveus",
         "Description": "Desktop fences: draw a box to make a fence, files sort themselves by rules",
         "Description[uk]": "Паркани на стільниці: обведіть область — і є паркан, файли розкладаються самі за правилами",
-        "Icon": "folder-favorites",
+        "Icon": "alveus",
         "Category": "File System",
         "Authors": [
             {
@@ -15,7 +15,11 @@
         ],
         "License": "GPL-2.0-or-later",
         "Version": "0.03.1",
-        "Website": "https://github.com/bezeza/Alveus"
+        "Website": "https://github.com/bezeza/Alveus",
+        "Name[en]": "Alveus",
+        "Name[ru]": "Alveus",
+        "Description[en]": "Desktop fences: draw a box to create a fence and let files sort themselves by rules",
+        "Description[ru]": "Ограждения рабочего стола: обведите область, чтобы создать ограждение, а файлы будут распределяться по правилам"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "X-Plasma-ContainmentType": "Desktop"
