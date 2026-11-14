@@ -137,3 +137,21 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   configuration and build, so an unsupported Qt version cannot remove the old
   widget before the compatibility check fails.
 - Verification is pending on the PR head.
+
+
+### Merged into `main` — PR #30 Qt 6.5 compatibility baseline
+
+- Raised the CMake Qt minimum to 6.5 because Qt Quick Effects / MultiEffect
+  was introduced in Qt 6.5. Aligned Fedora RPM build/runtime dependencies,
+  README, installer guidance, and the Claude agent notes.
+- Moved legacy-widget removal in `install.sh` until after successful CMake
+  configuration and build, preventing an unsupported Qt version from changing
+  the user's desktop before the version check fails.
+- Ubuntu 24.04 / Qt 6.4.2 was rejected specifically because CMake requested
+  Qt 6.5; the standard Qt build/CTest/static checks passed:
+  [run 43603426393](https://github.com/bezeza/Alveus/actions/runs/43603426393).
+- Fedora 43 RPM build, DNF install, payload verification, artifact upload, and
+  DNF removal passed with the new version constraints:
+  [run 43603426388](https://github.com/bezeza/Alveus/actions/runs/43603426388).
+- No Qt 6.5 exact-minimum build or live KDE Plasma session was run. Those
+  remain outside the current CI coverage.
