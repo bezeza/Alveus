@@ -71,13 +71,17 @@ remain proposals until GitHub confirms the merge.
   dependencies, installer ordering, README, and agent guidance with the Qt
   Quick Effects / MultiEffect minimum. CI proves Qt 6.4.2 is rejected; Fedora
   43 RPM build and DNF install/removal passed.
+- **PR #32 — bounded external helper processes.** Added QProcess deadlines for
+  PipeWire, KDE Connect, lsblk, udisksctl, and thumbnail helpers. Screen-share
+  errors fail closed; phone/drive discovery retain last-known state; thumbnail
+  jobs release worker slots and use a 30-second retry cooldown. CTest and
+  Fedora RPM/DNF checks passed.
 - The GitHub Actions build-and-test workflow is present in `main`.
 
 ### Open work
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P2 | External helper process deadlines | [Issue #10](https://github.com/bezeza/Alveus/issues/10) | Bound KDE Connect, PipeWire, drive, mount, and thumbnail helpers; preserve explicit stale/error state and test cleanup |
 | P1 | Live Fedora KDE/Plasma validation | planned | Install the built RPM on a supported Fedora KDE desktop, activate Alveus, and test file operations, recovery, activities, monitors, and session restart |
 
 PR #19 was synchronized with the merged performance and UI foundation before
@@ -142,8 +146,8 @@ validation remains separate.
   telemetry.
 - [x] Establish `AGENTS.md`, provider-specific pointers, PR template, and
   `docs/DEVELOPMENT_LOG.md` as the common engineering workflow.
-- [ ] Bound external helper processes, define stale/error policies, and test
-  timeout cleanup and retry behavior (Issue #10).
+- [x] Bound external helper processes, define stale/error policies, and test
+  timeout cleanup and retry behavior (PR #32).
 
 **Exit criteria:** merged CI passes; logging behavior, retention, and privacy
 limitations are documented. Live Plasma validation remains.
