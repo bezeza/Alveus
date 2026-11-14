@@ -20,7 +20,7 @@ class Thumbnailer : public QObject
 {
     Q_OBJECT
 public:
-    explicit Thumbnailer(QObject *parent = nullptr);
+    explicit Thumbnailer(QObject *parent = nullptr, int processTimeoutMs = 30000);
     ~Thumbnailer() override;
 
     // file:// URL of an up-to-date thumbnail, or "" (then one may be on its way)
@@ -32,6 +32,7 @@ public:
 
 Q_SIGNALS:
     void ready(const QString &path);
+    void message(const QString &kind, const QString &detail);
 
 private:
     struct Job {
@@ -45,9 +46,11 @@ private:
 
     QQueue<Job> m_queue;
     QSet<QString> m_pending;
-    QHash<QString, QString> m_failed; // path -> size/mtime stamp; retry when the source changes
+    QHash<QString, QString> m_failed; // path -> size/mtime stamp
+    QHash<QString, qint64> m_retryAt; // path -> earliest retry time after helper failure
     QSet<QTemporaryDir *> m_temporaryDirs;
     int m_running = 0;
+    int m_processTimeoutMs = 30000;
     bool m_hasFfmpegThumbnailer = false;
     bool m_hasFfmpeg = false;
     bool m_hasPdftoppm = false;
