@@ -57,6 +57,7 @@ static bool isCriticalQmlWarning(const QQmlError &error)
         || message.contains(QStringLiteral("binding loop"))
         || message.contains(QStringLiteral("unable to assign"))
         || message.contains(QStringLiteral("cannot assign"))
+        || message.contains(QStringLiteral("cannot anchor"))
         || message.contains(QStringLiteral("is not a type"))
         || message.contains(QStringLiteral("is not installed"))
         || message.contains(QStringLiteral("cannot load library"));
