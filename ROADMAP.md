@@ -246,6 +246,25 @@ already shipped in `main`.
 child relationships and visibility rules; the UI is usable at narrow and wide
 fence sizes; live device testing has no mount, unmount, or data-loss regression.
 
+### Stage D — Grouping and information controls
+
+- [ ] Review and merge [PR #39](https://github.com/bezeza/Alveus/pull/39),
+  stacked on Stage C.
+- [x] Default to large drive cards, matching the selected design direction.
+- [x] Place USB devices in a dedicated group by default, with a configurable
+  option to show them together with other storage.
+- [x] Offer detailed and basic information density, keeping detailed hardware,
+  mount-point, free-space, and read-only information as the default.
+- [x] Expose grouping and information density in global settings and per-fence
+  settings, including inheritance and reset-to-global controls.
+- [x] Validate and persist the new preferences; add settings and offscreen UI
+  regression coverage.
+- [ ] Confirm the grouping and density choices on a live KDE Plasma desktop.
+
+**Exit criteria:** the selected defaults are reflected in a real drive fence;
+global and per-fence settings persist correctly; USB devices are not
+misclassified when transport metadata is unavailable; current CI passes.
+
 ## Post-stabilization backlog
 
 These items follow the current PR sequence. Reprioritize only when new evidence,
