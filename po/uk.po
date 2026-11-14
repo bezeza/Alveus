@@ -951,4 +951,4 @@ msgstr "Попереджень або помилок поки немає."
 
 #: package/contents/ui/AlveusSettings.qml
 msgid "The log rotates automatically. File names and paths can appear in third-party error messages, so review the log before sharing it."
-msgstr "Журнал автоматично ротуються. У повідомленнях сторонніх компонентів можуть бути назви файлів і шляхи, тому перевірте журнал перед тим, як ним ділитися."
+msgstr "Для журналу автоматично виконується ротація файлів. У повідомленнях сторонніх компонентів можуть бути назви файлів і шляхи, тому перевірте журнал, перш ніж ділитися ним."
