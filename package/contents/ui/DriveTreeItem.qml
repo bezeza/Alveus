@@ -143,70 +143,67 @@ Item {
                     anchors.fill: parent
                     spacing: 1
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Kirigami.Units.smallSpacing
-                    PlasmaComponents.Label {
-                        text: Core.privacy ? "•••••" : node.title
-                        font.bold: true
-                        color: node.textColor
-                        elide: Text.ElideRight
+                    RowLayout {
                         Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                    }
-                    Rectangle {
-                        radius: height / 2
-                        color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.14)
-                        implicitWidth: mediaText.implicitWidth + Kirigami.Units.smallSpacing * 2
-                        implicitHeight: mediaText.implicitHeight + 4
+                        spacing: Kirigami.Units.smallSpacing
                         PlasmaComponents.Label {
-                            id: mediaText
-                            anchors.centerIn: parent
-                            text: node.mediaLabel
+                            text: Core.privacy ? "•••••" : node.title
+                            font.bold: true
                             color: node.textColor
-                            font: Kirigami.Theme.smallFont
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                        }
+                        Rectangle {
+                            radius: height / 2
+                            color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.14)
+                            implicitWidth: mediaText.implicitWidth + Kirigami.Units.smallSpacing * 2
+                            implicitHeight: mediaText.implicitHeight + 4
+                            PlasmaComponents.Label {
+                                id: mediaText
+                                anchors.centerIn: parent
+                                text: node.mediaLabel
+                                color: node.textColor
+                                font: Kirigami.Theme.smallFont
+                            }
                         }
                     }
-                }
 
-                PlasmaComponents.Label {
-                    visible: !node.compactControls && node.informationLevel === "detailed"
-                    Layout.fillWidth: true
-                    text: node.detailText
-                    color: node.textColor
-                    opacity: 0.62
-                    font: Kirigami.Theme.smallFont
-                    elide: Text.ElideMiddle
+                    PlasmaComponents.Label {
+                        visible: !node.compactControls && node.informationLevel === "detailed"
+                        Layout.fillWidth: true
+                        text: node.detailText
+                        color: node.textColor
+                        opacity: 0.62
+                        font: Kirigami.Theme.smallFont
+                        elide: Text.ElideMiddle
+                    }
                 }
-            }
-
 
                 MouseArea {
-            id: rowMouse
-            anchors.fill: parent
-            z: 1
-            hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            onClicked: function(event) {
-                if (event.button === Qt.RightButton) {
-                    menu.popup(rowMouse, event.x, event.y)
-                } else if (node.hasChildren) {
-                    node.expanded = !node.expanded
-                } else if (Core.setting("singleClick")) {
-                    node.open()
+                    id: rowMouse
+                    anchors.fill: parent
+                    z: 1
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: function(event) {
+                        if (event.button === Qt.RightButton) {
+                            menu.popup(rowMouse, event.x, event.y)
+                        } else if (node.hasChildren) {
+                            node.expanded = !node.expanded
+                        } else if (Core.setting("singleClick")) {
+                            node.open()
+                        }
+                    }
+                    onDoubleClicked: function(event) {
+                        if (event.button === Qt.LeftButton && !Core.setting("singleClick") && !node.hasChildren) {
+                            node.open()
+                        }
+                    }
+                    QQC2.ToolTip.visible: containsMouse && node.mounted && !Core.privacy
+                    QQC2.ToolTip.delay: 800
+                    QQC2.ToolTip.text: node.drive.mountPoint + " · " + node.drive.device
                 }
-            }
-            onDoubleClicked: function(event) {
-                if (event.button === Qt.LeftButton && !Core.setting("singleClick") && !node.hasChildren) {
-                    node.open()
-                }
-            }
-            QQC2.ToolTip.visible: containsMouse && node.mounted && !Core.privacy
-            QQC2.ToolTip.delay: 800
-            QQC2.ToolTip.text: node.drive.mountPoint + " · " + node.drive.device
-        }
-    
-    
             }
 
             PlasmaComponents.Label {
