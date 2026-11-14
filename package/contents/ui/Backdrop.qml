@@ -1,7 +1,7 @@
 /*
  * Frosted glass behind a fence: the part of the wallpaper under the fence,
- * blurred, with rounded corners. Loaded on demand; if this Qt has no
- * QtQuick.Effects the fence simply stays translucent.
+ * blurred, with rounded corners. Loaded on demand. Requires Qt 6.5+ and
+ * the QtQuick.Effects module (MultiEffect).
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
