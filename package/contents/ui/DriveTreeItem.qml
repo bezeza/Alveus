@@ -245,15 +245,14 @@ Item {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
                 Layout.leftMargin: Kirigami.Units.gridUnit * 1.5
-                source: Qt.resolvedUrl("DriveTreeItem.qml")
-                onLoaded: {
-                    item.desk = node.desk
-                    item.fenceId = node.fenceId
-                    item.drive = modelData
-                    item.depth = node.depth + 1
-                    item.displayMode = node.displayMode
-                    item.textColor = node.textColor
-                }
+                Component.onCompleted: setSource(Qt.resolvedUrl("DriveTreeItem.qml"), {
+                    "desk": node.desk,
+                    "fenceId": node.fenceId,
+                    "drive": modelData,
+                    "depth": node.depth + 1,
+                    "displayMode": node.displayMode,
+                    "textColor": node.textColor
+                })
             }
         }
     }
