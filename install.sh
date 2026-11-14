@@ -3,6 +3,7 @@
 # Встановлення Alveus: ставить залежності, збирає і встановлює.
 # On Fedora you can instead build a proper package: ./packaging/build-rpm.sh
 # На Fedora можна натомість зібрати справжній пакет: ./packaging/build-rpm.sh
+# Requires Qt 6.5+ for QtQuick.Effects / MultiEffect; CMake checks this before installation.
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")"
 
@@ -39,17 +40,20 @@ else
     warn "Невідомий дистрибутив. Встановіть самі: cmake, компілятор C++20 (GCC 11+), пакети розробки Qt 6 (base, declarative), gettext."
 fi
 
+# ---- configure/build (validate Qt before changing the desktop) --------------
+say "Configuring / Налаштовую (Qt 6.5+ required)"
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+say "Building / Збираю"
+cmake --build build -j"$(nproc)"
+
 # ---- the old 0.1 widget (same id) in the home folder would hide this one ----
+# Do not remove it until the Qt minimum has passed CMake configuration and the
+# replacement has built successfully.
 old="${XDG_DATA_HOME:-$HOME/.local/share}/plasma/plasmoids/ua.bezeza.alveus"
 if [[ -d "$old" ]]; then
     say "Removing the old Alveus 0.1 widget / Прибираю старий віджет Alveus 0.1"
     kpackagetool6 -t Plasma/Applet -r ua.bezeza.alveus >/dev/null 2>&1 || rm -rf "$old"
 fi
-
-# ---- build & install ------------------------------------------------------
-say "Building / Збираю"
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
-cmake --build build -j"$(nproc)"
 
 say "Installing (needs your password) / Встановлюю (потрібен пароль)"
 sudo cmake --install build
