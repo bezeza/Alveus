@@ -280,7 +280,7 @@ void DriveWatcher::refresh()
         return;
     }
     if (QStandardPaths::findExecutable(QStringLiteral("lsblk")).isEmpty()) {
-        Q_EMIT message(QStringLiteral("drive-list-unavailable"), QStringLiteral("lsblk was not found"));
+        Q_EMIT message(QStringLiteral("drive-list-unavailable"), QStringLiteral("lsblk was not found; keeping the last known drive list"));
         rebuild();
         return;
     }
@@ -295,7 +295,7 @@ void DriveWatcher::refresh()
         if (Alveus::processTimedOut(process)) {
             m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
             Q_EMIT message(QStringLiteral("drive-list-timeout"),
-                           QStringLiteral("lsblk exceeded %1 ms").arg(m_lsblkTimeoutMs));
+                           QStringLiteral("lsblk exceeded %1 ms; keeping the last known drive list").arg(m_lsblkTimeoutMs));
         } else if (status == QProcess::NormalExit && code == 0) {
             const QByteArray output = process->readAllStandardOutput();
             QJsonParseError parseError;
@@ -315,7 +315,7 @@ void DriveWatcher::refresh()
             if (detail.isEmpty()) {
                 detail = QStringLiteral("lsblk exited with code %1").arg(code);
             }
-            Q_EMIT message(QStringLiteral("drive-list-failed"), detail);
+            Q_EMIT message(QStringLiteral("drive-list-failed"), detail + QStringLiteral("; keeping the last known drive list"));
         }
         m_lsblk->deleteLater();
         m_lsblk = nullptr;
@@ -329,7 +329,7 @@ void DriveWatcher::refresh()
         m_lsblk = nullptr;
         m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
         process->deleteLater();
-        Q_EMIT message(QStringLiteral("drive-list-failed"), detail);
+        Q_EMIT message(QStringLiteral("drive-list-failed"), detail + QStringLiteral("; keeping the last known drive list"));
         rebuild();
     });
     Alveus::killAfterTimeout(process, m_lsblkTimeoutMs);
