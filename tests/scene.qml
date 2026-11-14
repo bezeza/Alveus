@@ -89,6 +89,10 @@ Item {
             Core.snoozeCleanup(7)
             Core.createPortal(0, "", 0, 0.26, 0.04, 0.46, 0.58, "Диски", "drives:")
         }
+        if (s === "drivesnarrow") {
+            Core.snoozeCleanup(7)
+            Core.createPortal(0, "", 0, 0.02, 0.04, 0.12, 0.58, "Диски", "drives:")
+        }
         if (s === "drivesettings" || s === "driveglobal") {
             Core.snoozeCleanup(7)
             const id = Core.createPortal(0, "", 0, 0.30, 0.05, 0.34, 0.30, "Disks", "drives:")
