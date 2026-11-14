@@ -473,13 +473,13 @@ private Q_SLOTS:
         core.mergeFences(a, b);
         QVariantMap fb = core.fence(b);
         QVERIFY(!fb.value(QStringLiteral("group")).toString().isEmpty());
-        QCOMPARE(fb.value(QStringLiteral("x")).toReal(), 0.1);        // took A's frame
+        QCOMPARE(fb.value(QStringLiteral("x")).toDouble(), 0.1);        // took A's frame
         QCOMPARE(fb.value(QStringLiteral("activeTab")).toBool(), true);
         QCOMPARE(core.fence(a).value(QStringLiteral("activeTab")).toBool(), false);
         QCOMPARE(fb.value(QStringLiteral("tabs")).toList().size(), 2);
         // shared frame: moving one moves both
         core.updateFence(a, {{QStringLiteral("x"), 0.2}, {QStringLiteral("collapsed"), true}});
-        QCOMPARE(core.fence(b).value(QStringLiteral("x")).toReal(), 0.2);
+        QCOMPARE(core.fence(b).value(QStringLiteral("x")).toDouble(), 0.2);
         QCOMPARE(core.fence(b).value(QStringLiteral("collapsed")).toBool(), true);
         // but not the rules
         QCOMPARE(core.fence(b).value(QStringLiteral("rules")).toString(), QStringLiteral("mp3"));
@@ -573,10 +573,10 @@ private Q_SLOTS:
         QVERIFY(r.value(QStringLiteral("orphan")).toBool());
         // moved while away: remembered separately
         core.updateFence(right, {{QStringLiteral("x"), 0.7}, {QStringLiteral("y"), 0.0}, {QStringLiteral("orphan"), true}});
-        QCOMPARE(core.fence(right).value(QStringLiteral("x")).toReal(), 0.7);
+        QCOMPARE(core.fence(right).value(QStringLiteral("x")).toDouble(), 0.7);
         core.registerDesktop(1, QString()); // back again
         QCOMPARE(ids(core.fences(1, QString(), 0)), QStringList{right});
-        QCOMPARE(core.fence(right).value(QStringLiteral("x")).toReal(), 0.5);
+        QCOMPARE(core.fence(right).value(QStringLiteral("x")).toDouble(), 0.5);
         // move to another monitor for good
         core.updateFence(right, {{QStringLiteral("screen"), 0}});
         QCOMPARE(core.fences(0, QString(), 0).size(), 2);
@@ -635,7 +635,7 @@ private Q_SLOTS:
         QCOMPARE(f.value(QStringLiteral("activity")).toString(), QStringLiteral("act"));
         QCOMPARE(f.value(QStringLiteral("color")).toString(), QStringLiteral("#ff8800"));
         QCOMPARE(f.value(QStringLiteral("view")).toString(), QStringLiteral("honeycomb"));
-        QCOMPARE(f.value(QStringLiteral("opacity")).toReal(), 0.8);
+        QCOMPARE(f.value(QStringLiteral("opacity")).toDouble(), 0.8);
         QCOMPARE(f.value(QStringLiteral("collapsed")).toBool(), true);
         QCOMPARE(names(core.filesInFence(id, QStringLiteral("act"))), (QStringList{QStringLiteral("Scan.JPG"), QStringLiteral("notes")}));
         QCOMPARE(core.setting(QStringLiteral("cleanupDays")).toInt(), 30);
@@ -734,10 +734,10 @@ private Q_SLOTS:
 
         AlveusCore core(desk(), store());
         const QVariantMap fence = core.fence(QStringLiteral("geometry"));
-        QCOMPARE(fence.value(QStringLiteral("x")).toReal(), 0.0);
-        QCOMPARE(fence.value(QStringLiteral("y")).toReal(), 0.97);
-        QCOMPARE(fence.value(QStringLiteral("w")).toReal(), 1.0);
-        QCOMPARE(fence.value(QStringLiteral("h")).toReal(), 0.03);
+        QCOMPARE(fence.value(QStringLiteral("x")).toDouble(), 0.0);
+        QCOMPARE(fence.value(QStringLiteral("y")).toDouble(), 0.97);
+        QCOMPARE(fence.value(QStringLiteral("w")).toDouble(), 1.0);
+        QCOMPARE(fence.value(QStringLiteral("h")).toDouble(), 0.03);
         core.saveNow();
 
         QFile repaired(store());
@@ -799,7 +799,7 @@ private Q_SLOTS:
         QCOMPARE(core.fence(id).value(QStringLiteral("color")).toString(), QStringLiteral("#ff8800"));
         QVERIFY(core.undo());
         QCOMPARE(core.fence(id).value(QStringLiteral("color")).toString(), QString());
-        QCOMPARE(core.fence(id).value(QStringLiteral("opacity")).toReal(), 0.55);
+        QCOMPARE(core.fence(id).value(QStringLiteral("opacity")).toDouble(), 0.55);
         QCOMPARE(core.fence(id).value(QStringLiteral("blur")).toBool(), true);
     }
 
