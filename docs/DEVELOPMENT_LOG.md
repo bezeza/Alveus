@@ -48,3 +48,7 @@ is merged.
   the repository README after the CI run.
 
 These changes are proposed in PR #20 and are not shipped until merged.
+
+- The first CI preview exposed a missing Plasma Button mock and a blank render.
+  Added the missing test component and strict QML-warning handling so CI refuses
+  to publish screenshots when the UI did not load cleanly.

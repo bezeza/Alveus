@@ -112,6 +112,7 @@ jobs:
         env:
           QML_IMPORT_PATH: ${{ github.workspace }}/build/qml:${{ github.workspace }}/build/mocks:${{ github.workspace }}/tests/mocks
           QT_QPA_PLATFORM: offscreen
+          ALVEUS_UIHARNESS_STRICT: "1"
         run: |
           mkdir -p "$HOME/Desktop" docs/screenshots
           printf 'Alveus demo document\n' > "$HOME/Desktop/Project-notes.txt"

@@ -94,7 +94,9 @@ int main(int argc, char **argv)
     QQuickView view;
     I18n i18n;
     view.engine()->rootContext()->setContextObject(&i18n);
-    QObject::connect(view.engine(), &QQmlEngine::warnings, [](const QList<QQmlError> &list) {
+    bool hadQmlWarnings = false;
+    QObject::connect(view.engine(), &QQmlEngine::warnings, [&hadQmlWarnings](const QList<QQmlError> &list) {
+        hadQmlWarnings = true;
         for (const QQmlError &e : list) {
             fprintf(stderr, "QML: %s\n", qPrintable(e.toString()));
         }
@@ -114,7 +116,16 @@ int main(int argc, char **argv)
     QTimer::singleShot(delay, [&]() {
         play(&view, actions);
         QTest::qWait(300);
-        view.grabWindow().save(out);
+        if (qEnvironmentVariableIsSet("ALVEUS_UIHARNESS_STRICT") && hadQmlWarnings) {
+            fprintf(stderr, "UI harness strict mode: refusing to save a screenshot with QML warnings.\n");
+            app.exit(1);
+            return;
+        }
+        if (!view.grabWindow().save(out)) {
+            fprintf(stderr, "UI harness could not save screenshot: %s\n", qPrintable(out));
+            app.exit(1);
+            return;
+        }
         app.quit();
     });
     return app.exec();
