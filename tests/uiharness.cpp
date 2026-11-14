@@ -4,6 +4,8 @@
 // Import paths come from QML_IMPORT_PATH. Provides i18n()/i18nc() like KDE.
 #include <QDir>
 #include <QGuiApplication>
+#include <QImage>
+#include <QPalette>
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QQuickView>
@@ -97,6 +99,19 @@ int main(int argc, char **argv)
 {
     QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
     QGuiApplication app(argc, argv);
+    QPalette palette = app.palette();
+    palette.setColor(QPalette::Window, QColor("#202326"));
+    palette.setColor(QPalette::WindowText, QColor("#f2f4f8"));
+    palette.setColor(QPalette::Base, QColor("#1b1f24"));
+    palette.setColor(QPalette::AlternateBase, QColor("#292e34"));
+    palette.setColor(QPalette::Text, QColor("#f2f4f8"));
+    palette.setColor(QPalette::Button, QColor("#30363d"));
+    palette.setColor(QPalette::ButtonText, QColor("#f2f4f8"));
+    palette.setColor(QPalette::Highlight, QColor("#3daee9"));
+    palette.setColor(QPalette::HighlightedText, QColor("#ffffff"));
+    palette.setColor(QPalette::ToolTipBase, QColor("#202326"));
+    palette.setColor(QPalette::ToolTipText, QColor("#f2f4f8"));
+    app.setPalette(palette);
     if (argc < 3) {
         qWarning("usage: uiharness scene.qml out.png [delay] [w] [h] [step]");
         return 2;
@@ -132,9 +147,16 @@ int main(int argc, char **argv)
     QTimer::singleShot(delay, [&]() {
         play(&view, actions);
         QTest::qWait(300);
+        const QVariant prepared = view.rootObject()->property("prepared");
+        if (prepared.isValid() && !prepared.toBool()) {
+            fprintf(stderr, "ERROR: the QML scene did not finish preparing; check nested Loader errors above.\n");
+            app.exit(1);
+            return;
+        }
         int exitCode = 0;
-        if (!view.grabWindow().save(out)) {
-            qWarning("failed to save UI harness screenshot: %s", qPrintable(out));
+        const QImage screenshot = view.grabWindow();
+        if (screenshot.isNull() || !screenshot.save(out)) {
+            fprintf(stderr, "ERROR: could not capture or save screenshot: %s\n", qPrintable(out));
             exitCode = 1;
         }
         if (!criticalWarnings.isEmpty()) {

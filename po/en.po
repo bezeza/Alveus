@@ -854,3 +854,27 @@ msgstr "Alveus is a desktop layout, not a widget. Remove this widget, then right
 #: package/contents/ui/main.qml
 msgid "Remove this widget"
 msgstr "Remove this widget"
+
+#: package/contents/ui/AlveusSettings.qml
+msgid "Diagnostics"
+msgstr "Diagnostics"
+
+#: package/contents/ui/AlveusSettings.qml
+msgid "Warnings and errors are recorded automatically. Recent entries appear below."
+msgstr "Warnings and errors are recorded automatically. Recent entries appear below."
+
+#: package/contents/ui/AlveusSettings.qml
+msgid "Open log folder"
+msgstr "Open log folder"
+
+#: package/contents/ui/AlveusSettings.qml
+msgid "Copy log"
+msgstr "Copy log"
+
+#: package/contents/ui/AlveusSettings.qml
+msgid "No warnings or errors have been recorded."
+msgstr "No warnings or errors have been recorded."
+
+#: package/contents/ui/AlveusSettings.qml
+msgid "The log rotates automatically. File names and paths can appear in third-party error messages, so review the log before sharing it."
+msgstr "The log rotates automatically. File names and paths can appear in third-party error messages, so review the log before sharing it."

@@ -1,5 +1,15 @@
 # Development log
 
+### In progress — branding, translations and Fedora packaging (PR #20)
+
+- Add a canonical Alveus application icon for Plasma, KRunner, and desktop launchers.
+- Add English, Russian, and Ukrainian catalogs, including the Diagnostics UI strings.
+- Add catalog parity, placeholder, markup, and QML translation coverage checks.
+- Add a Fedora RPM build helper with optional DNF installation and command-line validation.
+- Add a reproducible offscreen desktop preview and upload the generated PNG as a CI artifact.
+- Validation is pending on the consolidated current head. No Fedora RPM build/install or live Plasma session has been run.
+
+
 This is the engineering record for Alveus. Entries distinguish merged work from
 open pull requests, so proposed code is not mistaken for shipped code.
 

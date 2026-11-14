@@ -530,7 +530,7 @@ ContainmentItem {
         },
         PlasmaCore.Action {
             text: i18n("Alveus Settings…")
-            icon.name: "folder-favorites"
+            icon.name: "alveus"
             onTriggered: root.openSettings(0)
         },
         PlasmaCore.Action { isSeparator: true }
@@ -898,7 +898,7 @@ ContainmentItem {
             RowLayout {
                 spacing: Kirigami.Units.largeSpacing
                 Kirigami.Icon {
-                    source: "folder-favorites"
+                    source: "alveus"
                     Layout.preferredWidth: Kirigami.Units.iconSizes.large
                     Layout.preferredHeight: Kirigami.Units.iconSizes.large
                 }
