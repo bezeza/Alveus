@@ -202,7 +202,6 @@ ListView {
 
             Flow {
                 Layout.fillWidth: true
-                width: parent.width
                 spacing: view.cardSpacing
                 implicitHeight: childrenRect.height
                 height: implicitHeight
