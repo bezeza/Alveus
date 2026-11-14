@@ -68,10 +68,11 @@ before closing or superseding it; do not merge the stale workflow blindly.
 
 The original successful CI runs linked in PR #14, PR #15, and PR #17
 were attached to earlier SHAs. On 2026-11-14, all three branches were synced
-with the current `main` after PR #18; fresh GitHub Actions runs were then
-observed in progress on the updated heads. Do not merge until those current
-runs complete successfully. A successful run on an earlier commit is not
-current verification.
+with the current `main` after PR #18 and fresh CI was run on the updated heads.
+The current runs passed for PR #14 and PR #15 (build, core tests, shell checks,
+QML lint, and whitespace); PR #17 also passed, including its UI harness CTest
+(2/2 tests). The successful runs are linked in each PR's current validation
+section. These results validate the current heads, not a live Plasma session.
 
 A review of PR #15 found a cache-invalidation gap in `mergeFences()`: source
 fences inherit the target's activity scope, but the subsequent tab activation
