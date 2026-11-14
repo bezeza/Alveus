@@ -51,7 +51,12 @@ if [[ -z "$version" ]]; then
 fi
 
 echo "==> Tools and build dependencies (needs your password) / Інструменти й залежності"
-sudo dnf install -y rpm-build rpmdevtools dnf-plugins-core
+dnf_version="$(dnf --version | head -n1)"
+case "$dnf_version" in
+    5.*) builddep_plugin="dnf5-plugins" ;;
+    *)   builddep_plugin="dnf-plugins-core" ;;
+esac
+sudo dnf install -y rpm-build rpmdevtools "$builddep_plugin"
 sudo dnf builddep -y "$spec"
 
 rpmdev-setuptree

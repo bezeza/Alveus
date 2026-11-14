@@ -82,4 +82,6 @@ regression check were added; verification is pending on this combined head.
   uploads the RPM artifact, and removes the package.
 - Make the helper's explicit `--install` mode non-interactive for CI by
   passing `-y` to DNF. The normal build-only mode remains unchanged.
+- Detect DNF 4 versus DNF 5 and install the matching builddep plugin
+  (`dnf-plugins-core` or `dnf5-plugins`) before resolving BuildRequires.
 - Verification is pending on the Fedora workflow.
