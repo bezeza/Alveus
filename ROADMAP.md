@@ -63,13 +63,16 @@ remain proposals until GitHub confirms the merge.
   container workflow that builds the RPM, installs it through DNF, verifies the
   Plasma metadata/QML/icon payload, uploads the RPM artifact, and removes the
   package through DNF. The container check passed; live Plasma testing remains.
+- **PR #28 — atomic and restart-safe recovery.** Replaced direct writes to the
+  live Plasma config with a validated temporary file and atomic rename after a
+  timestamped backup. Added restart cleanup and isolated regression tests for
+  normal, fallback, failure, and interruption paths. CTest passed 3/3.
 - The GitHub Actions build-and-test workflow is present in `main`.
 
 ### Open work
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P1 | Atomic and restart-safe desktop recovery | [Issue #8](https://github.com/bezeza/Alveus/issues/8) | Write Plasma config atomically, guarantee restart attempts, and test failure/interruption paths |
 | P1 | Live Fedora KDE/Plasma validation | planned | Install the built RPM on a supported Fedora KDE desktop, activate Alveus, and test file operations, recovery, activities, monitors, and session restart |
 
 PR #19 was synchronized with the merged performance and UI foundation before
@@ -163,9 +166,10 @@ desktop installation and live Plasma validation are still required before releas
 
 ### Stage 5 — Real KDE Plasma validation
 
-- [ ] Complete Issue #8: make the recovery script atomic and restart-safe, with
-  temporary-config tests for desktop containment, widgets, unrelated applets,
-  transformation failure, validation failure, and interruption.
+- [x] Complete Issue #8: recovery now uses a validated same-directory temporary
+  file, timestamped backup, atomic replacement, and restart cleanup; temporary
+  fixture tests cover desktop/widget containments, unrelated applets, failures,
+  and interruption (PR #28).
 
 Run this stage on a Fedora KDE Plasma machine before calling the release
 candidate ready. CI and offscreen rendering are not substitutes for a live
@@ -192,7 +196,6 @@ a reproducible bug, or user feedback justifies it.
 
 | Priority | Topic | Reference | Intended outcome |
 |---|---|---|---|
-| P1 | Recovery safety | [Issue #8](https://github.com/bezeza/Alveus/issues/8) | Make recovery predictable and protect the user's desktop configuration |
 | P1 | Qt compatibility baseline | [Issue #9](https://github.com/bezeza/Alveus/issues/9) | Define and test the minimum supported Qt version |
 | P2 | External-process timeouts | [Issue #10](https://github.com/bezeza/Alveus/issues/10) | Prevent a stalled helper process from hanging an operation |
 | P2 | Persisted configuration validation | [Issue #13](https://github.com/bezeza/Alveus/issues/13) | Reject or recover safely from invalid saved state |
