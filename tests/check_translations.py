@@ -81,9 +81,10 @@ plural = re.compile(r'\bi18np\s*\(\s*("(?:\\.|[^"\\])*")\s*,\s*("(?:\\.|[^"\\])*
 for qml in qml_root.rglob("*.qml"):
     text = qml.read_text(encoding="utf-8")
     messages = [ast.literal_eval(m.group(1)) for m in single.finditer(text)]
-    for pattern in (contextual, plural):
-        for match in pattern.finditer(text):
-            messages.append(ast.literal_eval(match.group(2)))
+    for match in contextual.finditer(text):
+        messages.append(ast.literal_eval(match.group(2)))
+    for match in plural.finditer(text):
+        messages.extend((ast.literal_eval(match.group(1)), ast.literal_eval(match.group(2))))
     for message in messages:
         if message not in source or message not in russian:
             fail(f"{qml.relative_to(ROOT)} uses an untranslated source string: {message!r}")
