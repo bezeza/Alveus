@@ -353,6 +353,7 @@ const QJsonObject &defaultDriveOptions()
         {QStringLiteral("hideBiosBoot"), true},
         {QStringLiteral("showUnmounted"), true},
         {QStringLiteral("partitionMode"), QStringLiteral("all")},
+        {QStringLiteral("displayMode"), QStringLiteral("medium")},
         {QStringLiteral("minimumPartitionSizeMiB"), 0},
     };
     return defaults;
@@ -391,6 +392,18 @@ bool validDriveOptions(const QJsonObject &options, bool allowExceptions)
         }
         const QString value = mode.toString();
         if (value != QLatin1String("all") && value != QLatin1String("mounted") && value != QLatin1String("selected")) {
+            return false;
+        }
+    }
+
+    if (options.contains(QStringLiteral("displayMode"))) {
+        const QJsonValue mode = options.value(QStringLiteral("displayMode"));
+        if (!mode.isString()) {
+            return false;
+        }
+        const QString value = mode.toString();
+        if (value != QLatin1String("compact") && value != QLatin1String("medium")
+            && value != QLatin1String("large")) {
             return false;
         }
     }
@@ -477,6 +490,18 @@ bool setDriveOptionValue(QJsonObject &options, const QString &key, const QJsonVa
         }
         const QString mode = value.toString();
         if (mode != QLatin1String("all") && mode != QLatin1String("mounted") && mode != QLatin1String("selected")) {
+            return false;
+        }
+        options.insert(key, value);
+        return true;
+    }
+    if (key == QLatin1String("displayMode")) {
+        if (!value.isString()) {
+            return false;
+        }
+        const QString mode = value.toString();
+        if (mode != QLatin1String("compact") && mode != QLatin1String("medium")
+            && mode != QLatin1String("large")) {
             return false;
         }
         options.insert(key, value);
@@ -3274,6 +3299,11 @@ bool AlveusCore::setDriveVisibilityException(const QString &fenceId, const QStri
 QVariantList AlveusCore::visibleDrives(const QString &fenceId, bool showHiddenTemporarily) const
 {
     return Alveus::filterDriveList(m_drives->drives(), driveOptions(fenceId), showHiddenTemporarily);
+}
+
+QVariantList AlveusCore::visibleDriveDevices(const QString &fenceId, bool showHiddenTemporarily) const
+{
+    return Alveus::filterDriveHierarchy(m_drives->devices(), driveOptions(fenceId), showHiddenTemporarily);
 }
 
 void AlveusCore::setHidden(bool hidden)
