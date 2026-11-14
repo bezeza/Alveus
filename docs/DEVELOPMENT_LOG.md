@@ -1,76 +1,67 @@
 # Development log
 
-### Merged into main — PR #20
-
-- Added a canonical Alveus icon for Plasma, KRunner, and desktop launchers.
-- Added Russian and Ukrainian catalogs, translation validation, and a reproducible
-  offscreen desktop preview with a CI artifact.
-- Added a Fedora RPM spec update and a build/install helper with CLI validation.
-- The current CI verifies the source build and package helper interface. A real
-  Fedora RPM build and DNF install/removal remain release checks.
-
-### In progress — PR #23 diagnostics rotation coverage
-- Add a regression test that forces four log rotations and verifies the three
-  retained archives plus the latest entry in the active log.
-- Verification is pending on the updated PR head.
-
-
-- Add a canonical Alveus application icon for Plasma, KRunner, and desktop launchers.
-- Keep English as the source language; add Russian and Ukrainian catalogs, including the Diagnostics UI strings.
-- Add catalog parity, placeholder, markup, and QML translation coverage checks.
-- Add a Fedora RPM build helper with optional DNF installation and command-line validation.
-- Add a reproducible offscreen desktop preview and upload the generated PNG as a CI artifact.
-- Validation is pending on the consolidated current head. No Fedora RPM build/install or live Plasma session has been run.
-
-
-This is the engineering record for Alveus. Entries distinguish merged work from
-open pull requests, so proposed code is not mistaken for shipped code.
+This is the engineering record for Alveus. Entries distinguish merged work
+from open pull requests, so proposed code is not mistaken for shipped code.
 
 ## 2026-11-14
 
 ### Merged into `main`
 
 - **PR #18 — keyed ListModel synchronization.** Replaced repeated linear key
-  searches with `Set`/`Map` lookups while preserving existing ListModel rows
-  and delegates. Merge commit: `65a7beeb8ce62325458983d93f9f2f80ffc139ef`.
-- The same merge added the GitHub Actions build/test workflow.
+  searches with keyed lookups while preserving existing model rows and
+  delegates.
+- **PR #14 — background directory validation.** Moved recursive validation and
+  same-filesystem directory operations off the UI thread for import, archive,
+  and Undo. Avoided redundant tree-size scans for rename-only moves.
+- **PR #15 — cached file placement and targeted model updates.** Added
+  per-activity file-model caches and refreshed only affected models. Added
+  regression coverage for cache invalidation in both fence-merge directions.
+- **PR #17 — offscreen UI harness.** Integrated the UI harness into CTest,
+  added Plasma API test doubles, and made critical QML warnings fail the
+  harness. The merged-head CI passed both CTest targets.
+- **PR #22 — development roadmap.** Added `ROADMAP.md` with the product
+  direction, staged work, release criteria, and post-stabilization backlog;
+  linked it from the README.
+- **PR #19 — runtime diagnostics and agent workflow.** Added local JSON-lines
+  diagnostics with bounded rotation and path redaction, a Settings diagnostics
+  viewer, a canonical `AGENTS.md`, provider-specific agent entrypoints, a PR
+  template, and CI enforcement for dated development-log updates. Added
+  regression coverage for warning capture, application errors, path redaction,
+  and message-handler reentrancy.
+- **PR #20 — branding, localization, preview, and Fedora RPM helper.** Added
+  the canonical application icon, Ukrainian and Russian translation catalogs
+  and validation, a reproducible offscreen desktop preview with a CI artifact,
+  and an RPM build/install helper with CLI validation.
+- **PR #23 — diagnostics log-rotation coverage.** Added a regression test that
+  forces four consecutive rotations, verifies that exactly three archive
+  generations are retained, and checks that the latest warning is written to
+  the active JSON-lines log.
 
-### Open pull requests (not yet in `main`)
+### Verification and remaining release checks
 
-- **PR #14:** background same-filesystem directory operations.
-- **PR #15:** cached file placement and targeted fence-model updates.
-- **PR #16:** GitHub Actions build and test pipeline.
-- **PR #17:** headless UI harness and critical QML warning checks.
+- The current merged CI for PR #19 passed the build, both CTest targets
+  (`coretest` and `uiharness`), shell checks, QML lint, development-log
+  enforcement, and whitespace validation.
+- The current merged CI for PR #20 passed build, tests, translation checks,
+  RPM-helper CLI checks, shell checks, QML lint, offscreen preview rendering,
+  artifact upload, and whitespace validation.
+- The current merged CI for PR #23 passed build, both CTest targets
+  (`coretest` and `uiharness`), translation checks, RPM-helper CLI checks,
+  shell checks, QML lint, development-log enforcement, offscreen preview
+  rendering, artifact upload, and whitespace validation.
+- A real Fedora RPM build, DNF installation/removal, and dependency-resolution
+  check have not been run in a supported Fedora KDE environment.
+- Live KDE Plasma validation has not been run. CI and offscreen rendering do
+  not replace testing file operations, recovery, desktop activities, multiple
+  monitors, and session restart in a real Plasma session.
 
-### In progress — PR #15 follow-up
+### Earlier implementation notes
 
-- Rebuild per-activity file-model caches when `mergeFences()` changes the
-  source fence's activity scope.
-- Add regression coverage for both global-to-activity-specific and
+- **PR #15 follow-up:** Rebuilt per-activity file-model caches when
+  `mergeFences()` changes the source fence's activity scope. Regression
+  coverage exercises both global-to-activity-specific and
   activity-specific-to-global merges.
-- GitHub Actions on the updated implementation head passed: build, CTest
-  core suite (1/1), shell checks, QML lint, and patch-whitespace validation.
-  Runs: [43594527975](https://github.com/bezeza/Alveus/actions/runs/43594527975)
-  and [43594525739](https://github.com/bezeza/Alveus/actions/runs/43594525739).
-- Live KDE Plasma validation has not been run.
-
-### In progress — PR #19
-
-- Persistent application diagnostics, a Settings → Diagnostics viewer, bounded
-  log rotation, and diagnostics documentation.
-- A canonical `AGENTS.md` policy plus lightweight entrypoints for common coding
-  agents (Claude Code, GitHub Copilot, Cursor, Gemini CLI, Cline, Roo Code, Aider, and Windsurf).
-- A PR template and CI enforcement requiring a development-log entry whenever
-  implementation, tests, CI, or packaging files change.
-- Updated Claude/README build guidance to avoid stale test counts and to use the
-  same full CTest command as CI.
-
-The diagnostics and agent-governance changes are in the open PR #19. The first
-CI run for the diagnostics-only commit passed build, core tests, shell checks,
-QML lint, and whitespace validation. The combined changes are subject to a new
-CI run on the current PR head. Nothing in this section is shipped until PR #19
-is merged.
-
-The branch was synchronized with the merged performance and UI foundation on
-2026-11-14. A thread-local message-handler reentrancy guard and a path-redaction
-regression check were added; verification is pending on this combined head.
+- **CI foundation:** The GitHub Actions workflow builds the Qt application,
+  runs CTest, checks shell scripts, lints QML, and validates patch whitespace.
+  Later merged changes extended it with the UI harness, translation checks,
+  preview rendering, and development-log enforcement.
