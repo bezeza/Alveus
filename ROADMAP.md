@@ -53,23 +53,27 @@ remain proposals until GitHub confirms the merge.
   dated development-log updates.
 - **PR #22 — development roadmap.** Added this dedicated roadmap and linked it
   from the README.
+- **PR #20 — branding, localization, and Fedora RPM helper.** Added the canonical
+  app icon, Russian/Ukrainian catalogs and validation, desktop preview, and RPM
+  build/install helper. The current CI passes the build and preview checks.
 - The GitHub Actions build-and-test workflow is present in `main`.
 
 ### Open work
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P2 | Branding, translations, UI preview, Fedora RPM packaging | [PR #20](https://github.com/bezeza/Alveus/pull/20) | Review and merge the consolidated PR; run a real Fedora RPM build/install and live Plasma validation before release |
+| P1 | Diagnostics log-rotation regression test | [PR #23](https://github.com/bezeza/Alveus/pull/23) | Verify bounded three-generation retention after repeated rotations |
+| P1 | Fedora RPM build and DNF validation | planned | Build and inspect the RPM in a Fedora environment, then verify DNF install/removal and dependency resolution |
 
 PR #19 was synchronized with the merged performance and UI foundation before
 it was merged. Its diagnostics code now includes a thread-local message-handler
 reentrancy guard and regression coverage for path redaction. Log rotation
 behavior still needs a focused test and live review.
 
-PR #20 consolidates the passing preview/icon foundation with PR #21's stronger
-Russian/Ukrainian catalogs, translation checker, and RPM build helper. Its
-current-head CI passes, including preview rendering and artifact upload. PR #21
-is now redundant and should be closed after the consolidated PR is merged.
+PR #20 is merged. It consolidates the passing preview/icon foundation
+with PR #21's Russian/Ukrainian catalogs, translation checker, and RPM build
+helper. Its final CI passed, including preview rendering and artifact upload.
+PR #21 was closed as superseded after its unique useful changes were carried over.
 
 PR #16 was closed as superseded. Its only proposed workflow file was compared
 with the current workflow in `main`; the current workflow includes the same
@@ -102,8 +106,8 @@ suite passes. Live Plasma stress testing remains a release gate.
 - [x] Merge PR #17 and integrate its UI harness with the standard CTest workflow.
 - [x] Provide test doubles for the Plasma APIs used by the harness.
 - [x] Make critical QML warnings fail the UI harness.
-- [ ] Keep offscreen preview screenshots reproducible and verify the generated
-  artifacts in the branding/translation PR.
+- [x] Keep offscreen preview screenshots reproducible and verify the generated
+  artifacts in the merged branding/translation PR.
 
 **Exit criteria:** current CI passes both coretest and uiharness; live Plasma
 validation remains separate.
@@ -115,7 +119,7 @@ validation remains separate.
   warnings/errors; add regression coverage for path redaction and handler
   reentrancy.
 - [ ] Add focused log-rotation tests and review third-party paths in copied
-  reports before sharing.
+  reports before sharing. PR #23 adds the missing rotation regression test.
 - [x] Keep diagnostics local and user-controlled; no automatic upload or
   telemetry.
 - [x] Establish `AGENTS.md`, provider-specific pointers, PR template, and

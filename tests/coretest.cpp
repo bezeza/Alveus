@@ -985,6 +985,33 @@ private Q_SLOTS:
         QVERIFY(!nestedFound);
     }
 
+    void diagnosticsRotatesLogsAndKeepsThreeGenerations()
+    {
+        AlveusCore core(desk(), store());
+        core.clearDiagnostics();
+        const QString path = core.diagnosticsPath();
+
+        // Force four rotations. The logger must retain only the newest three
+        // archives and keep the final warning in the active JSON-lines file.
+        for (int i = 0; i < 4; ++i) {
+            QFile oversized(path);
+            QVERIFY(oversized.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            QVERIFY(oversized.resize(1024 * 1024 + 1));
+            oversized.close();
+            qWarning("diagnostics rotation marker %d", i);
+        }
+
+        QVERIFY(QFileInfo::exists(path + QStringLiteral(".1")));
+        QVERIFY(QFileInfo::exists(path + QStringLiteral(".2")));
+        QVERIFY(QFileInfo::exists(path + QStringLiteral(".3")));
+        QVERIFY(!QFileInfo::exists(path + QStringLiteral(".4")));
+
+        const QVariantList entries = core.recentDiagnostics(10);
+        QVERIFY(!entries.isEmpty());
+        QVERIFY(entries.first().toMap().value(QStringLiteral("message")).toString()
+                    .contains(QStringLiteral("diagnostics rotation marker 3")));
+    }
+
     void diagnosticsCaptureApplicationErrors()
     {
         QDir().mkpath(QFileInfo(store()).absolutePath());
