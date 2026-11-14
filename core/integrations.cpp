@@ -4,6 +4,7 @@
  */
 
 #include "integrations.h"
+#include "processutils.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -11,13 +12,17 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonParseError>
 #include <QProcess>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QUrl>
 
-Integrations::Integrations(QObject *parent)
+#include <memory>
+
+Integrations::Integrations(QObject *parent, int processTimeoutMs)
     : QObject(parent)
+    , m_processTimeoutMs(processTimeoutMs > 0 ? processTimeoutMs : 5000)
 {
     m_shareTimer.setInterval(4000);
     connect(&m_shareTimer, &QTimer::timeout, this, &Integrations::pollScreenShare);
@@ -45,23 +50,52 @@ QVariantList Integrations::parsePhones(const QString &out)
 
 void Integrations::refreshPhones()
 {
-    if (QStandardPaths::findExecutable(QStringLiteral("kdeconnect-cli")).isEmpty()) {
-        Q_EMIT phonesChanged({});
+    if (m_phoneProc) {
         return;
     }
+    if (QStandardPaths::findExecutable(QStringLiteral("kdeconnect-cli")).isEmpty()) {
+        Q_EMIT message(QStringLiteral("kdeconnect-unavailable"), QStringLiteral("kdeconnect-cli was not found; keeping the last known device list"));
+        return;
+    }
+
     auto *proc = new QProcess(this);
-    connect(proc, &QProcess::finished, this, [this, proc](int code, QProcess::ExitStatus status) {
-        Q_EMIT phonesChanged(status == QProcess::NormalExit && code == 0
-                                 ? parsePhones(QString::fromUtf8(proc->readAllStandardOutput()))
-                                 : QVariantList{});
+    m_phoneProc = proc;
+    auto completed = std::make_shared<bool>(false);
+    auto complete = [this, proc, completed](const QVariantList &phones, const QString &kind, const QString &detail) {
+        if (*completed) {
+            return;
+        }
+        *completed = true;
+        if (m_phoneProc == proc) {
+            m_phoneProc = nullptr;
+        }
+        if (!kind.isEmpty()) {
+            Q_EMIT message(kind, detail + QStringLiteral("; keeping the last known device list"));
+        } else {
+            Q_EMIT phonesChanged(phones);
+        }
         proc->deleteLater();
-    });
-    connect(proc, &QProcess::errorOccurred, this, [this, proc](QProcess::ProcessError error) {
-        if (error == QProcess::FailedToStart) {
-            Q_EMIT phonesChanged({});
-            proc->deleteLater();
+    };
+    connect(proc, &QProcess::finished, this, [proc, complete, this](int code, QProcess::ExitStatus status) {
+        if (Alveus::processTimedOut(proc)) {
+            complete({}, QStringLiteral("kdeconnect-timeout"),
+                     QStringLiteral("kdeconnect-cli exceeded %1 ms").arg(m_processTimeoutMs));
+        } else if (status == QProcess::NormalExit && code == 0) {
+            complete(parsePhones(QString::fromUtf8(proc->readAllStandardOutput())), QString(), QString());
+        } else {
+            QString detail = QString::fromUtf8(proc->readAllStandardError()).trimmed();
+            if (detail.isEmpty()) {
+                detail = QStringLiteral("kdeconnect-cli exited with code %1").arg(code);
+            }
+            complete({}, QStringLiteral("kdeconnect-failed"), detail);
         }
     });
+    connect(proc, &QProcess::errorOccurred, this, [proc, complete](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart) {
+            complete({}, QStringLiteral("kdeconnect-failed"), proc->errorString());
+        }
+    });
+    Alveus::killAfterTimeout(proc, m_processTimeoutMs);
     proc->start(QStringLiteral("kdeconnect-cli"), {QStringLiteral("--list-available"), QStringLiteral("--id-name-only")});
 }
 
@@ -164,51 +198,109 @@ bool Integrations::screencastIn(const QByteArray &json)
     return false;
 }
 
+void Integrations::setScreenShared(bool shared)
+{
+    if (m_shared == shared) {
+        return;
+    }
+    m_shared = shared;
+    Q_EMIT screenSharedChanged(shared);
+}
+
 void Integrations::setWatchScreenShare(bool on)
 {
-    if (on && !QStandardPaths::findExecutable(QStringLiteral("pw-dump")).isEmpty()) {
-        m_shareTimer.start();
-        pollScreenShare();
-    } else {
+    m_watchScreenShare = on;
+    if (!on) {
         m_shareTimer.stop();
-        if (m_shared) {
-            m_shared = false;
-            Q_EMIT screenSharedChanged(false);
+        if (m_shareProc) {
+            m_shareProc->setProperty("alveusCancelled", true);
+            if (m_shareProc->state() != QProcess::NotRunning) {
+                m_shareProc->kill();
+            }
         }
+        setScreenShared(false);
+        return;
     }
+
+    m_shareTimer.setInterval(4000);
+    m_shareTimer.start();
+    pollScreenShare();
 }
 
 void Integrations::pollScreenShare()
 {
-    if (m_shareProc) {
-        return; // previous check still running
+    if (!m_watchScreenShare || m_shareProc) {
+        return;
     }
-    m_shareProc = new QProcess(this);
-    QProcess *process = m_shareProc;
-    connect(process, &QProcess::finished, this, [this, process](int code, QProcess::ExitStatus status) {
-        if (m_shareProc != process) {
-            process->deleteLater();
+    if (QStandardPaths::findExecutable(QStringLiteral("pw-dump")).isEmpty()) {
+        setScreenShared(true); // fail closed until a successful probe is available
+        if (!m_pwDumpUnavailableReported) {
+            Q_EMIT message(QStringLiteral("screen-share-unavailable"),
+                           QStringLiteral("pw-dump was not found; automatic privacy is failing closed"));
+            m_pwDumpUnavailableReported = true;
+        }
+        m_shareTimer.setInterval(qMin(m_shareTimer.interval() * 2, 60000));
+        return;
+    }
+    m_pwDumpUnavailableReported = false;
+
+    auto *process = new QProcess(this);
+    m_shareProc = process;
+    auto completed = std::make_shared<bool>(false);
+    auto complete = [this, process, completed](bool success, bool shared,
+                                               const QString &kind, const QString &detail) {
+        if (*completed) {
             return;
         }
-        const bool shared = status == QProcess::NormalExit && code == 0
-            ? screencastIn(process->readAllStandardOutput()) : false;
-        process->deleteLater();
-        m_shareProc = nullptr;
-        if (shared != m_shared) {
-            m_shared = shared;
-            Q_EMIT screenSharedChanged(shared);
+        *completed = true;
+        const bool cancelled = process->property("alveusCancelled").toBool();
+        if (m_shareProc == process) {
+            m_shareProc = nullptr;
         }
-    });
-    connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
-        if (error != QProcess::FailedToStart || m_shareProc != process) {
+        if (!cancelled && m_watchScreenShare) {
+            if (success) {
+                m_shareTimer.setInterval(4000);
+                setScreenShared(shared);
+            } else {
+                // Never turn a failed/unknown probe into a false negative.
+                setScreenShared(true);
+                m_shareTimer.setInterval(qMin(m_shareTimer.interval() * 2, 60000));
+                Q_EMIT message(kind, detail);
+            }
+        }
+        process->deleteLater();
+    };
+
+    connect(process, &QProcess::finished, this, [this, process, complete](int code, QProcess::ExitStatus status) {
+        if (Alveus::processTimedOut(process)) {
+            complete(false, false, QStringLiteral("screen-share-timeout"),
+                     QStringLiteral("pw-dump exceeded %1 ms").arg(m_processTimeoutMs));
             return;
         }
-        process->deleteLater();
-        m_shareProc = nullptr;
-        if (m_shared) {
-            m_shared = false;
-            Q_EMIT screenSharedChanged(false);
+        if (status != QProcess::NormalExit || code != 0) {
+            QString detail = QString::fromUtf8(process->readAllStandardError()).trimmed();
+            if (detail.isEmpty()) {
+                detail = QStringLiteral("pw-dump exited with code %1").arg(code);
+            }
+            complete(false, false, QStringLiteral("screen-share-check-failed"), detail);
+            return;
+        }
+
+        const QByteArray output = process->readAllStandardOutput();
+        QJsonParseError parseError;
+        const QJsonDocument document = QJsonDocument::fromJson(output, &parseError);
+        if (parseError.error != QJsonParseError::NoError || !document.isArray()) {
+            complete(false, false, QStringLiteral("screen-share-check-failed"),
+                     QStringLiteral("pw-dump returned invalid JSON"));
+            return;
+        }
+        complete(true, screencastIn(output), QString(), QString());
+    });
+    connect(process, &QProcess::errorOccurred, this, [process, complete](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart) {
+            complete(false, false, QStringLiteral("screen-share-check-failed"), process->errorString());
         }
     });
+    Alveus::killAfterTimeout(process, m_processTimeoutMs);
     process->start(QStringLiteral("pw-dump"), {});
 }

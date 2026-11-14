@@ -562,12 +562,14 @@ AlveusCore::AlveusCore(const QString &desktopPath, const QString &storePath, QOb
 
     m_thumbs = new Thumbnailer(this);
     connect(m_thumbs, &Thumbnailer::ready, this, &AlveusCore::thumbnailReady);
+    connect(m_thumbs, &Thumbnailer::message, this, &AlveusCore::message);
 
     m_drives = new DriveWatcher(this);
     connect(m_drives, &DriveWatcher::changed, this, &AlveusCore::drivesChanged);
     connect(m_drives, &DriveWatcher::message, this, &AlveusCore::message);
 
     m_integrations = new Integrations(this);
+    connect(m_integrations, &Integrations::message, this, &AlveusCore::message);
     connect(m_integrations, &Integrations::phonesChanged, this, [this](const QVariantList &p) {
         m_phones = p;
         Q_EMIT phonesChanged();

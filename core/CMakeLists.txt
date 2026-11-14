@@ -2,6 +2,7 @@
 # "import ua.bezeza.alveus".
 set(ALVEUS_CORE_SOURCES
     alveuscore.h alveuscore.cpp
+    processutils.h
     rules.h rules.cpp
     thumbnails.h thumbnails.cpp
     integrations.h integrations.cpp

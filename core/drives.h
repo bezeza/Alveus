@@ -47,7 +47,7 @@ class DriveWatcher : public QObject
 {
     Q_OBJECT
 public:
-    explicit DriveWatcher(QObject *parent = nullptr);
+    explicit DriveWatcher(QObject *parent = nullptr, int lsblkTimeoutMs = 10000, int operationTimeoutMs = 30000);
     ~DriveWatcher() override;
 
     // Starts watching the first time someone asks (a drives fence exists)
@@ -63,9 +63,12 @@ Q_SIGNALS:
 private:
     void rebuild();
     QVariantList buildList() const;
+    void runUdisksctl(const QString &operation, const QString &device);
 
     QTimer m_timer;
     QProcess *m_lsblk = nullptr;
     QByteArray m_lsblkJson;
     QVariantList m_list;
+    int m_lsblkTimeoutMs = 10000;
+    int m_operationTimeoutMs = 30000;
 };

@@ -4,6 +4,7 @@
  */
 
 #include "thumbnails.h"
+#include "processutils.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -14,6 +15,8 @@
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QTemporaryDir>
+
+#include <memory>
 #include <QUrl>
 
 #include <memory>
@@ -23,6 +26,7 @@ namespace
 {
 constexpr int kMaxParallel = 2;
 constexpr int kSize = 256; // "large" flavour
+constexpr int kFailureRetryDelayMs = 30000;
 
 QString uriOf(const QString &path)
 {
@@ -36,8 +40,9 @@ QString fileStamp(const QFileInfo &info)
 }
 } // namespace
 
-Thumbnailer::Thumbnailer(QObject *parent)
+Thumbnailer::Thumbnailer(QObject *parent, int processTimeoutMs)
     : QObject(parent)
+    , m_processTimeoutMs(processTimeoutMs > 0 ? processTimeoutMs : 30000)
 {
     m_hasFfmpegThumbnailer = !QStandardPaths::findExecutable(QStringLiteral("ffmpegthumbnailer")).isEmpty();
     m_hasFfmpeg = !QStandardPaths::findExecutable(QStringLiteral("ffmpeg")).isEmpty();
@@ -111,8 +116,12 @@ QString Thumbnailer::lookup(const QString &path, const QString &mime)
     }
 
     const QString stamp = fileStamp(info);
-    if (canGenerate(mime) && !m_pending.contains(path) && m_failed.value(path) != stamp) {
-        m_failed.remove(path); // a changed source deserves another attempt
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    const bool sameFailure = m_failed.value(path) == stamp;
+    const bool retryAllowed = !sameFailure || m_retryAt.value(path, 0) <= nowMs;
+    if (canGenerate(mime) && !m_pending.contains(path) && retryAllowed) {
+        m_failed.remove(path);
+        m_retryAt.remove(path);
         m_pending.insert(path);
         m_queue.enqueue({path, mime, info.size(), mtimeMs});
         pump();
@@ -169,14 +178,31 @@ void Thumbnailer::pump()
             --m_running;
             pump();
         };
-        connect(proc, &QProcess::finished, this, [complete](int code, QProcess::ExitStatus status) {
-            complete(status == QProcess::NormalExit && code == 0);
+        connect(proc, &QProcess::finished, this, [this, proc, job, complete](int code, QProcess::ExitStatus status) {
+            const bool timedOut = Alveus::processTimedOut(proc);
+            const bool ok = !timedOut && status == QProcess::NormalExit && code == 0;
+            if (timedOut) {
+                Q_EMIT message(QStringLiteral("thumbnail-timeout"),
+                               QStringLiteral("%1 exceeded %2 ms")
+                                   .arg(QFileInfo(job.path).fileName()).arg(m_processTimeoutMs));
+            } else if (!ok) {
+                QString detail = QString::fromUtf8(proc->readAllStandardError()).trimmed();
+                if (detail.isEmpty()) {
+                    detail = QStringLiteral("%1 exited with code %2")
+                                 .arg(QFileInfo(job.path).fileName()).arg(code);
+                }
+                Q_EMIT message(QStringLiteral("thumbnail-helper-failed"), detail);
+            }
+            complete(ok);
         });
-        connect(proc, &QProcess::errorOccurred, this, [complete](QProcess::ProcessError error) {
+        connect(proc, &QProcess::errorOccurred, this, [this, proc, job, complete](QProcess::ProcessError error) {
             if (error == QProcess::FailedToStart) {
+                Q_EMIT message(QStringLiteral("thumbnail-helper-failed"),
+                               QStringLiteral("%1: %2").arg(QFileInfo(job.path).fileName(), proc->errorString()));
                 complete(false);
             }
         });
+        Alveus::killAfterTimeout(proc, m_processTimeoutMs);
         proc->start(program, args);
     }
 }
@@ -187,6 +213,7 @@ void Thumbnailer::finish(const Job &job, const QString &tmp, bool ok)
     const QFileInfo info(job.path);
     if (!info.exists() || !info.isFile()) {
         m_failed.remove(job.path);
+        m_retryAt.remove(job.path);
         return;
     }
 
@@ -195,6 +222,7 @@ void Thumbnailer::finish(const Job &job, const QString &tmp, bool ok)
         // The file changed while ffmpeg/poppler was reading it. Queue a fresh
         // generation instead of caching an image for stale contents.
         m_failed.remove(job.path);
+        m_retryAt.remove(job.path);
         m_pending.insert(job.path);
         m_queue.enqueue({job.path, job.mime, info.size(), currentMtimeMs});
         return;
@@ -203,8 +231,11 @@ void Thumbnailer::finish(const Job &job, const QString &tmp, bool ok)
     QImage img;
     if (!ok || !img.load(tmp)) {
         m_failed.insert(job.path, fileStamp(info));
+        m_retryAt.insert(job.path, QDateTime::currentMSecsSinceEpoch() + kFailureRetryDelayMs);
         return;
     }
+    m_failed.remove(job.path);
+    m_retryAt.remove(job.path);
     if (img.width() > kSize || img.height() > kSize) {
         img = img.scaled(kSize, kSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }

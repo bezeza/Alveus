@@ -4,6 +4,7 @@
  */
 
 #include "drives.h"
+#include "processutils.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -12,6 +13,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QSet>
 #include <QStandardPaths>
 
@@ -240,8 +243,10 @@ QVariantMap toMap(const Drive &d)
 
 // ---------------------------------------------------------------------------
 
-DriveWatcher::DriveWatcher(QObject *parent)
+DriveWatcher::DriveWatcher(QObject *parent, int lsblkTimeoutMs, int operationTimeoutMs)
     : QObject(parent)
+    , m_lsblkTimeoutMs(lsblkTimeoutMs > 0 ? lsblkTimeoutMs : 10000)
+    , m_operationTimeoutMs(operationTimeoutMs > 0 ? operationTimeoutMs : 30000)
 {
     // mounts and free space change without telling anyone: look now and then
     m_timer.setInterval(15000);
@@ -271,10 +276,15 @@ QVariantList DriveWatcher::drives()
 
 void DriveWatcher::refresh()
 {
-    if (m_lsblk || QStandardPaths::findExecutable(QStringLiteral("lsblk")).isEmpty()) {
+    if (m_lsblk) {
+        return;
+    }
+    if (QStandardPaths::findExecutable(QStringLiteral("lsblk")).isEmpty()) {
+        Q_EMIT message(QStringLiteral("drive-list-unavailable"), QStringLiteral("lsblk was not found; keeping the last known drive list"));
         rebuild();
         return;
     }
+
     m_lsblk = new QProcess(this);
     QProcess *process = m_lsblk;
     connect(process, &QProcess::finished, this, [this, process](int code, QProcess::ExitStatus status) {
@@ -282,9 +292,30 @@ void DriveWatcher::refresh()
             process->deleteLater();
             return;
         }
-        m_lsblkJson = status == QProcess::NormalExit && code == 0 ? process->readAllStandardOutput() : QByteArray();
-        if (status != QProcess::NormalExit || code != 0) {
-            Q_EMIT message(QStringLiteral("drive-list-failed"), QString::fromUtf8(process->readAllStandardError()).trimmed());
+        if (Alveus::processTimedOut(process)) {
+            m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
+            Q_EMIT message(QStringLiteral("drive-list-timeout"),
+                           QStringLiteral("lsblk exceeded %1 ms; keeping the last known drive list").arg(m_lsblkTimeoutMs));
+        } else if (status == QProcess::NormalExit && code == 0) {
+            const QByteArray output = process->readAllStandardOutput();
+            QJsonParseError parseError;
+            const QJsonDocument document = QJsonDocument::fromJson(output, &parseError);
+            if (parseError.error == QJsonParseError::NoError && document.isObject()
+                && document.object().value(QStringLiteral("blockdevices")).isArray()) {
+                m_lsblkJson = output;
+                m_timer.setInterval(15000);
+            } else {
+                m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
+                Q_EMIT message(QStringLiteral("drive-list-invalid-output"),
+                               QStringLiteral("lsblk returned invalid JSON; keeping the last known drive list"));
+            }
+        } else {
+            m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
+            QString detail = QString::fromUtf8(process->readAllStandardError()).trimmed();
+            if (detail.isEmpty()) {
+                detail = QStringLiteral("lsblk exited with code %1").arg(code);
+            }
+            Q_EMIT message(QStringLiteral("drive-list-failed"), detail + QStringLiteral("; keeping the last known drive list"));
         }
         m_lsblk->deleteLater();
         m_lsblk = nullptr;
@@ -296,11 +327,12 @@ void DriveWatcher::refresh()
         }
         const QString detail = process->errorString();
         m_lsblk = nullptr;
-        m_lsblkJson.clear();
+        m_timer.setInterval(qMin(m_timer.interval() * 2, 60000));
         process->deleteLater();
-        Q_EMIT message(QStringLiteral("drive-list-failed"), detail);
+        Q_EMIT message(QStringLiteral("drive-list-failed"), detail + QStringLiteral("; keeping the last known drive list"));
         rebuild();
     });
+    Alveus::killAfterTimeout(process, m_lsblkTimeoutMs);
     process->start(QStringLiteral("lsblk"), {QStringLiteral("-J"), QStringLiteral("-b"), QStringLiteral("-o"),
                                               QStringLiteral("NAME,PATH,LABEL,FSTYPE,MOUNTPOINTS,SIZE,RM,HOTPLUG,TYPE")});
 }
@@ -329,42 +361,50 @@ QVariantList DriveWatcher::buildList() const
     return list;
 }
 
+void DriveWatcher::runUdisksctl(const QString &operation, const QString &device)
+{
+    auto *process = new QProcess(this);
+    auto completed = std::make_shared<bool>(false);
+    auto complete = [this, process, completed, operation](bool success, const QString &kind, const QString &detail) {
+        if (*completed) {
+            return;
+        }
+        *completed = true;
+        if (!success) {
+            Q_EMIT message(kind, detail);
+        }
+        process->deleteLater();
+        refresh();
+    };
+    connect(process, &QProcess::finished, this, [this, process, complete, operation](int code, QProcess::ExitStatus status) {
+        if (Alveus::processTimedOut(process)) {
+            complete(false, operation + QStringLiteral("-timeout"),
+                     QStringLiteral("udisksctl %1 exceeded %2 ms").arg(operation).arg(m_operationTimeoutMs));
+        } else if (status == QProcess::NormalExit && code == 0) {
+            complete(true, QString(), QString());
+        } else {
+            QString detail = QString::fromUtf8(process->readAllStandardError()).trimmed();
+            if (detail.isEmpty()) {
+                detail = QStringLiteral("udisksctl %1 exited with code %2").arg(operation).arg(code);
+            }
+            complete(false, operation + QStringLiteral("-failed"), detail);
+        }
+    });
+    connect(process, &QProcess::errorOccurred, this, [process, complete, operation](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart) {
+            complete(false, operation + QStringLiteral("-failed"), process->errorString());
+        }
+    });
+    Alveus::killAfterTimeout(process, m_operationTimeoutMs);
+    process->start(QStringLiteral("udisksctl"), {operation, QStringLiteral("-b"), device});
+}
+
 void DriveWatcher::mount(const QString &device)
 {
-    auto *p = new QProcess(this);
-    connect(p, &QProcess::finished, this, [this, p](int code, QProcess::ExitStatus status) {
-        if (status != QProcess::NormalExit || code != 0) {
-            Q_EMIT message(QStringLiteral("mount-failed"), QString::fromUtf8(p->readAllStandardError()).trimmed());
-        }
-        p->deleteLater();
-        refresh();
-    });
-    connect(p, &QProcess::errorOccurred, this, [this, p](QProcess::ProcessError error) {
-        if (error == QProcess::FailedToStart) {
-            Q_EMIT message(QStringLiteral("mount-failed"), p->errorString());
-            p->deleteLater();
-            refresh();
-        }
-    });
-    p->start(QStringLiteral("udisksctl"), {QStringLiteral("mount"), QStringLiteral("-b"), device});
+    runUdisksctl(QStringLiteral("mount"), device);
 }
 
 void DriveWatcher::unmount(const QString &device)
 {
-    auto *p = new QProcess(this);
-    connect(p, &QProcess::finished, this, [this, p](int code, QProcess::ExitStatus status) {
-        if (status != QProcess::NormalExit || code != 0) {
-            Q_EMIT message(QStringLiteral("unmount-failed"), QString::fromUtf8(p->readAllStandardError()).trimmed());
-        }
-        p->deleteLater();
-        refresh();
-    });
-    connect(p, &QProcess::errorOccurred, this, [this, p](QProcess::ProcessError error) {
-        if (error == QProcess::FailedToStart) {
-            Q_EMIT message(QStringLiteral("unmount-failed"), p->errorString());
-            p->deleteLater();
-            refresh();
-        }
-    });
-    p->start(QStringLiteral("udisksctl"), {QStringLiteral("unmount"), QStringLiteral("-b"), device});
+    runUdisksctl(QStringLiteral("unmount"), device);
 }

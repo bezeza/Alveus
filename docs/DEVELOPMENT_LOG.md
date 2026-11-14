@@ -155,3 +155,19 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   [run 43603426388](https://github.com/bezeza/Alveus/actions/runs/43603426388).
 - No Qt 6.5 exact-minimum build or live KDE Plasma session was run. Those
   remain outside the current CI coverage.
+
+
+### In progress — Issue #10 / PR #32 bounded helper processes
+
+- Add a shared QProcess deadline helper and bounded lifetimes for PipeWire
+  screen-share probes, KDE Connect device discovery, lsblk, udisksctl mount /
+  unmount, and thumbnail generators.
+- Screen-share probe failures fail closed (treat as shared) until a successful
+  probe; polling backs off to 60 seconds and resets after success. KDE Connect
+  and drive discovery retain their last known data on helper failure.
+- Thumbnail failures release the worker slot and temporary directory, then
+  permit an on-demand retry after a 30-second cooldown for the same file stamp.
+  Mount/unmount operations are not automatically retried because they may have
+  partially completed.
+- Add fake-process tests for timeouts, non-zero exit, recovery, drive operations,
+  thumbnail queue release, and no immediate retry storm. Verification is pending.

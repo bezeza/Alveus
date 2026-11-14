@@ -2,6 +2,7 @@
 #include "../core/alveuscore.h"
 #include "../core/drives.h"
 #include "../core/integrations.h"
+#include "../core/processutils.h"
 #include "../core/rules.h"
 #include "../core/runner.h"
 #include "../core/thumbnails.h"
@@ -69,6 +70,73 @@ static QStringList ids(const QVariantList &fences)
     return out;
 }
 
+
+static QString writeExecutable(const QString &directory, const QString &name, const QByteArray &contents)
+{
+    QDir().mkpath(directory);
+    const QString path = directory + QLatin1Char('/') + name;
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return QString();
+    }
+    file.write(contents);
+    file.close();
+    const QFileDevice::Permissions permissions = QFile::permissions(path)
+        | QFileDevice::ExeOwner | QFileDevice::ExeGroup | QFileDevice::ExeOther;
+    return QFile::setPermissions(path, permissions) ? path : QString();
+}
+
+class ScopedPath
+{
+public:
+    explicit ScopedPath(const QString &prefix)
+        : m_original(qgetenv("PATH"))
+    {
+        qputenv("PATH", prefix.toUtf8() + QLatin1Char(':').toLatin1() + m_original);
+    }
+    ~ScopedPath()
+    {
+        if (m_original.isNull()) {
+            qunsetenv("PATH");
+        } else {
+            qputenv("PATH", m_original);
+        }
+    }
+
+private:
+    QByteArray m_original;
+};
+
+static bool hasMessageKind(const QSignalSpy &spy, const QString &kind)
+{
+    for (const QList<QVariant> &arguments : spy) {
+        if (!arguments.isEmpty() && arguments.first().toString() == kind) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static int messageKindCount(const QSignalSpy &spy, const QString &kind)
+{
+    int count = 0;
+    for (const QList<QVariant> &arguments : spy) {
+        if (!arguments.isEmpty() && arguments.first().toString() == kind) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+static int lineCount(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return 0;
+    }
+    return file.readAll().count('\n');
+}
+
 static QtMessageHandler s_testDefaultMessageHandler = nullptr;
 static bool s_triggerNestedDiagnostic = false;
 
@@ -114,6 +182,143 @@ private Q_SLOTS:
         touch(d(QStringLiteral("Рахунок_березень.xlsx")));
         touch(d(QStringLiteral("notes")));
         QDir().mkpath(d(QStringLiteral("Projects")));
+    }
+
+
+    // ---- bounded external helpers -------------------------------------------
+
+    void processTimeoutKillsHungHelperAndPreservesExitErrors()
+    {
+        QTemporaryDir helpers;
+        QVERIFY(helpers.isValid());
+        const QString sleeper = writeExecutable(helpers.path(), QStringLiteral("sleep-helper"),
+                                                  "#!/bin/sh\nexec sleep 30\n");
+        QVERIFY(!sleeper.isEmpty());
+        QProcess hung;
+        QSignalSpy hungFinished(&hung, &QProcess::finished);
+        hung.start(sleeper);
+        QVERIFY(hung.waitForStarted(1000));
+        Alveus::killAfterTimeout(&hung, 100);
+        QTRY_COMPARE_WITH_TIMEOUT(hungFinished.count(), 1, 2000);
+        QVERIFY(Alveus::processTimedOut(&hung));
+        QCOMPARE(hung.exitStatus(), QProcess::CrashExit);
+
+        const QString failing = writeExecutable(helpers.path(), QStringLiteral("error-helper"),
+                                                  "#!/bin/sh\nexit 7\n");
+        QVERIFY(!failing.isEmpty());
+        QProcess error;
+        QSignalSpy errorFinished(&error, &QProcess::finished);
+        error.start(failing);
+        QTRY_COMPARE_WITH_TIMEOUT(errorFinished.count(), 1, 2000);
+        QVERIFY(!Alveus::processTimedOut(&error));
+        QCOMPARE(error.exitCode(), 7);
+    }
+
+    void integrationHelpersTimeoutFailClosedAndRecover()
+    {
+        QTemporaryDir helpers;
+        QVERIFY(helpers.isValid());
+        const QString pwDump = writeExecutable(helpers.path(), QStringLiteral("pw-dump"),
+                                                "#!/bin/sh\nexec sleep 30\n");
+        const QString kdeConnect = writeExecutable(helpers.path(), QStringLiteral("kdeconnect-cli"),
+                                                     "#!/bin/sh\nexec sleep 30\n");
+        QVERIFY(!pwDump.isEmpty());
+        QVERIFY(!kdeConnect.isEmpty());
+        ScopedPath path(helpers.path());
+
+        Integrations integrations(nullptr, 100);
+        QSignalSpy phones(&integrations, &Integrations::phonesChanged);
+        QSignalSpy shared(&integrations, &Integrations::screenSharedChanged);
+        QSignalSpy messages(&integrations, &Integrations::message);
+
+        integrations.refreshPhones();
+        integrations.setWatchScreenShare(true);
+        QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("kdeconnect-timeout")), 2000);
+        QVERIFY(phones.isEmpty()); // timeout preserves the last known list instead of publishing a false empty result
+        QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("screen-share-timeout")), 2000);
+        QVERIFY(!shared.isEmpty());
+        QCOMPARE(shared.last().first().toBool(), true);
+
+        writeExecutable(helpers.path(), QStringLiteral("pw-dump"), "#!/bin/sh\nprintf '[]\\n'\n");
+        integrations.setWatchScreenShare(true);
+        QTRY_VERIFY_WITH_TIMEOUT(shared.count() >= 2, 2000);
+        QCOMPARE(shared.last().first().toBool(), false);
+
+        writeExecutable(helpers.path(), QStringLiteral("kdeconnect-cli"), "#!/bin/sh\nexit 7\n");
+        integrations.refreshPhones();
+        QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("kdeconnect-failed")), 2000);
+        QVERIFY(phones.isEmpty());
+        writeExecutable(helpers.path(), QStringLiteral("kdeconnect-cli"),
+                        "#!/bin/sh\nprintf 'device-1 Pixel 8\\n'\n");
+        integrations.refreshPhones();
+        QTRY_VERIFY_WITH_TIMEOUT(phones.count() == 1, 2000);
+        QCOMPARE(phones.last().first().toList().first().toMap().value(QStringLiteral("id")).toString(),
+                 QStringLiteral("device-1"));
+        integrations.setWatchScreenShare(false);
+    }
+
+    void driveHelpersTimeoutAndCanRetry()
+    {
+        QTemporaryDir helpers;
+        QVERIFY(helpers.isValid());
+        const QString lsblkLog = helpers.path() + QStringLiteral("/lsblk.log");
+        const QString udisksLog = helpers.path() + QStringLiteral("/udisks.log");
+        const QByteArray logLine = QStringLiteral("echo run >> '%1'\n").arg(lsblkLog).toUtf8();
+        const QString lsblk = writeExecutable(helpers.path(), QStringLiteral("lsblk"),
+                        "#!/bin/sh\n" + logLine + "exec sleep 30\n");
+        const QString udisks = writeExecutable(helpers.path(), QStringLiteral("udisksctl"),
+                        QStringLiteral("#!/bin/sh\necho \"$1\" >> '%1'\nexec sleep 30\n").arg(udisksLog).toUtf8());
+        QVERIFY(!lsblk.isEmpty());
+        QVERIFY(!udisks.isEmpty());
+        ScopedPath path(helpers.path());
+
+        DriveWatcher watcher(nullptr, 100, 100);
+        QSignalSpy messages(&watcher, &DriveWatcher::message);
+        watcher.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("drive-list-timeout")), 2000);
+
+        const QString quickLsblk = writeExecutable(helpers.path(), QStringLiteral("lsblk"),
+                        "#!/bin/sh\n" + logLine + "printf '{\"blockdevices\":[]}\\n'\n");
+        QVERIFY(!quickLsblk.isEmpty());
+        watcher.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(lineCount(lsblkLog) >= 2, 2000);
+
+        watcher.mount(QStringLiteral("/dev/fake"));
+        QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("mount-timeout")), 2000);
+        watcher.unmount(QStringLiteral("/dev/fake"));
+        QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("unmount-timeout")), 2000);
+        QVERIFY(lineCount(udisksLog) >= 2);
+    }
+
+    void thumbnailTimeoutsReleaseWorkerSlotsAndBackOff()
+    {
+        QTemporaryDir helpers;
+        QVERIFY(helpers.isValid());
+        const QString helperLog = helpers.path() + QStringLiteral("/thumbnail.log");
+        const QByteArray script = QStringLiteral("#!/bin/sh\necho run >> '%1'\nexec sleep 30\n").arg(helperLog).toUtf8();
+        const QString thumbnailHelper = writeExecutable(helpers.path(), QStringLiteral("ffmpegthumbnailer"), script);
+        QVERIFY(!thumbnailHelper.isEmpty());
+        ScopedPath path(helpers.path());
+
+        Thumbnailer thumbnails(nullptr, 100);
+        QSignalSpy messages(&thumbnails, &Thumbnailer::message);
+        QStringList files;
+        for (int i = 0; i < 3; ++i) {
+            const QString file = d(QStringLiteral("clip-%1.mp4").arg(i));
+            touch(file);
+            files << file;
+            QVERIFY(thumbnails.lookup(file, QStringLiteral("video/mp4")).isEmpty());
+        }
+
+        QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("thumbnail-timeout")), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(lineCount(helperLog), 3, 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(messageKindCount(messages, QStringLiteral("thumbnail-timeout")), 3, 2000);
+
+        for (const QString &file : files) {
+            QVERIFY(thumbnails.lookup(file, QStringLiteral("video/mp4")).isEmpty());
+        }
+        QTest::qWait(200);
+        QCOMPARE(lineCount(helperLog), 3); // no immediate retry storm for the same source stamp
     }
 
     // ---- rules ---------------------------------------------------------------

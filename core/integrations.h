@@ -16,7 +16,7 @@ class Integrations : public QObject
 {
     Q_OBJECT
 public:
-    explicit Integrations(QObject *parent = nullptr);
+    explicit Integrations(QObject *parent = nullptr, int processTimeoutMs = 5000);
 
     // KDE Connect
     void refreshPhones();
@@ -37,11 +37,17 @@ public:
 Q_SIGNALS:
     void phonesChanged(const QVariantList &phones);
     void screenSharedChanged(bool shared);
+    void message(const QString &kind, const QString &detail);
 
 private:
     void pollScreenShare();
+    void setScreenShared(bool shared);
 
     QTimer m_shareTimer;
+    QProcess *m_phoneProc = nullptr;
     QProcess *m_shareProc = nullptr;
+    int m_processTimeoutMs = 5000;
     bool m_shared = false;
+    bool m_watchScreenShare = false;
+    bool m_pwDumpUnavailableReported = false;
 };
