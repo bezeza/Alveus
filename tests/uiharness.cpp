@@ -153,7 +153,9 @@ int main(int argc, char **argv)
         if (step == QLatin1String("blanktitle")) {
             const QString id = view.rootObject()->property("blankFenceId").toString();
             const QString objectName = QStringLiteral("fence-title-") + id;
-            QQuickItem *title = view.rootObject()->findChild<QQuickItem *>(objectName);
+            QObject *loader = view.rootObject()->findChild<QObject *>(QStringLiteral("desktopLoader"));
+            QObject *desktop = loader ? loader->property("item").value<QObject *>() : nullptr;
+            QQuickItem *title = desktop ? desktop->findChild<QQuickItem *>(objectName) : nullptr;
             if (!title) {
                 fprintf(stderr, "ERROR: could not find the blank fence title label: %s\n", qPrintable(objectName));
                 app.exit(1);
