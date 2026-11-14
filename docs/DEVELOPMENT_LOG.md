@@ -264,3 +264,19 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   and DNF removal passed:
   [run 43623269086](https://github.com/bezeza/Alveus/actions/runs/43623269086).
 - No live KDE Plasma session or physical storage hardware has been tested.
+
+### In progress — Issue #13 / persisted-state semantic validation
+
+- Validate supported global settings by type and range while preserving unknown
+  settings fields for forward compatibility. Validate the drive-settings object
+  through the existing drive-options schema.
+- Validate fence view modes, opacity, screen/page indexes, icon-size steps,
+  timestamps, placement coordinates and fence references, page-map keys, and
+  snapshot IDs/names/state.
+- Keep finite out-of-bounds fence geometry on the safe normalization path rather
+  than treating recoverable geometry as a corrupt store.
+- Reject invalid values at the settings/fence/placement/snapshot entry points
+  so the application does not write state that its loader would later reject.
+- Preserve the existing v1 migration path and corrupt-store backup behavior.
+- Verification is pending on this branch. No live KDE Plasma session was used;
+  manual desktop validation remains a separate release gate.
