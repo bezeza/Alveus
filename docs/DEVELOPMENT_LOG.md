@@ -265,7 +265,7 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   [run 43623269086](https://github.com/bezeza/Alveus/actions/runs/43623269086).
 - No live KDE Plasma session or physical storage hardware has been tested.
 
- 
+
 ### In progress — Stage D / feat/drive-grouping-details
 
 - Set large drive cards as the default, matching the selected visual direction.
