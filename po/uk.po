@@ -1276,3 +1276,7 @@ msgstr "%1 загалом · %2 зайнято · %3 вільно"
 #: package/contents/ui/DriveTreeItem.qml
 msgid "Use default expansion"
 msgstr "Використовувати типове розгортання"
+
+#: package/contents/ui/DrivesView.qml
+msgid "Mounted volumes: %1 total · %2 used · %3 free"
+msgstr "Підключені томи: %1 загалом · %2 зайнято · %3 вільно"
