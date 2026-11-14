@@ -3441,6 +3441,11 @@ QVariantList AlveusCore::visibleDriveDevices(const QString &fenceId, bool showHi
     return Alveus::filterDriveHierarchy(m_drives->devices(), driveOptions(fenceId), showHiddenTemporarily);
 }
 
+QVariantMap AlveusCore::driveSummary(const QString &fenceId, bool showHiddenTemporarily) const
+{
+    return Alveus::summarizeDriveHierarchy(visibleDriveDevices(fenceId, showHiddenTemporarily));
+}
+
 void AlveusCore::setHidden(bool hidden)
 {
     if (m_hidden != hidden) {
