@@ -19,6 +19,25 @@ QQC2.Popup {
     property var desk
     property int tab: 0
     property var diagnosticEntries: []
+    readonly property var driveGroups: [
+        { key: "internal", label: i18n("Internal devices") },
+        { key: "usb", label: i18n("USB devices") },
+        { key: "external", label: i18n("Other removable devices") },
+        { key: "network", label: i18n("Network storage") },
+        { key: "virtual", label: i18n("Virtual devices") },
+        { key: "optical", label: i18n("Optical drives") }
+    ]
+    readonly property var driveFilters: [
+        { key: "hideEfi", label: i18n("Hide EFI System partitions") },
+        { key: "hideMicrosoftReserved", label: i18n("Hide Microsoft Reserved partitions") },
+        { key: "hideRecovery", label: i18n("Hide Windows Recovery partitions") },
+        { key: "hideSwap", label: i18n("Hide Linux swap partitions") },
+        { key: "hideBiosBoot", label: i18n("Hide BIOS boot partitions") }
+    ]
+    readonly property var effectiveDriveDefaults: {
+        const revision = Core.revision
+        return Core.driveDefaults()
+    }
 
     modal: true
     focus: true
@@ -95,6 +114,7 @@ QQC2.Popup {
             QQC2.TabButton { text: i18n("Rules help") }
             QQC2.TabButton { text: i18n("About") }
             QQC2.TabButton { text: i18n("Diagnostics") }
+            QQC2.TabButton { text: i18n("Drives") }
         }
 
         StackLayout {
@@ -406,6 +426,97 @@ QQC2.Popup {
                         text: i18n("The log rotates automatically. File names and paths can appear in third-party error messages, so review the log before sharing it.")
                     }
                 }
+
+            // ---- drive visibility defaults
+            QQC2.ScrollView {
+                contentWidth: availableWidth
+                ColumnLayout {
+                    width: parent.width
+                    spacing: Kirigami.Units.largeSpacing
+
+                    PlasmaComponents.Label {
+                        text: i18n("Drive visibility defaults")
+                        font.bold: true
+                        font.pointSize: Kirigami.Theme.defaultFont.pointSize * 1.1
+                    }
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        opacity: 0.7
+                        text: i18n("These defaults apply to every drive fence unless an individual fence overrides them.")
+                    }
+
+                    PlasmaComponents.Label { text: i18n("Visibility groups"); font.bold: true }
+                    Repeater {
+                        model: dialog.driveGroups
+                        delegate: QQC2.CheckBox {
+                            required property var modelData
+                            text: modelData.label
+                            checked: dialog.effectiveDriveDefaults.groups[modelData.key] !== false
+                            onToggled: Core.setDriveDefault("groups." + modelData.key, checked)
+                        }
+                    }
+
+                    Kirigami.Separator { Layout.fillWidth: true }
+                    PlasmaComponents.Label { text: i18n("Automatic service-partition filters"); font.bold: true }
+                    Repeater {
+                        model: dialog.driveFilters
+                        delegate: QQC2.CheckBox {
+                            required property var modelData
+                            text: modelData.label
+                            checked: dialog.effectiveDriveDefaults[modelData.key] !== false
+                            onToggled: Core.setDriveDefault(modelData.key, checked)
+                        }
+                    }
+
+                    Kirigami.Separator { Layout.fillWidth: true }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        PlasmaComponents.Label {
+                            Layout.fillWidth: true
+                            text: i18n("Partition visibility")
+                        }
+                        QQC2.ComboBox {
+                            id: globalPartitionModeBox
+                            model: [i18n("All partitions"), i18n("Mounted only"), i18n("Manually selected")]
+                            currentIndex: Math.max(0, ["all", "mounted", "selected"].indexOf(dialog.effectiveDriveDefaults.partitionMode))
+                            onActivated: Core.setDriveDefault("partitionMode", ["all", "mounted", "selected"][currentIndex])
+                        }
+                    }
+                    QQC2.CheckBox {
+                        text: i18n("Show unmounted volumes")
+                        checked: dialog.effectiveDriveDefaults.showUnmounted !== false
+                        onToggled: Core.setDriveDefault("showUnmounted", checked)
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        PlasmaComponents.Label {
+                            Layout.fillWidth: true
+                            text: i18n("Minimum partition size (MiB)")
+                        }
+                        QQC2.SpinBox {
+                            id: globalMinimumPartitionSizeBox
+                            from: 0
+                            to: 1024
+                            stepSize: 16
+                            value: dialog.effectiveDriveDefaults.minimumPartitionSizeMiB || 0
+                            onValueModified: Core.setDriveDefault("minimumPartitionSizeMiB", value)
+                        }
+                    }
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        opacity: 0.65
+                        text: i18n("0 disables the size filter")
+                    }
+                    Kirigami.Separator { Layout.fillWidth: true }
+                    QQC2.Button {
+                        text: i18n("Reset global defaults")
+                        icon.name: "edit-undo"
+                        onClicked: Core.resetDriveDefaults()
+                    }
+                }
+            }
             }
         }
     }
