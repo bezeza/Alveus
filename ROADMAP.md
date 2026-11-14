@@ -44,9 +44,9 @@ features.
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P1 | Background directory validation | [PR #14](https://github.com/bezeza/Alveus/pull/14) | Review behavior, tests, and current CI; merge only when verified |
-| P1 | Cached placement and targeted model updates | [PR #15](https://github.com/bezeza/Alveus/pull/15) | Review cache invalidation and stale-file handling; verify with large folders |
-| P2 | Offscreen UI harness and QML warning checks | [PR #17](https://github.com/bezeza/Alveus/pull/17) | Align Plasma mocks with the real APIs and make the harness reliable |
+| P1 | Background directory validation | [PR #14](https://github.com/bezeza/Alveus/pull/14) | Current-head CI passed; final code review and authorized merge remain |
+| P1 | Cached placement and targeted model updates | [PR #15](https://github.com/bezeza/Alveus/pull/15) | Activity-scope cache fix and two-way regression test added; final CI pending; reconcile development log with PR #19 |
+| P2 | Offscreen UI harness and QML warning checks | [PR #17](https://github.com/bezeza/Alveus/pull/17) | Current-head CI passed, including UI harness CTest (2/2); live Plasma validation remains |
 | P2 | Runtime diagnostics and agent workflow | [PR #19](https://github.com/bezeza/Alveus/pull/19) | Finish review, verify privacy/rotation, and pass CI |
 | P2 | Icon, translations, previews, Fedora RPM workflow | [PR #20](https://github.com/bezeza/Alveus/pull/20), [PR #21](https://github.com/bezeza/Alveus/pull/21) | Consolidate overlapping work into one coherent change; fix the current UI-preview failure before considering it complete |
 
