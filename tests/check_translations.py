@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PLACEHOLDER = re.compile(r"%(?:[1-9][0-9]*|n)")
-TAG = re.compile(r"</?([A-Za-z][A-Za-z0-9]*)\\b[^>]*>")
+TAG = re.compile(r"</?([A-Za-z][A-Za-z0-9]*)\b[^>]*>")
 
 
 def parse_po(path: Path) -> dict[str, dict[str, str]]:
@@ -32,7 +32,7 @@ def parse_po(path: Path) -> dict[str, dict[str, str]]:
             continue
         if line.startswith("#"):
             continue
-        match = re.match(r"^(msgid_plural|msgid|msgstr(?:\\[\\d+\\])?)\\s+(.*)$", line)
+        match = re.match(r"^(msgid_plural|msgid|msgstr(?:\[\d+\])?)\s+(.*)$", line)
         if match:
             active = match.group(1)
             current[active] = ast.literal_eval(match.group(2))
@@ -73,15 +73,17 @@ for msgid, src in source.items():
         if TAG.findall(form) != TAG.findall(msgid):
             fail(f"HTML markup differs for {msgid!r}")
 
-# Every literal passed to i18n()/i18np() in the QML UI must exist in both catalogs.
+# Every literal passed to i18n()/i18nc()/i18np() in the QML UI must be translated.
 qml_root = ROOT / "package/contents/ui"
-single = re.compile(r"\\bi18n\\s*\\(\\s*(\"(?:\\\\.|[^\"\\\\])*\")", re.S)
-plural = re.compile(r"\\bi18np\\s*\\(\\s*(\"(?:\\\\.|[^\"\\\\])*\")\\s*,\\s*(\"(?:\\\\.|[^\"\\\\])*\")", re.S)
+single = re.compile(r'\bi18n\s*\(\s*("(?:\\.|[^"\\])*")', re.S)
+contextual = re.compile(r'\bi18nc\s*\(\s*("(?:\\.|[^"\\])*")\s*,\s*("(?:\\.|[^"\\])*")', re.S)
+plural = re.compile(r'\bi18np\s*\(\s*("(?:\\.|[^"\\])*")\s*,\s*("(?:\\.|[^"\\])*")', re.S)
 for qml in qml_root.rglob("*.qml"):
     text = qml.read_text(encoding="utf-8")
     messages = [ast.literal_eval(m.group(1)) for m in single.finditer(text)]
-    for match in plural.finditer(text):
-        messages.extend((ast.literal_eval(match.group(1)), ast.literal_eval(match.group(2))))
+    for pattern in (contextual, plural):
+        for match in pattern.finditer(text):
+            messages.append(ast.literal_eval(match.group(2)))
     for message in messages:
         if message not in source or message not in russian:
             fail(f"{qml.relative_to(ROOT)} uses an untranslated source string: {message!r}")

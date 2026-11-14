@@ -114,9 +114,9 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           mkdir -p "$HOME/Desktop" docs/screenshots
-          printf 'Alveus demo document\\n' > "$HOME/Desktop/Project-notes.txt"
-          printf 'Alveus demo archive\\n' > "$HOME/Desktop/Photos.zip"
-          printf 'Alveus demo report\\n' > "$HOME/Desktop/Report.pdf"
+          printf 'Alveus demo document\n' > "$HOME/Desktop/Project-notes.txt"
+          printf 'Alveus demo archive\n' > "$HOME/Desktop/Photos.zip"
+          printf 'Alveus demo report\n' > "$HOME/Desktop/Report.pdf"
           ./build/tests/uiharness tests/scene.qml docs/screenshots/alveus-desktop.png 1200 1600 900 rich /tmp
           ./build/tests/uiharness tests/scene.qml docs/screenshots/alveus-settings.png 1200 1600 900 alveus
 
