@@ -750,7 +750,10 @@ bool AlveusCore::undo()
         if (exists(a) && !exists(b)) {
             tasks << FileTask{op == QLatin1String("move") ? FileTask::Move : FileTask::Restore, a, b};
             QDir().mkpath(QFileInfo(b).absolutePath());
-            slow = slow || !Alveus::FileOps::sameFilesystem(a, QFileInfo(b).absolutePath());
+            const bool sameFilesystem = Alveus::FileOps::sameFilesystem(a, QFileInfo(b).absolutePath());
+            // movePath validates directory contents before renaming. Keep that
+            // recursive walk off the GUI thread, even when both paths share a disk.
+            slow = slow || !sameFilesystem || QFileInfo(a).isDir();
         } else if (exists(a) || !exists(b)) {
             Q_EMIT message(QStringLiteral("undo-conflict"), b);
             return false;
@@ -1804,8 +1807,13 @@ QStringList AlveusCore::importInto(const QList<QUrl> &urls, bool copy, const QSt
         }
         const QString dst = dirPath + QLatin1Char('/') + uniqueName(dirPath, info.fileName());
         if (!copy && Alveus::FileOps::sameFilesystem(src, dirPath)) {
-            // same disk: an instant rename, done right here
-            if (Alveus::FileOps::movePath(src, dst) == Alveus::FileOps::Result::Done) {
+            if (info.isDir()) {
+                // The rename is instant, but movePath recursively validates the
+                // directory tree. Run that validation and move in the worker.
+                slow->append(FileTask{FileTask::Move, src, dst});
+                m_reserved.insert(QDir::cleanPath(dst));
+                created << dst;
+            } else if (Alveus::FileOps::movePath(src, dst) == Alveus::FileOps::Result::Done) {
                 created << dst;
                 ops->append(fileOp(QStringLiteral("move"), dst, src));
             } else {
@@ -1940,7 +1948,11 @@ void AlveusCore::startNextFileJob()
     m_jobThread = QThread::create([tasks, control, results]() {
         QList<qint64> sizes;
         for (const FileTask &t : tasks) {
-            sizes << (t.op == FileTask::Trash ? 0 : Alveus::FileOps::treeSize(t.from));
+            const bool renameOnly = (t.op == FileTask::Move || t.op == FileTask::Restore)
+                && Alveus::FileOps::sameFilesystem(t.from, QFileInfo(t.to).absolutePath());
+            // Same-filesystem moves do not copy bytes. In particular, avoid a
+            // redundant full tree-size scan before directory validation.
+            sizes << (t.op == FileTask::Trash || renameOnly ? 0 : Alveus::FileOps::treeSize(t.from));
             control->bytesTotal += sizes.last();
         }
         for (int i = 0; i < tasks.size(); ++i) {
@@ -2407,7 +2419,9 @@ QString AlveusCore::archiveFiles(const QStringList &names, const QString &archiv
             continue;
         }
         const QString dst = target + QLatin1Char('/') + uniqueName(target, name);
-        if (!sameDisk) {
+        if (!sameDisk || QFileInfo(src).isDir()) {
+            // Directory moves validate their full tree, so even same-disk
+            // archives must use the background worker.
             slow << FileTask{FileTask::Move, src, dst};
             m_reserved.insert(QDir::cleanPath(dst));
         } else if (Alveus::FileOps::movePath(src, dst) == Alveus::FileOps::Result::Done) {

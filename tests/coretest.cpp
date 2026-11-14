@@ -617,6 +617,52 @@ private Q_SLOTS:
         QVERIFY(QDir(dir).removeRecursively());
     }
 
+    // Same-filesystem directory moves still validate every descendant. That
+    // work must run in the worker for imports, archives, and undo.
+    void sameFilesystemDirectoryMovesRunInBackground()
+    {
+        AlveusCore core(desk(), store());
+        const QString target = m_tmp.path() + QStringLiteral("/same-disk-target");
+        QVERIFY(QDir().mkpath(target));
+        QVERIFY(Alveus::FileOps::sameFilesystem(desk(), target));
+
+        const QString source = d(QStringLiteral("background-tree"));
+        QVERIFY(QDir().mkpath(source + QStringLiteral("/nested")));
+        touch(source + QStringLiteral("/nested/item.txt"), "payload");
+
+        const QStringList moved = core.importToFolder({QUrl::fromLocalFile(source)}, false, target);
+        QCOMPARE(moved, QStringList{target + QStringLiteral("/background-tree")});
+        QVERIFY(core.fileJobsBusy());
+        QVERIFY(core.fileJob().value(QStringLiteral("active")).toBool());
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(!QFileInfo::exists(source));
+        QVERIFY(QFileInfo::exists(target + QStringLiteral("/background-tree/nested/item.txt")));
+        QCOMPARE(core.undoText(), QStringLiteral("move|1"));
+
+        QVERIFY(core.undo());
+        QVERIFY(core.fileJobsBusy());
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(QFileInfo::exists(source + QStringLiteral("/nested/item.txt")));
+        QVERIFY(!QFileInfo::exists(target + QStringLiteral("/background-tree")));
+
+        const QString archiveSource = d(QStringLiteral("archive-tree"));
+        QVERIFY(QDir().mkpath(archiveSource + QStringLiteral("/nested")));
+        touch(archiveSource + QStringLiteral("/nested/archive.txt"), "archive");
+        const QString archive = core.archiveFiles({QStringLiteral("archive-tree")}, QStringLiteral("Alveus test archive"));
+        QVERIFY(!archive.isEmpty());
+        QVERIFY(core.fileJobsBusy());
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(!QFileInfo::exists(archiveSource));
+        QVERIFY(QFileInfo::exists(archive + QStringLiteral("/archive-tree/nested/archive.txt")));
+        QCOMPARE(core.undoText(), QStringLiteral("archive|1"));
+
+        QVERIFY(core.undo());
+        QVERIFY(core.fileJobsBusy());
+        QVERIFY(core.waitForFileJobs());
+        QVERIFY(QFileInfo::exists(archiveSource + QStringLiteral("/nested/archive.txt")));
+        QVERIFY(!QFileInfo::exists(archive + QStringLiteral("/archive-tree")));
+    }
+
     // Moving to another disk runs in the background, with progress, and can be
     // undone; a cancelled copy leaves nothing behind.
     void backgroundJobsOnAnotherDisk()
@@ -801,9 +847,11 @@ private Q_SLOTS:
         QCOMPARE(core.fenceOfFile(QStringLiteral("report (1).pdf"), QString()), id);
 
         got = core.importToDesktop({QUrl::fromLocalFile(outside + QStringLiteral("/dir"))}, false, QString());
+        QVERIFY(core.waitForFileJobs()); // same-filesystem directory validation runs in the worker
         QVERIFY(!QFile::exists(outside + QStringLiteral("/dir")));
         QVERIFY(QFile::exists(d(QStringLiteral("dir/sub/deep.txt"))));
         QVERIFY(core.undo()); // the folder goes back where it was
+        QVERIFY(core.waitForFileJobs()); // undo of a directory move is asynchronous too
         QVERIFY(QFile::exists(outside + QStringLiteral("/dir/sub/deep.txt")));
         QVERIFY(!QFile::exists(d(QStringLiteral("dir"))));
 
@@ -832,6 +880,7 @@ private Q_SLOTS:
         QVERIFY(!QFile::exists(d(QStringLiteral("notes"))));
         QVERIFY(QFile::exists(m_tmp.path() + QStringLiteral("/data/Trash/files/notes")));
         QVERIFY(core.undo());
+        QVERIFY(core.waitForFileJobs()); // restoring the trashed directory uses the worker
         QVERIFY(QFile::exists(d(QStringLiteral("notes"))));
         QVERIFY(QFileInfo(d(QStringLiteral("Projects"))).isDir());
         QVERIFY(!QFile::exists(m_tmp.path() + QStringLiteral("/data/Trash/info/notes.trashinfo")));
