@@ -24,6 +24,7 @@
 #include <QPdfWriter>
 #include <QProcess>
 #include <QSignalSpy>
+#include <QSet>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
