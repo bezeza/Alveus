@@ -207,15 +207,15 @@ works; known limitations are documented; manual test results are recorded.
 
 This is a separate, stacked feature track. These PRs remain proposals until
 they are reviewed and merged; a passing CI run does not mean the work is
-already shipped in \`main\`.
+already shipped in `main`.
 
 ### Stage A — Drive discovery core
 
 - [ ] Review and merge [PR #35](https://github.com/bezeza/Alveus/pull/35).
 - [x] Preserve physical-device and partition hierarchy, stable IDs, mount
-  points, filesystem and hardware metadata in the additive \`Core.driveDevices\`
+  points, filesystem and hardware metadata in the additive `Core.driveDevices`
   API.
-- [x] Keep the legacy flat \`Core.drives\` API for compatibility.
+- [x] Keep the legacy flat `Core.drives` API for compatibility.
 
 ### Stage B — Visibility and filtering
 
