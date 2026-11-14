@@ -197,6 +197,12 @@ public:
 
 Q_SIGNALS:
     void changed();
+    void fencesChanged();
+    // activity + fence IDs whose file lists changed; an empty ID denotes loose desktop files.
+    void fileModelsChanged(const QString &activity, const QStringList &fenceIds);
+    void desktopPositionsChanged();
+    void desktopTopologyChanged();
+    void folderContentsChanged(const QString &path);
     void hiddenChanged();
     void privacyChanged();
     void undoChanged();
@@ -267,6 +273,10 @@ private:
         QDateTime accessed;
         QString origin;
     };
+    struct FileModelCache {
+        QHash<QString, QVariantList> byFence;
+        QHash<QString, QString> fenceByName;
+    };
 
     // state
     void load();
@@ -277,6 +287,16 @@ private:
     void scheduleRescan();
     void rescan();
     void bump();
+    void bumpFences(bool fileMembershipChanged = false);
+    void activateTabInternal(const QString &id, bool fileMembershipChanged);
+    void bumpFileModels(const QSet<QString> &changedNames);
+    void bumpAllFileModels();
+    void bumpDesktopPositions();
+    void bumpDesktopTopology();
+    const FileModelCache &fileModelCacheFor(const QString &activity) const;
+    void refreshFileModelCaches(bool rebuildAll, const QSet<QString> &changedNames = {});
+    void invalidateFolder(const QString &path);
+    void invalidateAllFolders();
 
     // undo
     void pushUndo(const QString &text, const QJsonObject &extra = QJsonObject());
@@ -310,6 +330,7 @@ private:
     QList<Fence> m_fences;
     QHash<QString, Placement> m_place;
     QList<Entry> m_files;
+    mutable QHash<QString, FileModelCache> m_fileModelCache;
     QHash<QString, QList<Entry>> m_folders; // portals and folders browsed in them
     QHash<QString, int> m_desktops;  // "activity|screen" -> refcount
     QHash<QString, int> m_pages;     // "activity|screen" -> page count
