@@ -1,0 +1,5 @@
+module org.kde.plasma.private.containmentlayoutmanager
+AppletsLayout 1.0 AppletsLayout.qml
+BasicAppletContainer 1.0 BasicAppletContainer.qml
+ItemContainer 1.0 ItemContainer.qml
+PlaceHolder 1.0 PlaceHolder.qml

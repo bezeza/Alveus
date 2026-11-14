@@ -127,7 +127,7 @@ ContainmentItem {
     property var screenChoices: []
     property var loosePositions: ({})
 
-    function refresh() {
+    function refreshFences() {
         if (screenId < 0) {
             return
         }
@@ -142,13 +142,38 @@ ContainmentItem {
             })
         }
         fenceChoices = choices
-        screenChoices = Core.screens(activity)
+    }
+    function refreshFiles() {
+        if (screenId < 0) {
+            return
+        }
         Utils.syncModel(looseModel, Core.looseFiles(screenId, activity).map(Utils.fileRow), "path")
         layoutLoose()
     }
+    function refreshScreens() {
+        if (screenId >= 0) {
+            screenChoices = Core.screens(activity)
+        }
+    }
+    function refresh() {
+        refreshFences()
+        refreshFiles()
+        refreshScreens()
+    }
     Connections {
         target: Core
-        function onChanged() { root.refresh() }
+        function onFencesChanged() { root.refreshFences() }
+        function onDesktopTopologyChanged() {
+            root.refreshFences()
+            root.refreshFiles()
+            root.refreshScreens()
+        }
+        function onDesktopPositionsChanged() { root.refreshFiles() }
+        function onFileModelsChanged(activityName, fenceIds) {
+            if (activityName === root.activity && fenceIds.indexOf("") !== -1) {
+                root.refreshFiles()
+            }
+        }
         function onFenceRequested(id) { root.showFence(id) }
         function onMessage(kind, detail) {
             // one desktop speaks for all, otherwise every monitor shows the same message

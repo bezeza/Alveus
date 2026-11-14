@@ -12,6 +12,20 @@ Item {
 
     readonly property string step: Qt.application.arguments.length > 6 ? Qt.application.arguments[6] : "welcome"
 
+    // The Loader-created desktop component inherits this scene context.
+    function i18n(s, a, b, c) {
+        let out = s
+        const args = [a, b, c]
+        for (let i = 0; i < args.length; ++i) {
+            if (args[i] !== undefined && args[i] !== null) {
+                out = out.replace("%" + (i + 1), String(args[i]))
+            }
+        }
+        return out
+    }
+    function i18nc(context, s, a, b) { return i18n(s, a, b) }
+    function i18np(one, many, n, b) { return i18n(n === 1 ? one : many, n, b) }
+
     Rectangle {
         id: wall
         anchors.fill: parent

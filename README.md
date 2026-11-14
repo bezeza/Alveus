@@ -128,6 +128,8 @@ Remove completely: `./uninstall.sh` (or `sudo dnf remove alveus`).
 
 ## Development
 
+See the [development roadmap](ROADMAP.md) for planned work, priorities, and release criteria.
+
 ```sh
 cmake -S . -B build -DALVEUS_BUILD_TESTS=ON
 cmake --build build --parallel
