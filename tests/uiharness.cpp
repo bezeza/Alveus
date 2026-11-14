@@ -94,6 +94,14 @@ int main(int argc, char **argv)
     QQuickView view;
     I18n i18n;
     view.engine()->rootContext()->setContextObject(&i18n);
+    QObject::connect(view.engine(), &QQmlEngine::objectCreated, &app,
+                     [&i18n](QObject *object, const QUrl &) {
+        if (QQmlContext *context = QQmlEngine::contextForObject(object)) {
+            if (!context->contextObject()) {
+                context->setContextObject(&i18n);
+            }
+        }
+    });
     bool hadQmlWarnings = false;
     QObject::connect(view.engine(), &QQmlEngine::warnings, [&hadQmlWarnings](const QList<QQmlError> &list) {
         hadQmlWarnings = true;
