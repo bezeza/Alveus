@@ -49,12 +49,21 @@ ListView {
         height: implicitHeight
         spacing: Kirigami.Units.smallSpacing
         QQC2.CheckBox {
+            visible: view.width > Kirigami.Units.gridUnit * 15
             text: i18n("Show hidden temporarily")
             checked: view.showHiddenTemporarily
             onToggled: view.showHiddenTemporarily = checked
         }
+        QQC2.ToolButton {
+            visible: view.width <= Kirigami.Units.gridUnit * 15
+            icon.name: view.showHiddenTemporarily ? "view-visible" : "view-hidden"
+            QQC2.ToolTip.text: i18n("Show hidden temporarily")
+            QQC2.ToolTip.visible: hovered
+            onClicked: view.showHiddenTemporarily = !view.showHiddenTemporarily
+        }
         Item { Layout.fillWidth: true }
         PlasmaComponents.Label {
+            visible: view.width > Kirigami.Units.gridUnit * 15
             text: view.count > 0 ? i18n("%1 devices", view.count) : ""
             color: view.textColor
             opacity: 0.6
