@@ -157,17 +157,27 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   remain outside the current CI coverage.
 
 
-### In progress — Issue #10 / PR #32 bounded helper processes
+### Merged into `main` — PR #32 bounded external helper processes
 
-- Add a shared QProcess deadline helper and bounded lifetimes for PipeWire
-  screen-share probes, KDE Connect device discovery, lsblk, udisksctl mount /
-  unmount, and thumbnail generators.
-- Screen-share probe failures fail closed (treat as shared) until a successful
-  probe; polling backs off to 60 seconds and resets after success. KDE Connect
-  and drive discovery retain their last known data on helper failure.
-- Thumbnail failures release the worker slot and temporary directory, then
-  permit an on-demand retry after a 30-second cooldown for the same file stamp.
-  Mount/unmount operations are not automatically retried because they may have
-  partially completed.
-- Add fake-process tests for timeouts, non-zero exit, recovery, drive operations,
-  thumbnail queue release, and no immediate retry storm. Verification is pending.
+- Added a shared QProcess deadline helper with timer ownership tied to the
+  process object, timeout marking, and cleanup from finished callbacks.
+- Bounded `pw-dump` and `kdeconnect-cli` at 5 seconds, `lsblk` at 10 seconds,
+  `udisksctl mount/unmount` at 30 seconds, and video/PDF thumbnail helpers at
+  30 seconds.
+- Screen-share detection fails closed on missing, invalid, failed, or timed-out
+  probes; polling backs off to 60 seconds and resets after success. Phone and
+  drive discovery retain their last successful data on failure. Mount/unmount
+  operations are not replayed automatically. Thumbnail failures release the
+  worker slot and temporary directory, with an on-demand 30-second cooldown.
+- Fake-helper regression tests cover hung and non-zero-exit processes, screen-
+  share recovery, phone and drive retry, mount/unmount timeouts, thumbnail
+  queue release, and suppression of immediate retry storms.
+- Current-head standard CI passed build, all three CTest targets, ShellCheck,
+  QML lint, translations, development-log enforcement, preview rendering, and
+  whitespace checks:
+  [run 43606016305](https://github.com/bezeza/Alveus/actions/runs/43606016305).
+- Fedora 43 RPM build, payload verification, artifact upload, DNF install, and
+  DNF removal passed:
+  [run 43606016299](https://github.com/bezeza/Alveus/actions/runs/43606016299).
+- No live PipeWire, KDE Connect, udisksctl, or Plasma session was exercised by
+  CI; those remain manual desktop validation tasks.
