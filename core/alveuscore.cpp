@@ -331,6 +331,10 @@ const QHash<QString, QVariant> &defaultSettings()
     return d;
 }
 
+bool isJsonNumber(const QJsonValue &value);
+bool isJsonInteger(const QJsonValue &value);
+bool hasExpectedType(const QJsonObject &object, const QString &key, QJsonValue::Type type);
+
 const QJsonObject &defaultDriveOptions()
 {
     static const QJsonObject defaults = {
@@ -594,6 +598,11 @@ bool validStateObject(const QJsonObject &root)
                     return false;
                 }
             }
+        }
+        if (fence.contains(QStringLiteral("driveOptions"))
+            && (!fence.value(QStringLiteral("driveOptions")).isObject()
+                || !validDriveOptions(fence.value(QStringLiteral("driveOptions")).toObject(), true))) {
+            return false;
         }
     }
 
@@ -1021,6 +1030,9 @@ static QJsonObject fenceToJson(const auto &f)
     o.insert(QStringLiteral("view"), f.view);
     o.insert(QStringLiteral("iconSize"), f.iconSize);
     o.insert(QStringLiteral("created"), f.created);
+    if (!f.driveOptions.isEmpty()) {
+        o.insert(QStringLiteral("driveOptions"), f.driveOptions);
+    }
     return o;
 }
 
@@ -1105,6 +1117,7 @@ void AlveusCore::applyState(const QJsonObject &root, bool includeSettings)
         f.view = o.value(QStringLiteral("view")).toString(QStringLiteral("grid"));
         f.iconSize = o.value(QStringLiteral("iconSize")).toInt();
         f.created = qint64(o.value(QStringLiteral("created")).toDouble());
+        f.driveOptions = o.value(QStringLiteral("driveOptions")).toObject();
         f.parsed = Alveus::Rules(f.rules);
         fenceNormalizeGeometry(f);
         m_fences << f;
@@ -1215,7 +1228,9 @@ void AlveusCore::load()
         return;
     }
     if (!validStateObject(root)
-        || (root.contains(QStringLiteral("settings")) && !root.value(QStringLiteral("settings")).isObject())
+        || (root.contains(QStringLiteral("settings"))
+            && (!root.value(QStringLiteral("settings")).isObject()
+                || !validSettingsObject(root.value(QStringLiteral("settings")).toObject())))
         || (root.contains(QStringLiteral("welcomeDismissed")) && !root.value(QStringLiteral("welcomeDismissed")).isBool())
         || (root.contains(QStringLiteral("cleanupSnoozedUntil"))
             && !isJsonNumber(root.value(QStringLiteral("cleanupSnoozedUntil"))))
@@ -1800,6 +1815,7 @@ QVariantMap AlveusCore::toMap(const Fence &f, const QString &activity) const
     m.insert(QStringLiteral("blur"), f.blur);
     m.insert(QStringLiteral("view"), f.view);
     m.insert(QStringLiteral("iconSize"), f.iconSize);
+    m.insert(QStringLiteral("driveOptions"), f.driveOptions.toVariantMap());
 
     QVariantList tabs;
     if (!f.group.isEmpty()) {
@@ -1879,7 +1895,8 @@ void AlveusCore::updateFence(const QString &id, const QVariantMap &patch)
         QStringLiteral("rules"), QStringLiteral("title"), QStringLiteral("portal"), QStringLiteral("screen"),
         QStringLiteral("page"), QStringLiteral("activity"), QStringLiteral("x"), QStringLiteral("y"),
         QStringLiteral("w"), QStringLiteral("h"), QStringLiteral("collapsed"), QStringLiteral("color"),
-        QStringLiteral("opacity"), QStringLiteral("blur"), QStringLiteral("view"), QStringLiteral("iconSize")
+        QStringLiteral("opacity"), QStringLiteral("blur"), QStringLiteral("view"), QStringLiteral("iconSize"),
+        QStringLiteral("driveOptions")
     };
     bool needsUndo = false;
     for (auto it = patch.cbegin(); it != patch.cend(); ++it) {
@@ -1943,6 +1960,8 @@ void AlveusCore::updateFence(const QString &id, const QVariantMap &patch)
                 f.view = v.toString();
             } else if (k == QLatin1String("iconSize")) {
                 f.iconSize = std::clamp(v.toInt(), 0, 256);
+            } else if (k == QLatin1String("driveOptions")) {
+                f.driveOptions = QJsonObject::fromVariantMap(v.toMap());
             } else if (k == QLatin1String("screen")) {
                 f.screen = v.toInt();
                 f.hasOrphanGeometry = false;
