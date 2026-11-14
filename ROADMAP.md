@@ -58,13 +58,16 @@ remain proposals until GitHub confirms the merge.
   build/install helper. The current CI passes the build and preview checks.
 - **PR #23 — diagnostics log rotation coverage.** Added a regression test for
   four consecutive rotations, three retained archives, and the active log entry.
+- **PR #24 — Fedora RPM validation.** Built and installed the package in a Fedora
+  container, verified its installed payload, uploaded the RPM artifact, and
+  removed it through DNF. Live Plasma validation remains separate.
 - The GitHub Actions build-and-test workflow is present in `main`.
 
 ### Open work
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P1 | Fedora RPM build and DNF validation | [PR #24](https://github.com/bezeza/Alveus/pull/24) | Build and install the package in a Fedora container, inspect the installed payload, and verify clean removal |
+| P1 | Live Fedora KDE smoke test | planned | Install the validated RPM on a real Fedora KDE session and check Plasma, KRunner, translations, and clean removal |
 
 PR #19 was synchronized with the merged performance and UI foundation before
 it was merged. Its diagnostics code now includes a thread-local message-handler
@@ -128,7 +131,7 @@ validation remains separate.
   `docs/DEVELOPMENT_LOG.md` as the common engineering workflow.
 
 **Exit criteria:** merged CI passes; logging behavior and privacy limitations
-are documented. Log-rotation coverage and live Plasma validation remain.
+are documented. Log-rotation coverage is complete; live Plasma validation remains.
 
 ### Stage 4 — Identity, translations, and Fedora packaging
 
@@ -141,14 +144,17 @@ are documented. Log-rotation coverage and live Plasma validation remain.
 - [x] Fix the offscreen preview and verify that the preview image is generated;
   the current CI run uploaded the PNG artifact.
 - [x] Validate RPM helper help and invalid-option behavior in CI.
-- [ ] Build and install the RPM in Fedora CI, verify the installed payload and
-  DNF removal, then confirm the package on a supported Fedora KDE system.
+- [x] Build and install the RPM in a Fedora container; verify the installed
+  icon, plasmoid metadata, KRunner entry, translations, artifact upload, and
+  DNF removal.
+- [ ] Install the validated RPM on a supported Fedora KDE system and verify
+  behavior in a live Plasma session.
 - [ ] Keep COPR publication separate until local RPM validation is complete.
 
 **Exit criteria:** one coherent PR; current CI passes; icon and preview assets
 exist at the referenced paths; translations validate; RPM packaging is
-reviewed. A real Fedora build/install and live Plasma validation are still
-required before release.
+reviewed. A real Fedora container build/install is verified; a live Fedora KDE install
+and Plasma validation are still required before release.
 
 ### Stage 5 — Real KDE Plasma validation
 
