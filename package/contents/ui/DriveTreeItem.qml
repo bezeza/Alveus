@@ -67,16 +67,6 @@ Item {
         return Number(bytes).toString()
     }
 
-    function mountedDescendants(items) {
-        let count = 0
-        for (let i = 0; i < items.length; ++i) {
-            const item = items[i]
-            if (item.mounted) ++count
-            count += mountedDescendants(item.children || [])
-        }
-        return count
-    }
-
     function open() {
         if (mounted && drive.mountPoint) {
             Core.openPath(drive.mountPoint)
@@ -231,7 +221,7 @@ Item {
         }
 
         PlasmaComponents.Label {
-            visible: node.depth === 0 && node.hasChildren && node.displayMode === "compact"
+            visible: node.depth === 0 && node.hasChildren
             Layout.fillWidth: true
             Layout.leftMargin: Kirigami.Units.gridUnit * 2 + Kirigami.Units.smallSpacing
             text: i18n("%1 partitions", node.drive.childCount || node.children.length)
