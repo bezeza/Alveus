@@ -65,3 +65,13 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   runs CTest, checks shell scripts, lints QML, and validates patch whitespace.
   Later merged changes extended it with the UI harness, translation checks,
   preview rendering, and development-log enforcement.
+
+
+### In progress — PR #26 Fedora RPM smoke test
+
+- Add a Fedora 43 container workflow that builds the source RPM, installs it
+  through DNF, verifies the packaged Plasma/QML/icon files, removes the package,
+  and uploads the resulting RPM as a CI artifact.
+- Make the explicit `--install` path non-interactive for reliable automation.
+- A container build does not replace the outstanding live Fedora KDE/Plasma
+  installation and desktop-session validation.

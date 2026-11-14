@@ -65,7 +65,7 @@ remain proposals until GitHub confirms the merge.
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P1 | Fedora RPM build and DNF validation | planned | Build and inspect the RPM in a Fedora environment, then verify DNF install/removal and dependency resolution |
+| P1 | Fedora RPM build and DNF smoke test | [PR #26](https://github.com/bezeza/Alveus/pull/26) | Run the Fedora 43 container build/install/remove workflow; then complete a live Fedora KDE desktop check |
 
 PR #19 was synchronized with the merged performance and UI foundation before
 it was merged. Its diagnostics code includes a thread-local message-handler
@@ -145,8 +145,10 @@ limitations are documented. Live Plasma validation remains.
   the current CI run uploaded the PNG artifact.
 - [x] Validate RPM helper argument handling, including build-only and
   `--install` selection, help, and invalid-option behavior.
-- [ ] Run an actual RPM build, DNF installation/removal, and dependency
-  resolution on a supported Fedora KDE system.
+- [ ] Add a Fedora 43 container CI smoke test that builds the RPM, installs it
+  with DNF, verifies the installed payload, removes it, and uploads the RPM artifact (PR #26).
+- [ ] Run the package on a supported Fedora KDE desktop and verify runtime
+  dependency resolution and Plasma integration.
 - [ ] Keep COPR publication separate until local RPM validation is complete.
 
 **Exit criteria:** one coherent PR; current CI passes; icon and preview assets
