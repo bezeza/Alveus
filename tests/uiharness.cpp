@@ -149,6 +149,23 @@ int main(int argc, char **argv)
         play(&view, actions);
         QTest::qWait(300);
         const QVariant prepared = view.rootObject()->property("prepared");
+        const QString step = argc > 6 ? QString::fromLocal8Bit(argv[6]) : QStringLiteral("welcome");
+        if (step == QLatin1String("blanktitle")) {
+            const QString id = view.rootObject()->property("blankFenceId").toString();
+            const QString objectName = QStringLiteral("fence-title-") + id;
+            QQuickItem *title = view.rootObject()->findChild<QQuickItem *>(objectName);
+            if (!title) {
+                fprintf(stderr, "ERROR: could not find the blank fence title label: %s\n", qPrintable(objectName));
+                app.exit(1);
+                return;
+            }
+            if (title->property("text").toString() != QString()) {
+                fprintf(stderr, "ERROR: an empty fence title was replaced with visible text: %s\n",
+                        qPrintable(title->property("text").toString()));
+                app.exit(1);
+                return;
+            }
+        }
         if (prepared.isValid() && !prepared.toBool()) {
             fprintf(stderr, "ERROR: the QML scene did not finish preparing; check nested Loader errors above.\n");
             app.exit(1);
