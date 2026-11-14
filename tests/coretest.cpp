@@ -182,6 +182,7 @@ private Q_SLOTS:
         QVERIFY(helpers.isValid());
         const QString sleeper = writeExecutable(helpers.path(), QStringLiteral("sleep-helper"),
                                                   "#!/bin/sh\nexec sleep 30\n");
+        QVERIFY(!sleeper.isEmpty());
         QProcess hung;
         QSignalSpy hungFinished(&hung, &QProcess::finished);
         hung.start(sleeper);
@@ -193,6 +194,7 @@ private Q_SLOTS:
 
         const QString failing = writeExecutable(helpers.path(), QStringLiteral("error-helper"),
                                                   "#!/bin/sh\nexit 7\n");
+        QVERIFY(!failing.isEmpty());
         QProcess error;
         QSignalSpy errorFinished(&error, &QProcess::finished);
         error.start(failing);
@@ -209,6 +211,8 @@ private Q_SLOTS:
                                                 "#!/bin/sh\nexec sleep 30\n");
         const QString kdeConnect = writeExecutable(helpers.path(), QStringLiteral("kdeconnect-cli"),
                                                      "#!/bin/sh\nexec sleep 30\n");
+        QVERIFY(!pwDump.isEmpty());
+        QVERIFY(!kdeConnect.isEmpty());
         ScopedPath path(helpers.path());
 
         Integrations integrations(nullptr, 100);
@@ -246,10 +250,12 @@ private Q_SLOTS:
         const QString lsblkLog = helpers.path() + QStringLiteral("/lsblk.log");
         const QString udisksLog = helpers.path() + QStringLiteral("/udisks.log");
         const QByteArray logLine = QStringLiteral("echo run >> '%1'\n").arg(lsblkLog).toUtf8();
-        writeExecutable(helpers.path(), QStringLiteral("lsblk"),
+        const QString lsblk = writeExecutable(helpers.path(), QStringLiteral("lsblk"),
                         "#!/bin/sh\n" + logLine + "exec sleep 30\n");
-        writeExecutable(helpers.path(), QStringLiteral("udisksctl"),
+        const QString udisks = writeExecutable(helpers.path(), QStringLiteral("udisksctl"),
                         QStringLiteral("#!/bin/sh\necho \"$1\" >> '%1'\nexec sleep 30\n").arg(udisksLog).toUtf8());
+        QVERIFY(!lsblk.isEmpty());
+        QVERIFY(!udisks.isEmpty());
         ScopedPath path(helpers.path());
 
         DriveWatcher watcher(nullptr, 100, 100);
@@ -257,8 +263,9 @@ private Q_SLOTS:
         watcher.refresh();
         QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("drive-list-timeout")), 2000);
 
-        writeExecutable(helpers.path(), QStringLiteral("lsblk"),
+        const QString quickLsblk = writeExecutable(helpers.path(), QStringLiteral("lsblk"),
                         "#!/bin/sh\n" + logLine + "printf '{\\"blockdevices\\":[]}\\n'\n");
+        QVERIFY(!quickLsblk.isEmpty());
         watcher.refresh();
         QTRY_VERIFY_WITH_TIMEOUT(lineCount(lsblkLog) >= 2, 2000);
 
@@ -275,7 +282,8 @@ private Q_SLOTS:
         QVERIFY(helpers.isValid());
         const QString helperLog = helpers.path() + QStringLiteral("/thumbnail.log");
         const QByteArray script = QStringLiteral("#!/bin/sh\necho run >> '%1'\nexec sleep 30\n").arg(helperLog).toUtf8();
-        writeExecutable(helpers.path(), QStringLiteral("ffmpegthumbnailer"), script);
+        const QString thumbnailHelper = writeExecutable(helpers.path(), QStringLiteral("ffmpegthumbnailer"), script);
+        QVERIFY(!thumbnailHelper.isEmpty());
         ScopedPath path(helpers.path());
 
         Thumbnailer thumbnails(nullptr, 100);
