@@ -47,33 +47,34 @@ remain proposals until GitHub confirms the merge.
 - **PR #17 — offscreen UI harness.** The UI harness is part of CTest, with
   Plasma API mocks and critical QML warning checks. The merged-head CI run
   passed both CTest targets (coretest and uiharness).
+- **PR #19 — runtime diagnostics and agent workflow.** Added local rotating
+  diagnostics with path redaction, a Settings viewer, provider-specific agent
+  entrypoints, a canonical `AGENTS.md`, PR template, and CI enforcement for
+  dated development-log updates.
+- **PR #22 — development roadmap.** Added this dedicated roadmap and linked it
+  from the README.
 - The GitHub Actions build-and-test workflow is present in `main`.
 
 ### Open work
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P2 | Runtime diagnostics and agent workflow | [PR #19](https://github.com/bezeza/Alveus/pull/19) | Sync with the new `main`, inspect the combined core diff, improve diagnostics edge-case coverage, and rerun CI |
-| P2 | Icon, translations, previews, Fedora RPM workflow | [PR #20](https://github.com/bezeza/Alveus/pull/20), [PR #21](https://github.com/bezeza/Alveus/pull/21) | Consolidate into one PR: use the passing PR #20 preview/icon foundation and selectively bring over PR #21's stronger translation checks and RPM installer after review |
+| P2 | Branding, translations, UI preview, Fedora RPM packaging | [PR #20](https://github.com/bezeza/Alveus/pull/20) | Review and merge the consolidated PR; run a real Fedora RPM build/install and live Plasma validation before release |
 
-PR #19 was authored against the pre-performance `main`. It changes the same
-core files as PR #15, so it must be synchronized and reviewed against the
-merged cache implementation before it can be marked ready. Its development
-log currently matches the version merged by PR #15; preserve that history.
+PR #19 was synchronized with the merged performance and UI foundation before
+it was merged. Its diagnostics code now includes a thread-local message-handler
+reentrancy guard and regression coverage for path redaction. Log rotation
+behavior still needs a focused test and live review.
 
-PR #20 and PR #21 are stacked on an earlier diagnostics-branch commit and
-overlap in branding, translations, CI, README, settings, and UI test support.
-PR #20's recorded CI run passed, including offscreen preview rendering, but
-it predates the current `main`. PR #21's recorded run failed in the preview
-step: the mock Plasma API lacks members used by the settings/desktop preview,
-including `configOverlaySource` and a callable `i18n`; qmllint also reports
-mock-type warnings. Fix the mock contract and verify a real rendered artifact.
-Do not merge both PRs or duplicate icon assets.
+PR #20 consolidates the passing preview/icon foundation with PR #21's stronger
+Russian/Ukrainian catalogs, translation checker, and RPM build helper. Its
+current-head CI passes, including preview rendering and artifact upload. PR #21
+is now redundant and should be closed after the consolidated PR is merged.
 
-PR #16 contains only an older CI workflow proposal. The current workflow is
-already in `main` through merged work; compare the unique workflow changes
-before closing #16 as superseded. Do not merge a stale workflow over the
-current one.
+PR #16 was closed as superseded. Its only proposed workflow file was compared
+with the current workflow in `main`; the current workflow includes the same
+build/test, shell, QML-lint, and whitespace checks plus the `perf/**` push
+trigger. Do not reopen or merge the stale workflow.
 
 ## Near-term execution plan
 
@@ -109,35 +110,40 @@ validation remains separate.
 
 ### Stage 3 — Diagnostics and contributor guardrails
 
-- [ ] Synchronize and complete PR #19 against the merged performance and UI work.
-- [ ] Verify severity, timestamp, category, and source context for recorded
-  warnings/errors; test log rotation, path redaction, and handler reentrancy.
-- [ ] Review copied reports for possible third-party paths before sharing.
-- [ ] Keep diagnostics local and user-controlled; no automatic upload or
+- [x] Merge PR #19.
+- [x] Verify severity, timestamp, category, and source context for recorded
+  warnings/errors; add regression coverage for path redaction and handler
+  reentrancy.
+- [ ] Add focused log-rotation tests and review third-party paths in copied
+  reports before sharing.
+- [x] Keep diagnostics local and user-controlled; no automatic upload or
   telemetry.
-- [ ] Establish `AGENTS.md`, provider-specific pointers, PR template, and
+- [x] Establish `AGENTS.md`, provider-specific pointers, PR template, and
   `docs/DEVELOPMENT_LOG.md` as the common engineering workflow.
 
-**Exit criteria:** current CI passes; logging behavior and privacy limitations
-are documented; implementation PRs record the checks actually run.
+**Exit criteria:** merged CI passes; logging behavior and privacy limitations
+are documented. Log-rotation coverage and live Plasma validation remain.
 
 ### Stage 4 — Identity, translations, and Fedora packaging
 
-- [ ] Consolidate PR #20/#21 into one reviewed implementation; remove duplicate
+- [x] Consolidate PR #20/#21 into one reviewed implementation; remove duplicate
   assets and conflicting CI/README changes.
-- [ ] Establish one canonical application-icon path and use it consistently in
+- [x] Establish one canonical application-icon path and use it consistently in
   the application metadata, package, and README.
-- [ ] Verify English source strings and complete Ukrainian and Russian
-  translations; run the translation checker and `msgfmt --check`.
-- [ ] Fix the offscreen preview failure and verify that both intended preview
-  images are actually generated and referenced correctly.
-- [ ] Validate the Fedora RPM build script, including build-only and
-  build-and-install modes, argument handling, and DNF dependency resolution.
+- [x] Keep English as the source language; complete Ukrainian and Russian
+  catalogs, run the translation checker and `msgfmt --check`.
+- [x] Fix the offscreen preview and verify that the preview image is generated;
+  the current CI run uploaded the PNG artifact.
+- [x] Validate RPM helper argument handling, including build-only and
+  `--install` selection, help, and invalid-option behavior.
+- [ ] Run an actual RPM build, DNF installation/removal, and dependency
+  resolution on a supported Fedora KDE system.
 - [ ] Keep COPR publication separate until local RPM validation is complete.
 
 **Exit criteria:** one coherent PR; current CI passes; icon and preview assets
-exist at the referenced paths; translations validate; RPM build path is
-reviewed. Do not claim a real Fedora installation was tested unless it was.
+exist at the referenced paths; translations validate; RPM packaging is
+reviewed. A real Fedora build/install and live Plasma validation are still
+required before release.
 
 ### Stage 5 — Real KDE Plasma validation
 
