@@ -1535,6 +1535,9 @@ private Q_SLOTS:
         QVERIFY(isUserMount(QStringLiteral("/mnt/Data"), QStringLiteral("ntfs3"), QStringLiteral("/dev/sdb2")));
         QVERIFY(isUserMount(QStringLiteral("/run/media/user/USB"), QStringLiteral("vfat"), QStringLiteral("/dev/sdc1")));
         QVERIFY(isUserMount(QStringLiteral("/mnt/nas"), QStringLiteral("cifs"), QStringLiteral("//nas/share")));
+        QVERIFY(isNetworkMount(QStringLiteral("fuse.sshfs"), QStringLiteral("/dev/fuse")));
+        QVERIFY(isNetworkMount(QStringLiteral("nfs4"), QStringLiteral("server:/share")));
+        QVERIFY(!isNetworkMount(QStringLiteral("ntfs3"), QStringLiteral("/dev/sdb2")));
         QVERIFY(isUserMount(QStringLiteral("/media/Windows"), QStringLiteral("fuseblk"), QStringLiteral("/dev/sda3"))); // ntfs-3g
         QVERIFY(!isUserMount(QStringLiteral("/boot/efi"), QStringLiteral("vfat"), QStringLiteral("/dev/nvme0n1p1")));
         QVERIFY(!isUserMount(QStringLiteral("/home"), QStringLiteral("btrfs"), QStringLiteral("/dev/nvme0n1p3")));
