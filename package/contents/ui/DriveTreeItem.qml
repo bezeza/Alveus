@@ -43,8 +43,9 @@ Item {
         if (drive.type === "crypt" || drive.type === "lvm") return i18n("Logical volume")
         if (drive.physical && drive.transport === "nvme") return i18n("NVMe")
         if (drive.physical && drive.usb) {
-            if (drive.rotationalKnown) return drive.rotational ? i18n("USB HDD") : i18n("USB SSD")
-            return i18n("USB")
+            // ROTA=0 means non-rotational, not necessarily a SATA/NVMe SSD:
+            // USB flash drives must not be mislabeled as SSDs.
+            return drive.rotationalKnown && drive.rotational ? i18n("USB HDD") : i18n("USB")
         }
         if (drive.physical && drive.rotationalKnown) return drive.rotational ? i18n("HDD") : i18n("SSD")
         if (drive.type === "disk") return i18n("Disk")
@@ -54,7 +55,7 @@ Item {
         if (Core.privacy) return "•••••"
         if (depth === 0 && drive.physical) {
             const model = ((drive.vendor || "") + " " + (drive.model || "")).trim()
-            if ((drive.system || drive.label) && model !== "") return model + " · " + drive.device
+            if (model !== "") return model + " · " + drive.device
             return drive.device
         }
         const mountPoints = drive.mountPoints || []
