@@ -18,7 +18,7 @@ ListView {
     property bool showHiddenTemporarily: false
     property color textColor: Kirigami.Theme.textColor
     property var visibleDevices: []
-    property var storageSummary: ({ total: 0, free: 0, used: 0, count: 0 })
+    property var storageSummary: ({ total: 0, free: 0, used: 0, count: 0, complete: true })
 
     readonly property int discoveredCount: Core.driveDevices.length
     readonly property var driveSettings: {
@@ -62,13 +62,17 @@ ListView {
             const children = device.children || []
             const hasMountedChild = hasMountedDescendant(children)
             const total = Number(device.total)
+            const free = Number(device.free)
             const id = String(device.id || device.device || "")
-            if (device.mounted && !hasMountedChild && total > 0 && id !== "" && !seen[id]) {
-                const free = Number(device.free)
-                totals.total += total
-                totals.free += Math.min(total, Math.max(0, isFinite(free) ? free : 0))
-                totals.count += 1
-                seen[id] = true
+            if (device.mounted && !hasMountedChild) {
+                if (total > 0 && id !== "" && !seen[id] && isFinite(free) && free >= 0) {
+                    totals.total += total
+                    totals.free += Math.min(total, free)
+                    totals.count += 1
+                    seen[id] = true
+                } else if (id === "" || total <= 0 || !isFinite(free) || free < 0) {
+                    totals.complete = false
+                }
             }
             accumulateSummary(children, totals, seen)
         }
@@ -83,7 +87,7 @@ ListView {
         const devices = Core.visibleDriveDevices(fenceId, showHiddenTemporarily)
         visibleDevices = devices
 
-        const totals = { total: 0, free: 0, used: 0, count: 0 }
+        const totals = { total: 0, free: 0, used: 0, count: 0, complete: true }
         accumulateSummary(devices, totals, ({}))
         totals.used = Math.max(0, totals.total - totals.free)
         storageSummary = totals
@@ -156,7 +160,7 @@ ListView {
         }
 
         PlasmaComponents.Label {
-            visible: view.showSummary && view.storageSummary.count > 0
+            visible: view.showSummary && view.storageSummary.complete && view.storageSummary.count > 0
             Layout.fillWidth: true
             text: i18n("%1 total · %2 used · %3 free",
                        view.formatSize(view.storageSummary.total),
