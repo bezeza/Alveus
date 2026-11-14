@@ -452,6 +452,32 @@ QQC2.Popup {
                             onActivated: Core.setDriveDefault("displayMode", ["compact", "medium", "large"][currentIndex])
                         }
                     }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        PlasmaComponents.Label {
+                            Layout.fillWidth: true
+                            text: i18n("USB device grouping")
+                        }
+                        QQC2.ComboBox {
+                            id: globalUsbGrouping
+                            model: [i18n("Separate group"), i18n("Together with other drives")]
+                            currentIndex: dialog.effectiveDriveDefaults.separateUsb === false ? 1 : 0
+                            onActivated: Core.setDriveDefault("separateUsb", currentIndex === 0)
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        PlasmaComponents.Label {
+                            Layout.fillWidth: true
+                            text: i18n("Device information")
+                        }
+                        QQC2.ComboBox {
+                            id: globalDriveInformation
+                            model: [i18n("Detailed"), i18n("Basic")]
+                            currentIndex: dialog.effectiveDriveDefaults.informationLevel === "basic" ? 1 : 0
+                            onActivated: Core.setDriveDefault("informationLevel", currentIndex === 0 ? "detailed" : "basic")
+                        }
+                    }
                     PlasmaComponents.Label {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
