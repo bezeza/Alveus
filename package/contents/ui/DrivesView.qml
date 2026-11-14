@@ -46,6 +46,7 @@ ListView {
 
     header: RowLayout {
         width: view.width
+        height: implicitHeight
         spacing: Kirigami.Units.smallSpacing
         QQC2.CheckBox {
             text: i18n("Show hidden temporarily")
