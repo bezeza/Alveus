@@ -27,6 +27,7 @@ Item {
     readonly property real used: mounted && Number(drive.total) > 0
         ? Math.min(1, Math.max(0, 1 - Number(drive.free) / Number(drive.total))) : 0
     readonly property int rowHeight: displayMode === "compact" ? 38 : displayMode === "large" ? 66 : 52
+    readonly property bool compactControls: displayMode === "compact" || width < Kirigami.Units.gridUnit * 15
     readonly property int iconSize: displayMode === "compact" ? Kirigami.Units.iconSizes.small
         : displayMode === "large" ? Kirigami.Units.iconSizes.large : Kirigami.Units.iconSizes.medium
     readonly property string title: drive.system
@@ -127,6 +128,7 @@ Item {
             ColumnLayout {
                 id: labelsColumn
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 spacing: 1
 
                 RowLayout {
@@ -138,6 +140,7 @@ Item {
                         color: node.textColor
                         elide: Text.ElideRight
                         Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                     }
                     Rectangle {
                         radius: height / 2
@@ -166,7 +169,7 @@ Item {
             }
 
             PlasmaComponents.Label {
-                visible: Number(node.drive.total) > 0
+                visible: Number(node.drive.total) > 0 && !node.compactControls
                 text: node.formatSize(node.drive.total)
                 color: node.textColor
                 opacity: 0.72
@@ -175,7 +178,7 @@ Item {
             }
 
             QQC2.ToolButton {
-                visible: !node.hasChildren && !!node.drive.device
+                visible: !node.hasChildren && !!node.drive.device && !node.compactControls
                 icon.name: node.mounted ? "document-open-folder" : "drive-harddisk"
                 QQC2.ToolTip.text: node.mounted ? i18n("Open") : i18n("Mount and open")
                 QQC2.ToolTip.visible: hovered
@@ -286,6 +289,8 @@ Item {
     QQC2.Menu {
         id: menu
         QQC2.MenuItem {
+            visible: !node.hasChildren
+            height: visible ? implicitHeight : 0
             text: node.mounted ? i18n("Open") : i18n("Mount and open")
             icon.name: "document-open-folder"
             enabled: !!node.drive.device
