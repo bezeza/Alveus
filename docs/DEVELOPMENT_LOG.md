@@ -181,3 +181,16 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   [run 43606016299](https://github.com/bezeza/Alveus/actions/runs/43606016299).
 - No live PipeWire, KDE Connect, udisksctl, or Plasma session was exercised by
   CI; those remain manual desktop validation tasks.
+
+
+### In progress — Issue #13 persisted configuration validation
+
+- Validate persisted settings keys and types, supported fence view enums,
+  numeric ranges, page/screen bounds, file placement references, page counts,
+  and snapshot identifiers/names/state.
+- Preserve malformed or semantically unsupported stores before replacing them
+  with defaults; continue accepting valid v1 layouts with omitted v2 fields.
+- Keep finite fence and orphan geometry recoverable by clamping it to normalized
+  desktop bounds; reject non-finite geometry and unsafe indices.
+- Validate runtime setting/fence/placement/snapshot mutations so the application
+  cannot write values that its own loader would reject. CI verification pending.
