@@ -813,6 +813,7 @@ private Q_SLOTS:
 
     void unknownSettingsFieldsArePreserved()
     {
+        QDir().mkpath(QFileInfo(store()).absolutePath());
         touch(store(), R"({"version":2,"fences":[],"settings":{"futureOption":{"enabled":true}}})");
         AlveusCore core(desk(), store());
         QVERIFY(core.setting(QStringLiteral("futureOption")).toMap().value(QStringLiteral("enabled")).toBool());
