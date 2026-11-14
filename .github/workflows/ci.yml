@@ -43,7 +43,7 @@ jobs:
             echo "::error::CMake unexpectedly accepted Qt ${qt_version}; Alveus requires Qt 6.5+"
             exit 1
           fi
-          if ! grep -Fq 'compatible with requested version "6.5"' <<< "${output}"; then
+          if ! grep -Fq 'with requested version "6.5"' <<< "${output}" || ! grep -Fq 'version: 6.4.2' <<< "${output}"; then
             printf '%s\n' "${output}"
             echo "::error::CMake failed for a reason other than the Qt 6.5 minimum"
             exit 1
