@@ -70,7 +70,7 @@ ListView {
                     totals.free += Math.min(total, free)
                     totals.count += 1
                     seen[id] = true
-                } else if (id === "" || total <= 0 || !isFinite(free) || free < 0) {
+                } else if (id === "" || !isFinite(total) || total <= 0 || !isFinite(free) || free < 0) {
                     totals.complete = false
                 }
             }
