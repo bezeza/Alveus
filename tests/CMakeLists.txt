@@ -29,6 +29,25 @@ set_tests_properties(uiharness PROPERTIES
         "QT_QPA_PLATFORM=offscreen;ALVEUS_NO_DBUS=1;QML_IMPORT_PATH=${_uiharness_import_path};XDG_DATA_HOME=${CMAKE_BINARY_DIR}/uiharness-data;XDG_CACHE_HOME=${CMAKE_BINARY_DIR}/uiharness-cache;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/uiharness-config"
     TIMEOUT 30)
 
+# Render both drive settings surfaces with the real QML and isolated test state.
+add_test(NAME uiharness_drive_fence_settings COMMAND uiharness
+    "${CMAKE_SOURCE_DIR}/tests/scene.qml"
+    "${CMAKE_BINARY_DIR}/uiharness-drive-fence-settings.png"
+    400 1600 900 drivesettings)
+set_tests_properties(uiharness_drive_fence_settings PROPERTIES
+    ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;ALVEUS_NO_DBUS=1;QML_IMPORT_PATH=${_uiharness_import_path};XDG_DATA_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-fence-data;XDG_CACHE_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-fence-cache;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-fence-config"
+    TIMEOUT 30)
+
+add_test(NAME uiharness_global_drive_settings COMMAND uiharness
+    "${CMAKE_SOURCE_DIR}/tests/scene.qml"
+    "${CMAKE_BINARY_DIR}/uiharness-global-drive-settings.png"
+    400 1600 900 driveglobal)
+set_tests_properties(uiharness_global_drive_settings PROPERTIES
+    ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;ALVEUS_NO_DBUS=1;QML_IMPORT_PATH=${_uiharness_import_path};XDG_DATA_HOME=${CMAKE_BINARY_DIR}/uiharness-global-drive-data;XDG_CACHE_HOME=${CMAKE_BINARY_DIR}/uiharness-global-drive-cache;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/uiharness-global-drive-config"
+    TIMEOUT 30)
+
 
 # Exercise recovery without touching the user's live Plasma configuration.
 find_program(BASH_EXECUTABLE bash REQUIRED)
