@@ -58,6 +58,7 @@ bool isNetworkMount(const QString &fsType, const QString &device);
 QString servicePartitionKind(const Drive &drive);
 QVariantList filterDriveList(const QVariantList &drives, const QVariantMap &options, bool showHiddenTemporarily = false);
 QVariantList filterDriveHierarchy(const QVariantList &devices, const QVariantMap &options, bool showHiddenTemporarily = false);
+QVariantMap summarizeDriveHierarchy(const QVariantList &devices);
 QList<Drive> fromMounts(const QList<QStorageInfo> &volumes);
 // Flat compatibility helpers used by the current drive-fence UI.
 QList<Drive> unmountedFromLsblk(const QByteArray &json);

@@ -18,6 +18,7 @@ ListView {
     property bool showHiddenTemporarily: false
     property color textColor: Kirigami.Theme.textColor
     property var visibleDevices: []
+    property var storageSummary: ({ total: 0, free: 0, used: 0, count: 0, complete: true })
 
     readonly property int discoveredCount: Core.driveDevices.length
     readonly property var driveSettings: {
@@ -27,6 +28,18 @@ ListView {
     readonly property string displayMode: driveSettings.displayMode || "large"
     readonly property string informationLevel: driveSettings.informationLevel || "detailed"
     readonly property bool separateUsb: driveSettings.separateUsb !== false
+    readonly property bool showSummary: driveSettings.showSummary === true
+    readonly property bool showUsageBar: driveSettings.showUsageBar !== false
+    readonly property bool expandPartitionsByDefault: driveSettings.expandPartitionsByDefault === true
+    readonly property string columnCount: driveSettings.columnCount || "auto"
+    readonly property int minimumCardWidth: displayMode === "large" ? 280 : displayMode === "medium" ? 240 : 220
+    readonly property int cardSpacing: Kirigami.Units.smallSpacing
+    readonly property int requestedColumns: columnCount === "auto" ? 0 : Math.max(1, Number(columnCount))
+    readonly property int maxColumns: Math.max(1, Math.floor((width + cardSpacing) / (minimumCardWidth + cardSpacing)))
+    readonly property int effectiveColumns: requestedColumns === 0
+        ? Math.min(maxColumns, width >= minimumCardWidth * 2 + cardSpacing ? 2 : 1)
+        : Math.min(requestedColumns, maxColumns)
+    readonly property real cardWidth: Math.max(1, (width - (effectiveColumns - 1) * cardSpacing) / effectiveColumns)
     readonly property int visibleDeviceCount: visibleDevices.length
 
     clip: true
@@ -35,9 +48,16 @@ ListView {
     model: []
     QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
 
+    function formatSize(bytes) {
+        if (desk && desk.formatSize) return desk.formatSize(Number(bytes))
+        return Number(bytes).toString()
+    }
+
     function refreshModel() {
         const devices = Core.visibleDriveDevices(fenceId, showHiddenTemporarily)
         visibleDevices = devices
+
+        storageSummary = Core.driveSummary(fenceId, showHiddenTemporarily)
 
         const groups = []
         if (separateUsb) {
@@ -70,36 +90,53 @@ ListView {
         function onDrivesChanged() { view.refreshModel() }
     }
 
-    header: RowLayout {
+    header: ColumnLayout {
         width: view.width
-        height: implicitHeight
         spacing: Kirigami.Units.smallSpacing
-        QQC2.CheckBox {
-            visible: view.width > Kirigami.Units.gridUnit * 15
-            text: i18n("Show hidden temporarily")
-            checked: view.showHiddenTemporarily
-            onToggled: view.showHiddenTemporarily = checked
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Kirigami.Units.smallSpacing
+            QQC2.CheckBox {
+                visible: view.width > Kirigami.Units.gridUnit * 15
+                text: i18n("Show hidden temporarily")
+                checked: view.showHiddenTemporarily
+                onToggled: view.showHiddenTemporarily = checked
+            }
+            QQC2.ToolButton {
+                visible: view.width <= Kirigami.Units.gridUnit * 15
+                icon.name: view.showHiddenTemporarily ? "view-visible" : "view-hidden"
+                QQC2.ToolTip.text: i18n("Show hidden temporarily")
+                QQC2.ToolTip.visible: hovered
+                onClicked: view.showHiddenTemporarily = !view.showHiddenTemporarily
+            }
+            Item { Layout.fillWidth: true }
+            PlasmaComponents.Label {
+                visible: view.width > Kirigami.Units.gridUnit * 15
+                text: view.visibleDeviceCount > 0 ? i18n("%1 devices", view.visibleDeviceCount) : ""
+                color: view.textColor
+                opacity: 0.6
+                font: Kirigami.Theme.smallFont
+            }
+            QQC2.ToolButton {
+                icon.name: "view-refresh"
+                QQC2.ToolTip.text: i18n("Refresh storage devices")
+                QQC2.ToolTip.visible: hovered
+                onClicked: Core.refreshDrives()
+            }
         }
-        QQC2.ToolButton {
-            visible: view.width <= Kirigami.Units.gridUnit * 15
-            icon.name: view.showHiddenTemporarily ? "view-visible" : "view-hidden"
-            QQC2.ToolTip.text: i18n("Show hidden temporarily")
-            QQC2.ToolTip.visible: hovered
-            onClicked: view.showHiddenTemporarily = !view.showHiddenTemporarily
-        }
-        Item { Layout.fillWidth: true }
+
         PlasmaComponents.Label {
-            visible: view.width > Kirigami.Units.gridUnit * 15
-            text: view.visibleDeviceCount > 0 ? i18n("%1 devices", view.visibleDeviceCount) : ""
+            visible: view.showSummary && view.storageSummary.complete && view.storageSummary.count > 0
+            Layout.fillWidth: true
+            text: i18n("Mounted volumes: %1 total · %2 used · %3 free",
+                       view.formatSize(view.storageSummary.total),
+                       view.formatSize(view.storageSummary.used),
+                       view.formatSize(view.storageSummary.free))
             color: view.textColor
-            opacity: 0.6
+            opacity: 0.72
             font: Kirigami.Theme.smallFont
-        }
-        QQC2.ToolButton {
-            icon.name: "view-refresh"
-            QQC2.ToolTip.text: i18n("Refresh storage devices")
-            QQC2.ToolTip.visible: hovered
-            onClicked: Core.refreshDrives()
+            elide: Text.ElideRight
         }
     }
 
@@ -130,20 +167,27 @@ ListView {
                 }
             }
 
-            Repeater {
-                model: modelData.devices
-                delegate: DriveTreeItem {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    Layout.minimumWidth: 0
-                    Layout.preferredHeight: implicitHeight
-                    desk: view.desk
-                    fenceId: view.fenceId
-                    drive: modelData
-                    depth: 0
-                    displayMode: view.displayMode
-                    informationLevel: view.informationLevel
-                    textColor: view.textColor
+            Flow {
+                Layout.fillWidth: true
+                spacing: view.cardSpacing
+                implicitHeight: childrenRect.height
+                height: implicitHeight
+
+                Repeater {
+                    model: modelData.devices
+                    delegate: DriveTreeItem {
+                        required property var modelData
+                        cardWidth: view.cardWidth
+                        desk: view.desk
+                        fenceId: view.fenceId
+                        drive: modelData
+                        depth: 0
+                        displayMode: view.displayMode
+                        informationLevel: view.informationLevel
+                        showUsageBar: view.showUsageBar
+                        expandPartitionsByDefault: view.expandPartitionsByDefault
+                        textColor: view.textColor
+                    }
                 }
             }
         }

@@ -19,8 +19,14 @@ Item {
     property int depth: 0
     property string displayMode: "large"
     property string informationLevel: "detailed"
+    property real cardWidth: -1
+    property bool showUsageBar: true
+    property bool expandPartitionsByDefault: false
     property color textColor: Kirigami.Theme.textColor
-    property bool expanded: depth === 0
+    property bool expanded: {
+        const revision = Core.revision
+        return Core.driveExpanded(fenceId, drive.id || "", expandPartitionsByDefault)
+    }
 
     readonly property var children: drive.children || []
     readonly property bool hasChildren: children.length > 0
@@ -64,7 +70,7 @@ Item {
         return i18n("Not mounted")
     }
 
-    width: parent ? parent.width : 0
+    width: cardWidth > 0 ? cardWidth : (parent ? parent.width : 0)
     implicitHeight: content.implicitHeight + (depth === 0 ? Kirigami.Units.smallSpacing * 2 : 0)
     height: implicitHeight
 
@@ -79,6 +85,13 @@ Item {
         } else if (drive.device) {
             Core.mountDrive(drive.device)
             if (desk) desk.showToast(i18n("Mounting %1…", title))
+        }
+    }
+
+    function toggleExpanded() {
+        expanded = !expanded
+        if (drive.id) {
+            Core.setDriveExpanded(fenceId, drive.id, expanded)
         }
     }
 
@@ -115,7 +128,7 @@ Item {
                 icon.name: node.expanded ? "go-down" : "go-next"
                 QQC2.ToolTip.text: node.expanded ? i18n("Collapse partitions") : i18n("Expand partitions")
                 QQC2.ToolTip.visible: hovered
-                onClicked: node.expanded = !node.expanded
+                onClicked: node.toggleExpanded()
             }
             Item {
                 visible: !node.hasChildren
@@ -190,7 +203,7 @@ Item {
                         if (event.button === Qt.RightButton) {
                             menu.popup(rowMouse, event.x, event.y)
                         } else if (node.hasChildren) {
-                            node.expanded = !node.expanded
+                            node.toggleExpanded()
                         } else if (Core.setting("singleClick")) {
                             node.open()
                         }
@@ -232,7 +245,7 @@ Item {
         }
 
         Rectangle {
-            visible: node.mounted && Number(node.drive.total) > 0
+            visible: node.showUsageBar && node.mounted && Number(node.drive.total) > 0
             Layout.fillWidth: true
             Layout.leftMargin: Kirigami.Units.gridUnit * 2 + Kirigami.Units.smallSpacing
             Layout.rightMargin: Kirigami.Units.smallSpacing
@@ -286,6 +299,8 @@ Item {
                     "depth": node.depth + 1,
                     "displayMode": node.displayMode,
                     "informationLevel": node.informationLevel,
+                    "showUsageBar": node.showUsageBar,
+                    "expandPartitionsByDefault": node.expandPartitionsByDefault,
                     "textColor": node.textColor
                 })
             }
@@ -353,6 +368,13 @@ Item {
             icon.name: "edit-undo"
             enabled: node.drive.id !== ""
             onTriggered: Core.setDriveVisibilityException(node.fenceId, node.drive.id, "")
+        }
+        QQC2.MenuItem {
+            visible: node.hasChildren
+            enabled: node.drive.id !== ""
+            text: i18n("Use default expansion")
+            icon.name: "edit-undo"
+            onTriggered: Core.resetDriveExpanded(node.fenceId, node.drive.id)
         }
         QQC2.MenuSeparator {}
         QQC2.MenuItem {

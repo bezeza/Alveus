@@ -190,8 +190,12 @@ public:
     Q_INVOKABLE void resetDriveOptions(const QString &fenceId);
     Q_INVOKABLE QVariantList driveVisibilityExceptions(const QString &fenceId) const;
     Q_INVOKABLE bool setDriveVisibilityException(const QString &fenceId, const QString &stableId, const QString &mode);
+    Q_INVOKABLE bool driveExpanded(const QString &fenceId, const QString &stableId, bool defaultValue = false) const;
+    Q_INVOKABLE bool setDriveExpanded(const QString &fenceId, const QString &stableId, bool expanded);
+    Q_INVOKABLE bool resetDriveExpanded(const QString &fenceId, const QString &stableId);
     Q_INVOKABLE QVariantList visibleDrives(const QString &fenceId, bool showHiddenTemporarily = false) const;
     Q_INVOKABLE QVariantList visibleDriveDevices(const QString &fenceId, bool showHiddenTemporarily = false) const;
+    Q_INVOKABLE QVariantMap driveSummary(const QString &fenceId, bool showHiddenTemporarily = false) const;
 
     // ---- integrations --------------------------------------------------------
     Q_INVOKABLE QString thumbnail(const QString &path); // "" while not ready

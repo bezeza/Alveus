@@ -290,3 +290,20 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - The offscreen UI harness now treats invalid QML anchors as critical; the
   previous drive-row anchor warning is fixed and no longer appears.
 - No live KDE Plasma session or physical USB storage test has been performed.
+
+ 
+### In progress — Stage E / feat/drive-layout-controls (PR #40)
+
+- Add automatic one/two-column layout and fixed one/two/three-column choices;
+  clamp the effective count to the available fence width.
+- Add an optional storage summary that totals unique mounted leaf volumes and
+  avoids counting a physical parent and its child partitions twice.
+- Add independent show/hide control for usage bars.
+- Collapse partitions by default, with a configurable global/per-fence default.
+- Persist per-device expansion state in each drive fence so periodic refreshes
+  and application restarts do not reset the user's expanded rows.
+- Add global/per-fence layout settings with inheritance and reset controls,
+  schema validation, persistence tests, and wide/narrow UI scenarios.
+- Add Ukrainian/Russian translations.
+- Verification is pending current-head CI. No live KDE Plasma or multi-device
+  storage test has been performed.
