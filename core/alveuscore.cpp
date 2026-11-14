@@ -461,6 +461,17 @@ bool validDriveOptions(const QJsonObject &options, bool allowExceptions)
             }
         }
     }
+    if (options.contains(QStringLiteral("expandedDevices"))) {
+        if (!allowExceptions || !options.value(QStringLiteral("expandedDevices")).isObject()) {
+            return false;
+        }
+        const QJsonObject expanded = options.value(QStringLiteral("expandedDevices")).toObject();
+        for (auto it = expanded.constBegin(); it != expanded.constEnd(); ++it) {
+            if (it.key().trimmed().isEmpty() || it.key().size() > 1024 || !it.value().isBool()) {
+                return false;
+            }
+        }
+    }
     return true;
 }
 
@@ -3358,6 +3369,61 @@ bool AlveusCore::setDriveVisibilityException(const QString &fenceId, const QStri
         options.remove(QStringLiteral("visibilityExceptions"));
     } else {
         options.insert(QStringLiteral("visibilityExceptions"), exceptions);
+    }
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), options.toVariantMap()}});
+    return true;
+}
+
+bool AlveusCore::driveExpanded(const QString &fenceId, const QString &stableId, bool defaultValue) const
+{
+    const int index = indexOfFence(fenceId);
+    const QString id = stableId.trimmed();
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:") || id.isEmpty()) {
+        return defaultValue;
+    }
+    const QJsonObject expanded = m_fences.at(index).driveOptions.value(QStringLiteral("expandedDevices")).toObject();
+    const QJsonValue saved = expanded.value(id);
+    return saved.isBool() ? saved.toBool() : defaultValue;
+}
+
+bool AlveusCore::setDriveExpanded(const QString &fenceId, const QString &stableId, bool expandedValue)
+{
+    const int index = indexOfFence(fenceId);
+    const QString id = stableId.trimmed();
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")
+        || id.isEmpty() || id.size() > 1024) {
+        return false;
+    }
+
+    QJsonObject options = m_fences.at(index).driveOptions;
+    QJsonObject expanded = options.value(QStringLiteral("expandedDevices")).toObject();
+    if (expanded.value(id).isBool() && expanded.value(id).toBool() == expandedValue) {
+        return true;
+    }
+    expanded.insert(id, expandedValue);
+    options.insert(QStringLiteral("expandedDevices"), expanded);
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), options.toVariantMap()}});
+    return true;
+}
+
+bool AlveusCore::resetDriveExpanded(const QString &fenceId, const QString &stableId)
+{
+    const int index = indexOfFence(fenceId);
+    const QString id = stableId.trimmed();
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:") || id.isEmpty()) {
+        return false;
+    }
+
+    QJsonObject options = m_fences.at(index).driveOptions;
+    QJsonObject expanded = options.value(QStringLiteral("expandedDevices")).toObject();
+    if (!expanded.contains(id)) {
+        return false;
+    }
+    expanded.remove(id);
+    if (expanded.isEmpty()) {
+        options.remove(QStringLiteral("expandedDevices"));
+    } else {
+        options.insert(QStringLiteral("expandedDevices"), expanded);
     }
     updateFence(fenceId, {{QStringLiteral("driveOptions"), options.toVariantMap()}});
     return true;
