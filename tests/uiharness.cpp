@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QGuiApplication>
 #include <QImage>
+#include <QQuickItem>
 #include <QPalette>
 #include <QQmlContext>
 #include <QQmlEngine>
