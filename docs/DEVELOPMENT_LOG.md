@@ -74,3 +74,16 @@ is merged.
 The branch was synchronized with the merged performance and UI foundation on
 2026-11-14. A thread-local message-handler reentrancy guard and a path-redaction
 regression check were added; verification is pending on this combined head.
+
+### Merged into main — PR #24 Fedora RPM validation
+
+- Added a Fedora-container GitHub Actions job that builds the RPM, installs it
+  through DNF, verifies the icon, plasmoid metadata, KRunner desktop entry, and
+  Russian/Ukrainian locale files, uploads the RPM artifact, and removes the
+  package.
+- Made the helper's explicit `--install` mode non-interactive for CI by
+  passing `-y` to DNF. The normal build-only mode remains unchanged.
+- Install the Fedora builddep plugin `dnf-plugins-core` before resolving
+  BuildRequires; the Fedora-container build/install check passed with it.
+- Fedora-container build/install and payload verification passed; artifact:
+  `alveus-fedora-rpm`. Live KDE Plasma session validation remains separate.
