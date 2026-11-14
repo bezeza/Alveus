@@ -26,6 +26,33 @@ QQC2.Popup {
     y: parent ? Math.max(Kirigami.Units.gridUnit, (parent.height - height) / 3) : 0
 
     readonly property var swatches: ["", "#3daee9", "#1d99f3", "#27ae60", "#f67400", "#da4453", "#9b59b6", "#232629", "#eff0f1"]
+    readonly property var driveGroups: [
+        { key: "internal", label: i18n("Internal devices") },
+        { key: "usb", label: i18n("USB devices") },
+        { key: "external", label: i18n("Other removable devices") },
+        { key: "network", label: i18n("Network storage") },
+        { key: "virtual", label: i18n("Virtual devices") },
+        { key: "optical", label: i18n("Optical drives") }
+    ]
+    readonly property var driveFilters: [
+        { key: "hideEfi", label: i18n("Hide EFI System partitions") },
+        { key: "hideMicrosoftReserved", label: i18n("Hide Microsoft Reserved partitions") },
+        { key: "hideRecovery", label: i18n("Hide Windows Recovery partitions") },
+        { key: "hideSwap", label: i18n("Hide Linux swap partitions") },
+        { key: "hideBiosBoot", label: i18n("Hide BIOS boot partitions") }
+    ]
+    readonly property var effectiveDriveOptions: {
+        const revision = Core.revision
+        return Core.driveOptions(dialog.fid)
+    }
+    readonly property var driveOverrides: {
+        const revision = Core.revision
+        return Core.driveOptionOverrides(dialog.fid)
+    }
+    readonly property var driveExceptions: {
+        const revision = Core.revision
+        return Core.driveVisibilityExceptions(dialog.fid)
+    }
 
     function openFor(id) {
         fid = id
@@ -108,6 +135,151 @@ QQC2.Popup {
                 id: drivesSwitch
                 text: i18n("Drives and free space")
                 onToggled: if (checked) portalSwitch.checked = false
+            }
+
+            ColumnLayout {
+                visible: drivesSwitch.checked
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.gridUnit
+                spacing: Kirigami.Units.smallSpacing
+
+                PlasmaComponents.Label {
+                    text: i18n("Drive-specific settings")
+                    font.bold: true
+                }
+                PlasmaComponents.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    opacity: 0.7
+                    text: i18n("These settings apply only to this fence. Unchanged options inherit the global defaults.")
+                }
+
+                PlasmaComponents.Label { text: i18n("Visibility groups"); font.bold: true }
+                Repeater {
+                    model: dialog.driveGroups
+                    delegate: RowLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        QQC2.CheckBox {
+                            Layout.fillWidth: true
+                            text: modelData.label
+                            checked: dialog.effectiveDriveOptions.groups[modelData.key] !== false
+                            onToggled: Core.setDriveOption(dialog.fid, "groups." + modelData.key, checked)
+                        }
+                        QQC2.ToolButton {
+                            icon.name: "edit-undo"
+                            enabled: dialog.driveOverrides.groups
+                                && dialog.driveOverrides.groups[modelData.key] !== undefined
+                            onClicked: Core.resetDriveOption(dialog.fid, "groups." + modelData.key)
+                        }
+                    }
+                }
+
+                PlasmaComponents.Label { text: i18n("Automatic service-partition filters"); font.bold: true }
+                Repeater {
+                    model: dialog.driveFilters
+                    delegate: RowLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        QQC2.CheckBox {
+                            Layout.fillWidth: true
+                            text: modelData.label
+                            checked: dialog.effectiveDriveOptions[modelData.key] !== false
+                            onToggled: Core.setDriveOption(dialog.fid, modelData.key, checked)
+                        }
+                        QQC2.ToolButton {
+                            icon.name: "edit-undo"
+                            enabled: dialog.driveOverrides[modelData.key] !== undefined
+                            onClicked: Core.resetDriveOption(dialog.fid, modelData.key)
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    PlasmaComponents.Label {
+                        text: i18n("Partition visibility")
+                        Layout.fillWidth: true
+                    }
+                    QQC2.ComboBox {
+                        id: partitionModeBox
+                        model: [i18n("All partitions"), i18n("Mounted only"), i18n("Manually selected")]
+                        currentIndex: Math.max(0, ["all", "mounted", "selected"].indexOf(dialog.effectiveDriveOptions.partitionMode))
+                        onActivated: Core.setDriveOption(dialog.fid, "partitionMode", ["all", "mounted", "selected"][currentIndex])
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "edit-undo"
+                        enabled: dialog.driveOverrides.partitionMode !== undefined
+                        onClicked: Core.resetDriveOption(dialog.fid, "partitionMode")
+                    }
+                }
+
+                QQC2.CheckBox {
+                    text: i18n("Show unmounted volumes")
+                    checked: dialog.effectiveDriveOptions.showUnmounted !== false
+                    onToggled: Core.setDriveOption(dialog.fid, "showUnmounted", checked)
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        text: i18n("Minimum partition size (MiB)")
+                    }
+                    QQC2.SpinBox {
+                        id: minimumPartitionSizeBox
+                        from: 0
+                        to: 1024
+                        stepSize: 16
+                        value: dialog.effectiveDriveOptions.minimumPartitionSizeMiB || 0
+                        onValueModified: Core.setDriveOption(dialog.fid, "minimumPartitionSizeMiB", value)
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "edit-undo"
+                        enabled: dialog.driveOverrides.minimumPartitionSizeMiB !== undefined
+                        onClicked: Core.resetDriveOption(dialog.fid, "minimumPartitionSizeMiB")
+                    }
+                }
+                PlasmaComponents.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    opacity: 0.65
+                    text: i18n("0 disables the size filter")
+                }
+
+                PlasmaComponents.Label { text: i18n("Hidden items and exceptions"); font.bold: true }
+                Repeater {
+                    model: dialog.driveExceptions
+                    delegate: RowLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        PlasmaComponents.Label {
+                            Layout.fillWidth: true
+                            elide: Text.ElideMiddle
+                            text: (modelData.connected ? modelData.name : i18n("Not currently connected") + " · " + modelData.id)
+                                  + " · " + (modelData.mode === "hide" ? i18n("Hidden") : i18n("Always shown"))
+                        }
+                        QQC2.ToolButton {
+                            icon.name: "edit-undo"
+                            QQC2.ToolTip.text: i18n("Restore automatic visibility")
+                            onClicked: Core.setDriveVisibilityException(dialog.fid, modelData.id, "")
+                        }
+                    }
+                }
+                PlasmaComponents.Label {
+                    visible: dialog.driveExceptions.length === 0
+                    Layout.fillWidth: true
+                    opacity: 0.65
+                    text: i18n("No hidden items or exceptions.")
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Button {
+                        text: i18n("Reset all drive settings")
+                        icon.name: "edit-undo"
+                        onClicked: Core.resetDriveOptions(dialog.fid)
+                    }
+                }
             }
 
             ColumnLayout {
