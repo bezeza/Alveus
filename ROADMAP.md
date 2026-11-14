@@ -89,6 +89,11 @@ content, including the cache-invalidation follow-up. Preserve that identical
 version when updating or merging the branches, and verify the file does not
 regress or lose either entry.
 
+PR #15 and PR #19 also both modify `core/alveuscore.cpp). After the performance
+PRs are merged, re-sync PR #19 with the updated `main`, inspect the combined
+diff for conflicts or regressions, and run CI on the final PR #19 head before
+marking it ready.
+
 ## Near-term execution plan
 
 Complete these stages in order. Independent PRs may proceed separately, but
