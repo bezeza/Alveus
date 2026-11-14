@@ -433,13 +433,42 @@ bool validDriveOptions(const QJsonObject &options, bool allowExceptions)
     return true;
 }
 
+bool isJsonIntegerInRange(const QJsonValue &value, qint64 minimum, qint64 maximum)
+{
+    return isJsonInteger(value) && value.toDouble() >= double(minimum)
+        && value.toDouble() <= double(maximum);
+}
+
+bool validSettingValue(const QString &key, const QJsonValue &value)
+{
+    if (key == QLatin1String("drives")) {
+        return value.isObject() && validDriveOptions(value.toObject(), false);
+    }
+    // Preserve unknown keys so a newer build or an extension does not lose
+    // settings when an older build loads and saves the same file.
+    if (!defaultSettings().contains(key)) {
+        return !value.isUndefined();
+    }
+    if (key == QLatin1String("iconSize")) {
+        if (!isJsonIntegerInRange(value, 24, 128)) {
+            return false;
+        }
+        return (value.toInt() - 24) % 8 == 0;
+    }
+    if (key == QLatin1String("cleanupDays")) {
+        return isJsonIntegerInRange(value, 1, 3650);
+    }
+    return value.isBool(); // autoPrivacy, cleanupReminder, singleClick, showDonate
+}
+
 bool validSettingsObject(const QJsonObject &settings)
 {
-    if (!settings.contains(QStringLiteral("drives"))) {
-        return true;
+    for (auto it = settings.constBegin(); it != settings.constEnd(); ++it) {
+        if (!validSettingValue(it.key(), it.value())) {
+            return false;
+        }
     }
-    const QJsonValue drives = settings.value(QStringLiteral("drives"));
-    return drives.isObject() && validDriveOptions(drives.toObject(), false);
+    return true;
 }
 
 QJsonObject mergeDriveOptions(QJsonObject base, const QJsonObject &overrides)
@@ -555,10 +584,24 @@ bool hasExpectedType(const QJsonObject &object, const QString &key, QJsonValue::
     return !object.contains(key) || object.value(key).type() == type;
 }
 
+bool validPageKey(const QString &key)
+{
+    const int separator = key.lastIndexOf(QLatin1Char('|'));
+    if (separator < 0 || key.indexOf(QLatin1Char('|')) != separator) {
+        return false;
+    }
+    const QString activity = key.left(separator);
+    const QString screenText = key.mid(separator + 1);
+    bool ok = false;
+    const int screen = screenText.toInt(&ok);
+    return ok && screen >= 0 && screen <= 255
+        && QString::number(screen) == screenText && activity.size() <= 128;
+}
+
 bool validStateObject(const QJsonObject &root)
 {
-    // `fences` is the one mandatory state collection in every released layout.
-    // Accept older v1 layouts that omitted the newer `pages`/`files` fields.
+    // The fences collection is mandatory in every released layout. Older v1
+    // layouts may omit the newer files and pages collections.
     if (!root.value(QStringLiteral("fences")).isArray()) {
         return false;
     }
@@ -571,38 +614,68 @@ bool validStateObject(const QJsonObject &root)
         }
         const QJsonObject fence = value.toObject();
         const QJsonValue idValue = fence.value(QStringLiteral("id"));
-        if (!idValue.isString() || idValue.toString().trimmed().isEmpty() || fenceIds.contains(idValue.toString())) {
+        const QString id = idValue.toString();
+        if (!idValue.isString() || id.trimmed().isEmpty() || id.size() > 64 || fenceIds.contains(id)) {
             return false;
         }
-        fenceIds.insert(idValue.toString());
+        fenceIds.insert(id);
 
         const QStringList stringKeys = {QStringLiteral("title"), QStringLiteral("activity"), QStringLiteral("rules"),
                                         QStringLiteral("portal"), QStringLiteral("group"), QStringLiteral("color"),
                                         QStringLiteral("view")};
+        const QHash<QString, int> stringLimits = {
+            {QStringLiteral("title"), 256}, {QStringLiteral("activity"), 128},
+            {QStringLiteral("rules"), 4096}, {QStringLiteral("portal"), 4096},
+            {QStringLiteral("group"), 128}, {QStringLiteral("color"), 64},
+            {QStringLiteral("view"), 16}
+        };
         for (const QString &key : stringKeys) {
-            if (!hasExpectedType(fence, key, QJsonValue::String)) {
+            if (!hasExpectedType(fence, key, QJsonValue::String)
+                || fence.value(key).toString().size() > stringLimits.value(key)) {
                 return false;
             }
         }
+        if (fence.contains(QStringLiteral("view"))) {
+            const QString view = fence.value(QStringLiteral("view")).toString();
+            if (view != QLatin1String("grid") && view != QLatin1String("list")
+                && view != QLatin1String("honeycomb")) {
+                return false;
+            }
+        }
+
         const QStringList boolKeys = {QStringLiteral("collapsed"), QStringLiteral("activeTab"), QStringLiteral("blur")};
         for (const QString &key : boolKeys) {
             if (!hasExpectedType(fence, key, QJsonValue::Bool)) {
                 return false;
             }
         }
-        const QStringList integerKeys = {QStringLiteral("screen"), QStringLiteral("page"), QStringLiteral("iconSize")};
-        for (const QString &key : integerKeys) {
-            if (fence.contains(key) && !isJsonInteger(fence.value(key))) {
-                return false;
-            }
+
+        if ((fence.contains(QStringLiteral("screen"))
+             && !isJsonIntegerInRange(fence.value(QStringLiteral("screen")), 0, 255))
+            || (fence.contains(QStringLiteral("page"))
+                && !isJsonIntegerInRange(fence.value(QStringLiteral("page")), 0, 8))
+            || (fence.contains(QStringLiteral("iconSize"))
+                && (!isJsonIntegerInRange(fence.value(QStringLiteral("iconSize")), 0, 128)
+                    || fence.value(QStringLiteral("iconSize")).toInt() % 8 != 0))
+            || (fence.contains(QStringLiteral("created"))
+                && !isJsonIntegerInRange(fence.value(QStringLiteral("created")), 0, 9007199254740991LL))) {
+            return false;
         }
-        const QStringList numberKeys = {QStringLiteral("x"), QStringLiteral("y"), QStringLiteral("w"),
-                                         QStringLiteral("h"), QStringLiteral("opacity"), QStringLiteral("created")};
-        for (const QString &key : numberKeys) {
+
+        const QStringList geometryKeys = {QStringLiteral("x"), QStringLiteral("y"),
+                                          QStringLiteral("w"), QStringLiteral("h")};
+        for (const QString &key : geometryKeys) {
             if (fence.contains(key) && !isJsonNumber(fence.value(key))) {
                 return false;
             }
         }
+        if (fence.contains(QStringLiteral("opacity"))
+            && (!isJsonNumber(fence.value(QStringLiteral("opacity")))
+                || fence.value(QStringLiteral("opacity")).toDouble() < 0.0
+                || fence.value(QStringLiteral("opacity")).toDouble() > 1.0)) {
+            return false;
+        }
+
         if (fence.contains(QStringLiteral("orphan"))) {
             const QJsonValue orphanValue = fence.value(QStringLiteral("orphan"));
             if (!orphanValue.isArray()) {
@@ -618,8 +691,12 @@ bool validStateObject(const QJsonObject &root)
             if (!fence.value(QStringLiteral("extensions")).isArray()) {
                 return false;
             }
-            for (const QJsonValue &extension : fence.value(QStringLiteral("extensions")).toArray()) {
-                if (!extension.isString()) {
+            const QJsonArray extensions = fence.value(QStringLiteral("extensions")).toArray();
+            if (extensions.size() > 256) {
+                return false;
+            }
+            for (const QJsonValue &extension : extensions) {
+                if (!extension.isString() || extension.toString().size() > 64) {
                     return false;
                 }
             }
@@ -637,12 +714,22 @@ bool validStateObject(const QJsonObject &root)
         }
         const QJsonObject files = root.value(QStringLiteral("files")).toObject();
         for (auto it = files.constBegin(); it != files.constEnd(); ++it) {
-            if (!it.value().isObject()) {
+            const QString name = it.key();
+            if (name.isEmpty() || name.size() > 255 || name.contains(QLatin1Char('/'))
+                || name.contains(QChar(0)) || !it.value().isObject()) {
                 return false;
             }
             const QJsonObject placement = it.value().toObject();
             if (!hasExpectedType(placement, QStringLiteral("manual"), QJsonValue::Bool)
                 || !hasExpectedType(placement, QStringLiteral("fence"), QJsonValue::String)) {
+                return false;
+            }
+            const bool manual = placement.value(QStringLiteral("manual")).toBool();
+            if (manual && !placement.contains(QStringLiteral("fence"))) {
+                return false;
+            }
+            const QString fenceId = placement.value(QStringLiteral("fence")).toString();
+            if (!fenceId.isEmpty() && (!manual || !fenceIds.contains(fenceId))) {
                 return false;
             }
             if (placement.contains(QStringLiteral("pos"))) {
@@ -651,8 +738,11 @@ bool validStateObject(const QJsonObject &root)
                     return false;
                 }
                 const QJsonArray pos = posValue.toArray();
-                if (pos.size() != 4 || !isJsonInteger(pos[0]) || !isJsonInteger(pos[1])
-                    || !isJsonInteger(pos[2]) || !isJsonInteger(pos[3])) {
+                if (pos.size() != 4
+                    || !isJsonIntegerInRange(pos[0], 0, 255)
+                    || !isJsonIntegerInRange(pos[1], 0, 8)
+                    || !isJsonIntegerInRange(pos[2], 0, 10000)
+                    || !isJsonIntegerInRange(pos[3], 0, 10000)) {
                     return false;
                 }
             }
@@ -665,7 +755,7 @@ bool validStateObject(const QJsonObject &root)
         }
         const QJsonObject pages = root.value(QStringLiteral("pages")).toObject();
         for (auto it = pages.constBegin(); it != pages.constEnd(); ++it) {
-            if (!isJsonInteger(it.value()) || it.value().toInt() < 1) {
+            if (!validPageKey(it.key()) || !isJsonIntegerInRange(it.value(), 1, 9)) {
                 return false;
             }
         }
@@ -678,17 +768,23 @@ bool validSnapshots(const QJsonValue &value)
     if (!value.isArray()) {
         return false;
     }
+    QSet<QString> snapshotIds;
     for (const QJsonValue &item : value.toArray()) {
         if (!item.isObject()) {
             return false;
         }
         const QJsonObject snapshot = item.toObject();
-        if (!snapshot.value(QStringLiteral("id")).isString()
-            || snapshot.value(QStringLiteral("id")).toString().trimmed().isEmpty()
-            || !snapshot.value(QStringLiteral("name")).isString()
-            || (snapshot.contains(QStringLiteral("created")) && !isJsonNumber(snapshot.value(QStringLiteral("created"))))) {
+        const QJsonValue idValue = snapshot.value(QStringLiteral("id"));
+        const QString id = idValue.toString();
+        const QJsonValue nameValue = snapshot.value(QStringLiteral("name"));
+        const QString name = nameValue.toString();
+        if (!idValue.isString() || id.trimmed().isEmpty() || id.size() > 64 || snapshotIds.contains(id)
+            || !nameValue.isString() || name.trimmed().isEmpty() || name.size() > 256
+            || (snapshot.contains(QStringLiteral("created"))
+                && !isJsonIntegerInRange(snapshot.value(QStringLiteral("created")), 0, 9007199254740991LL))) {
             return false;
         }
+        snapshotIds.insert(id);
         if (!snapshot.value(QStringLiteral("state")).isObject()
             || !validStateObject(snapshot.value(QStringLiteral("state")).toObject())) {
             return false;
@@ -696,6 +792,7 @@ bool validSnapshots(const QJsonValue &value)
     }
     return true;
 }
+
 } // namespace
 
 // =============================================================================
@@ -1258,7 +1355,7 @@ void AlveusCore::load()
                 || !validSettingsObject(root.value(QStringLiteral("settings")).toObject())))
         || (root.contains(QStringLiteral("welcomeDismissed")) && !root.value(QStringLiteral("welcomeDismissed")).isBool())
         || (root.contains(QStringLiteral("cleanupSnoozedUntil"))
-            && !isJsonNumber(root.value(QStringLiteral("cleanupSnoozedUntil"))))
+            && !isJsonIntegerInRange(root.value(QStringLiteral("cleanupSnoozedUntil")), 0, 9007199254740991LL))
         || (root.contains(QStringLiteral("snapshots")) && !validSnapshots(root.value(QStringLiteral("snapshots"))))) {
         preserveCorruptStore(QStringLiteral("bad-structure"));
         return;
@@ -1916,6 +2013,61 @@ void AlveusCore::updateFence(const QString &id, const QVariantMap &patch)
         return;
     }
 
+    if (patch.contains(QStringLiteral("view"))) {
+        const QString view = patch.value(QStringLiteral("view")).toString();
+        if (view != QLatin1String("grid") && view != QLatin1String("list")
+            && view != QLatin1String("honeycomb")) {
+            Q_EMIT message(QStringLiteral("fence-invalid-view"), view);
+            return;
+        }
+    }
+    if (patch.contains(QStringLiteral("screen"))) {
+        bool ok = false;
+        const int screen = patch.value(QStringLiteral("screen")).toInt(&ok);
+        if (!ok || screen < 0 || screen > 255) {
+            Q_EMIT message(QStringLiteral("fence-invalid-screen"), patch.value(QStringLiteral("screen")).toString());
+            return;
+        }
+    }
+    if (patch.contains(QStringLiteral("page"))) {
+        bool ok = false;
+        const int page = patch.value(QStringLiteral("page")).toInt(&ok);
+        if (!ok || page < 0 || page > 8) {
+            Q_EMIT message(QStringLiteral("fence-invalid-page"), patch.value(QStringLiteral("page")).toString());
+            return;
+        }
+    }
+    if (patch.contains(QStringLiteral("iconSize"))) {
+        bool ok = false;
+        const int iconSize = patch.value(QStringLiteral("iconSize")).toInt(&ok);
+        if (!ok || iconSize < 0 || iconSize > 128 || iconSize % 8 != 0) {
+            Q_EMIT message(QStringLiteral("fence-invalid-icon-size"), patch.value(QStringLiteral("iconSize")).toString());
+            return;
+        }
+    }
+    if (patch.contains(QStringLiteral("opacity"))) {
+        const qreal opacity = patch.value(QStringLiteral("opacity")).toReal();
+        if (!std::isfinite(opacity) || opacity < 0.0 || opacity > 1.0) {
+            Q_EMIT message(QStringLiteral("fence-invalid-opacity"), QStringLiteral("opacity"));
+            return;
+        }
+    }
+    const QStringList geometryKeys = {QStringLiteral("x"), QStringLiteral("y"),
+                                      QStringLiteral("w"), QStringLiteral("h")};
+    for (const QString &key : geometryKeys) {
+        if (patch.contains(key) && !std::isfinite(patch.value(key).toReal())) {
+            Q_EMIT message(QStringLiteral("fence-invalid-geometry"), key);
+            return;
+        }
+    }
+    if ((patch.contains(QStringLiteral("title")) && patch.value(QStringLiteral("title")).toString().size() > 256)
+        || (patch.contains(QStringLiteral("rules")) && patch.value(QStringLiteral("rules")).toString().size() > 4096)
+        || (patch.contains(QStringLiteral("portal")) && patch.value(QStringLiteral("portal")).toString().size() > 4096)
+        || (patch.contains(QStringLiteral("activity")) && patch.value(QStringLiteral("activity")).toString().size() > 128)) {
+        Q_EMIT message(QStringLiteral("fence-invalid-state"), QStringLiteral("Fence text exceeds supported limits"));
+        return;
+    }
+
     static const QSet<QString> undoablePatchKeys = {
         QStringLiteral("rules"), QStringLiteral("title"), QStringLiteral("portal"), QStringLiteral("screen"),
         QStringLiteral("page"), QStringLiteral("activity"), QStringLiteral("x"), QStringLiteral("y"),
@@ -1984,7 +2136,7 @@ void AlveusCore::updateFence(const QString &id, const QVariantMap &patch)
             } else if (k == QLatin1String("view")) {
                 f.view = v.toString();
             } else if (k == QLatin1String("iconSize")) {
-                f.iconSize = std::clamp(v.toInt(), 0, 256);
+                f.iconSize = v.toInt();
             } else if (k == QLatin1String("driveOptions")) {
                 f.driveOptions = QJsonObject::fromVariantMap(v.toMap());
             } else if (k == QLatin1String("screen")) {
@@ -2287,6 +2439,26 @@ void AlveusCore::setFilePositions(const QVariantList &items)
 {
     if (items.isEmpty()) {
         return;
+    }
+    for (const QVariant &v : items) {
+        const QVariantMap item = v.toMap();
+        const QString name = item.value(QStringLiteral("name")).toString();
+        bool screenOk = false;
+        bool pageOk = false;
+        bool colOk = false;
+        bool rowOk = false;
+        const int screen = item.value(QStringLiteral("screen")).toInt(&screenOk);
+        const int page = item.value(QStringLiteral("page")).toInt(&pageOk);
+        const int col = item.value(QStringLiteral("col")).toInt(&colOk);
+        const int row = item.value(QStringLiteral("row")).toInt(&rowOk);
+        if (name.isEmpty() || name.size() > 255 || name.contains(QLatin1Char('/')) || name.contains(QChar(0))
+            || !screenOk || screen < 0 || screen > 255
+            || !pageOk || page < 0 || page > 8
+            || !colOk || col < 0 || col > 10000
+            || !rowOk || row < 0 || row > 10000) {
+            Q_EMIT message(QStringLiteral("file-position-invalid"), name);
+            return;
+        }
     }
     pushUndo(QStringLiteral("move-icons|") + QString::number(items.size()));
     for (const QVariant &v : items) {
@@ -2972,10 +3144,15 @@ QVariantList AlveusCore::snapshots() const
 
 QString AlveusCore::saveSnapshot(const QString &name)
 {
+    const QString cleanName = name.trimmed();
+    if (cleanName.isEmpty() || cleanName.size() > 256) {
+        Q_EMIT message(QStringLiteral("snapshot-invalid-name"), QStringLiteral("Snapshot name is empty or too long"));
+        return QString();
+    }
     QJsonObject s;
     const QString id = newId();
     s.insert(QStringLiteral("id"), id);
-    s.insert(QStringLiteral("name"), name);
+    s.insert(QStringLiteral("name"), cleanName);
     s.insert(QStringLiteral("created"), double(QDateTime::currentMSecsSinceEpoch()));
     s.insert(QStringLiteral("state"), stateJson());
     m_snapshots << s;
@@ -3108,7 +3285,12 @@ QVariant AlveusCore::setting(const QString &key) const
 
 void AlveusCore::setSetting(const QString &key, const QVariant &value)
 {
-    m_settings.insert(key, QJsonValue::fromVariant(value));
+    const QJsonValue jsonValue = QJsonValue::fromVariant(value);
+    if (!validSettingValue(key, jsonValue)) {
+        Q_EMIT message(QStringLiteral("settings-invalid-value"), key);
+        return;
+    }
+    m_settings.insert(key, jsonValue);
     if (key == QLatin1String("autoPrivacy")) {
         m_integrations->setWatchScreenShare(value.toBool());
         Q_EMIT privacyChanged();
