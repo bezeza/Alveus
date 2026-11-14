@@ -411,7 +411,7 @@ msgstr "На этой неделе"
 
 #: package/contents/ui/FenceSettings.qml:148
 msgid "Not touched for 60 days"
-msgstr "Не открывались 60 дней"
+msgstr "Не изменялись 60 дней"
 
 #: package/contents/ui/FenceSettings.qml:149
 msgid "Bigger than 100 MB"
@@ -697,7 +697,7 @@ msgstr "Evanesco! Дважды щёлкните по рабочему столу
 
 #: package/contents/ui/main.qml:671
 msgid "Make a fence with %1 files"
-msgstr "Создать ограждение для %1 файлов"
+msgstr "Создать ограждение · файлов: %1"
 
 #: package/contents/ui/main.qml:672
 msgid "Make a fence here"
@@ -729,7 +729,7 @@ msgstr "Создать стандартные ограждения"
 
 #: package/contents/ui/main.qml:871
 msgid "%1 files on the desktop haven't been opened for a long time."
-msgstr "На рабочем столе есть %1 файлов, которые давно не открывались."
+msgstr "Давно не открывались файлы на рабочем столе: %1."
 
 #: package/contents/ui/main.qml:877
 msgid "Later"
