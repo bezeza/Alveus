@@ -93,3 +93,15 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   [run 43601617196](https://github.com/bezeza/Alveus/actions/runs/43601617196).
 - The Fedora container is not a live KDE desktop. RPM activation in Plasma,
   recovery, multi-monitor behavior, and session restart remain untested.
+
+
+### In progress — Issue #8 / PR #28 atomic desktop recovery
+
+- Replace direct redirection into the live Plasma config with a same-directory
+  temporary file, validation, and atomic rename after a timestamped backup.
+- Add EXIT/INT/TERM/HUP cleanup so a restart is attempted on normal completion,
+  errors, and interruption after the shell stop is attempted.
+- Add temporary-fixture tests for desktop and widget containments, unrelated
+  applets, transformation/validation failures, and SIGTERM interruption.
+- Verification is pending on the PR head. No live Plasma service is stopped or
+  restarted by these tests.

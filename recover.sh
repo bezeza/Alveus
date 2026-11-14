@@ -9,7 +9,7 @@ set -euo pipefail
 
 cfg="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-org.kde.plasma.desktop-appletsrc"
 if [[ ! -f "$cfg" ]]; then
-    echo "Plasma config not found: $cfg"
+    echo "Plasma config not found: $cfg" >&2
     exit 1
 fi
 if ! grep -q '^plugin=ua.bezeza.alveus$' "$cfg"; then
@@ -18,19 +18,77 @@ if ! grep -q '^plugin=ua.bezeza.alveus$' "$cfg"; then
     exit 0
 fi
 
-backup="$cfg.before-recover-$(date +%Y%m%d-%H%M%S)"
+backup=""
+tmp=""
+plasma_stopped=0
+restart_mode=""
 
-# Stop the shell first so it doesn't write its own copy over ours
+restart_plasma() {
+    case "$restart_mode" in
+        systemctl)
+            systemctl --user start plasma-plasmashell.service
+            ;;
+        kstart)
+            kstart plasmashell >/dev/null 2>&1
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+    plasma_stopped=0
+}
+
+cleanup() {
+    local status=$?
+    trap - EXIT INT TERM HUP
+
+    if (( plasma_stopped )); then
+        if ! restart_plasma; then
+            echo "Warning: could not restart Plasma automatically. Start plasmashell manually." >&2
+            if (( status == 0 )); then
+                status=1
+            fi
+        fi
+    fi
+
+    if [[ -n "$tmp" && -e "$tmp" ]]; then
+        if ! rm -f -- "$tmp"; then
+            echo "Warning: could not remove temporary config: $tmp" >&2
+            if (( status == 0 )); then
+                status=1
+            fi
+        fi
+    fi
+
+    exit "$status"
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+
+# Stop the shell first so it cannot write its own copy over ours. Set the
+# restart guard before attempting to stop it, so even a partial stop failure
+# gets a corresponding restart attempt from the EXIT trap.
 if systemctl --user is-active --quiet plasma-plasmashell.service 2>/dev/null; then
+    restart_mode=systemctl
+    plasma_stopped=1
     systemctl --user stop plasma-plasmashell.service
-    restart() { systemctl --user start plasma-plasmashell.service; }
 else
+    restart_mode=kstart
+    plasma_stopped=1
     kquitapp6 plasmashell >/dev/null 2>&1 || true
     sleep 1
-    restart() { (kstart plasmashell >/dev/null 2>&1 &); }
 fi
 
-cp "$cfg" "$backup"
+backup="$cfg.before-recover-$(date +%Y%m%d-%H%M%S)-$$"
+cp -p -- "$cfg" "$backup"
+
+# Keep the temporary file beside the live config: rename is then atomic on
+# the same filesystem. Never redirect AWK output into the live config.
+tmp="$(mktemp "${cfg}.tmp.XXXXXX")"
+
 # Two passes over the backup:
 #  1. find Alveus added as a *widget* ([Containments][N][Applets][M] with our plugin)
 #  2. write the config back: desktops ([Containments][N]) using Alveus become the
@@ -49,8 +107,24 @@ awk '
     skip { next }
     $0 == "plugin=ua.bezeza.alveus" && s ~ /^\[Containments\]\[[0-9]+\]$/ { print "plugin=org.kde.desktopcontainment"; next }
     { print }
-' "$backup" "$backup" > "$cfg"
-restart
+' "$backup" "$backup" > "$tmp"
+
+# Refuse to replace the live config if the transformation did not produce a
+# usable result or any Alveus containment reference remains.
+if [[ ! -s "$tmp" ]]; then
+    echo "Recovery produced an empty Plasma config; original file was kept." >&2
+    exit 1
+fi
+if grep -q '^plugin=ua.bezeza.alveus$' "$tmp"; then
+    echo "Recovery output still contains an Alveus plugin reference; original file was kept." >&2
+    exit 1
+fi
+
+chmod --reference="$cfg" "$tmp"
+mv -f -- "$tmp" "$cfg"
+tmp=""
+
+restart_plasma
 
 echo "Back to the standard desktop. Backup of the old settings: $backup"
 echo "Повернуто стандартний робочий стіл. Копія старих налаштувань: $backup"

@@ -69,6 +69,7 @@ remain proposals until GitHub confirms the merge.
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
+| P1 | Atomic and restart-safe desktop recovery | [Issue #8](https://github.com/bezeza/Alveus/issues/8) | Write Plasma config atomically, guarantee restart attempts, and test failure/interruption paths |
 | P1 | Live Fedora KDE/Plasma validation | planned | Install the built RPM on a supported Fedora KDE desktop, activate Alveus, and test file operations, recovery, activities, monitors, and session restart |
 
 PR #19 was synchronized with the merged performance and UI foundation before
@@ -161,6 +162,10 @@ reviewed. Fedora 43 container build/install/removal now passes; a real Fedora KD
 desktop installation and live Plasma validation are still required before release.
 
 ### Stage 5 — Real KDE Plasma validation
+
+- [ ] Complete Issue #8: make the recovery script atomic and restart-safe, with
+  temporary-config tests for desktop containment, widgets, unrelated applets,
+  transformation failure, validation failure, and interruption.
 
 Run this stage on a Fedora KDE Plasma machine before calling the release
 candidate ready. CI and offscreen rendering are not substitutes for a live
