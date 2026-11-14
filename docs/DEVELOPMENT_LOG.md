@@ -74,3 +74,13 @@ is merged.
 The branch was synchronized with the merged performance and UI foundation on
 2026-11-14. A thread-local message-handler reentrancy guard and a path-redaction
 regression check were added; verification is pending on this combined head.
+
+### In progress — PR #24 Fedora RPM validation
+
+- Add a Fedora-container GitHub Actions job that builds the RPM using the
+  repository helper, installs it through DNF, checks the installed payload,
+  uploads the RPM artifact, and removes the package.
+- Make the helper's explicit `--install` mode non-interactive for CI by
+  passing `-y` to DNF. The normal build-only mode remains unchanged.
+- Verification is pending on the Fedora workflow.
+

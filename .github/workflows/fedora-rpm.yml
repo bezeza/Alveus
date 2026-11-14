@@ -1,0 +1,77 @@
+name: Fedora RPM validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'CMakeLists.txt'
+      - 'core/**'
+      - 'package/**'
+      - 'packaging/**'
+      - 'data/**'
+      - 'po/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/fedora-rpm.yml'
+  pull_request:
+    paths:
+      - 'CMakeLists.txt'
+      - 'core/**'
+      - 'package/**'
+      - 'packaging/**'
+      - 'data/**'
+      - 'po/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/fedora-rpm.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rpm-build-install:
+    name: Build and install RPM on Fedora
+    runs-on: ubuntu-26.04
+    container:
+      image: fedora:latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Install checkout prerequisites
+        run: dnf install -y git sudo
+
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build and install through DNF
+        run: ./packaging/build-rpm.sh --install
+
+      - name: Verify installed RPM payload
+        shell: bash
+        run: |
+          rpm -q alveus
+          rpm -ql alveus | grep -Fx '/usr/share/icons/hicolor/scalable/apps/alveus.svg'
+          rpm -ql alveus | grep -Fx '/usr/share/plasma/plasmoids/ua.bezeza.alveus/metadata.json'
+          rpm -ql alveus | grep -Fx '/usr/share/krunner/dbusplugins/ua.bezeza.alveus.runner.desktop'
+          rpm -ql alveus | grep -Fx '/usr/share/locale/ru/LC_MESSAGES/plasma_applet_ua.bezeza.alveus.mo'
+          rpm -ql alveus | grep -Fx '/usr/share/locale/uk/LC_MESSAGES/plasma_applet_ua.bezeza.alveus.mo'
+
+      - name: Collect RPM artifact
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          if [[ -d "$HOME/rpmbuild/RPMS" ]]; then
+            find "$HOME/rpmbuild/RPMS" -type f -name 'alveus-*.rpm' -exec cp -v {} "$GITHUB_WORKSPACE/dist/" \;
+          fi
+
+      - name: Upload Fedora RPM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alveus-fedora-rpm
+          path: dist/*.rpm
+          if-no-files-found: warn
+
+      - name: Remove installed package
+        if: always()
+        run: dnf remove -y alveus || true

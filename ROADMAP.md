@@ -56,19 +56,20 @@ remain proposals until GitHub confirms the merge.
 - **PR #20 — branding, localization, and Fedora RPM helper.** Added the canonical
   app icon, Russian/Ukrainian catalogs and validation, desktop preview, and RPM
   build/install helper. The current CI passes the build and preview checks.
+- **PR #23 — diagnostics log rotation coverage.** Added a regression test for
+  four consecutive rotations, three retained archives, and the active log entry.
 - The GitHub Actions build-and-test workflow is present in `main`.
 
 ### Open work
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P1 | Diagnostics log-rotation regression test | [PR #23](https://github.com/bezeza/Alveus/pull/23) | Verify bounded three-generation retention after repeated rotations |
-| P1 | Fedora RPM build and DNF validation | planned | Build and inspect the RPM in a Fedora environment, then verify DNF install/removal and dependency resolution |
+| P1 | Fedora RPM build and DNF validation | [PR #24](https://github.com/bezeza/Alveus/pull/24) | Build and install the package in a Fedora container, inspect the installed payload, and verify clean removal |
 
 PR #19 was synchronized with the merged performance and UI foundation before
 it was merged. Its diagnostics code now includes a thread-local message-handler
-reentrancy guard and regression coverage for path redaction. Log rotation
-behavior still needs a focused test and live review.
+reentrancy guard and regression coverage for path redaction. PR #23 now covers bounded log rotation; reviewing copied reports and live Plasma
+validation remain.
 
 PR #20 is merged. It consolidates the passing preview/icon foundation
 with PR #21's Russian/Ukrainian catalogs, translation checker, and RPM build
@@ -118,8 +119,9 @@ validation remains separate.
 - [x] Verify severity, timestamp, category, and source context for recorded
   warnings/errors; add regression coverage for path redaction and handler
   reentrancy.
-- [ ] Add focused log-rotation tests and review third-party paths in copied
-  reports before sharing. PR #23 adds the missing rotation regression test.
+- [x] Add focused log-rotation tests; PR #23 verifies three retained archives
+  after four rotations and confirms the active log contains the latest event.
+- [ ] Review copied reports for possible third-party paths before sharing.
 - [x] Keep diagnostics local and user-controlled; no automatic upload or
   telemetry.
 - [x] Establish `AGENTS.md`, provider-specific pointers, PR template, and
@@ -138,10 +140,9 @@ are documented. Log-rotation coverage and live Plasma validation remain.
   catalogs, run the translation checker and `msgfmt --check`.
 - [x] Fix the offscreen preview and verify that the preview image is generated;
   the current CI run uploaded the PNG artifact.
-- [x] Validate RPM helper argument handling, including build-only and
-  `--install` selection, help, and invalid-option behavior.
-- [ ] Run an actual RPM build, DNF installation/removal, and dependency
-  resolution on a supported Fedora KDE system.
+- [x] Validate RPM helper help and invalid-option behavior in CI.
+- [ ] Build and install the RPM in Fedora CI, verify the installed payload and
+  DNF removal, then confirm the package on a supported Fedora KDE system.
 - [ ] Keep COPR publication separate until local RPM validation is complete.
 
 **Exit criteria:** one coherent PR; current CI passes; icon and preview assets
