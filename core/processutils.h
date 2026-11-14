@@ -7,6 +7,7 @@
 
 #include <QProcess>
 #include <QTimer>
+#include <QVariant>
 
 namespace Alveus
 {
