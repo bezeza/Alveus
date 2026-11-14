@@ -25,8 +25,11 @@ open pull requests, so proposed code is not mistaken for shipped code.
   source fence's activity scope.
 - Add regression coverage for both global-to-activity-specific and
   activity-specific-to-global merges.
-- Verification is pending on the updated PR head; live Plasma validation has
-  not been run.
+- GitHub Actions on the updated implementation head passed: build, CTest
+  core suite (1/1), shell checks, QML lint, and patch-whitespace validation.
+  Runs: [43594527975](https://github.com/bezeza/Alveus/actions/runs/43594527975)
+  and [43594525739](https://github.com/bezeza/Alveus/actions/runs/43594525739).
+- Live KDE Plasma validation has not been run.
 
 ### In progress — PR #19
 
