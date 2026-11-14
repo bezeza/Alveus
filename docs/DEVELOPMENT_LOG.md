@@ -292,7 +292,7 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - No live KDE Plasma session or physical USB storage test has been performed.
 
  
-### In progress — Stage E / feat/drive-layout-controls
+### In progress — Stage E / feat/drive-layout-controls (PR #40)
 
 - Add automatic one/two-column layout and fixed one/two/three-column choices;
   clamp the effective count to the available fence width.
