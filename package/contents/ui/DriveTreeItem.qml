@@ -199,11 +199,11 @@ Item {
         }
 
         Rectangle {
-            visible: node.mounted && Number(node.drive.total) > 0 && node.displayMode !== "compact"
+            visible: node.mounted && Number(node.drive.total) > 0
             Layout.fillWidth: true
             Layout.leftMargin: Kirigami.Units.gridUnit * 2 + Kirigami.Units.smallSpacing
             Layout.rightMargin: Kirigami.Units.smallSpacing
-            height: node.displayMode === "large" ? 6 : 4
+            height: node.displayMode === "compact" ? 2 : node.displayMode === "large" ? 6 : 4
             radius: height / 2
             color: Qt.rgba(node.textColor.r, node.textColor.g, node.textColor.b, 0.16)
             Rectangle {
