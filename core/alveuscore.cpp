@@ -441,6 +441,9 @@ bool isJsonIntegerInRange(const QJsonValue &value, qint64 minimum, qint64 maximu
 
 bool validSettingValue(const QString &key, const QJsonValue &value)
 {
+    if (key.trimmed().isEmpty() || key.size() > 128) {
+        return false;
+    }
     if (key == QLatin1String("drives")) {
         return value.isObject() && validDriveOptions(value.toObject(), false);
     }
