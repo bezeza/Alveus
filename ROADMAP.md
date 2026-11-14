@@ -59,13 +59,17 @@ remain proposals until GitHub confirms the merge.
 - **PR #23 — diagnostics log-rotation regression test.** Verified four rotations,
   retention of exactly three archive generations, and the newest warning in the
   active JSON-lines log. Current-head CI passed both CTest targets (2/2).
+- **PR #26 — Fedora RPM build and DNF lifecycle smoke test.** Added a Fedora 43
+  container workflow that builds the RPM, installs it through DNF, verifies the
+  Plasma metadata/QML/icon payload, uploads the RPM artifact, and removes the
+  package through DNF. The container check passed; live Plasma testing remains.
 - The GitHub Actions build-and-test workflow is present in `main`.
 
 ### Open work
 
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
-| P1 | Fedora RPM build and DNF smoke test | [PR #26](https://github.com/bezeza/Alveus/pull/26) | Run the Fedora 43 container build/install/remove workflow; then complete a live Fedora KDE desktop check |
+| P1 | Live Fedora KDE/Plasma validation | planned | Install the built RPM on a supported Fedora KDE desktop, activate Alveus, and test file operations, recovery, activities, monitors, and session restart |
 
 PR #19 was synchronized with the merged performance and UI foundation before
 it was merged. Its diagnostics code includes a thread-local message-handler
@@ -145,7 +149,7 @@ limitations are documented. Live Plasma validation remains.
   the current CI run uploaded the PNG artifact.
 - [x] Validate RPM helper argument handling, including build-only and
   `--install` selection, help, and invalid-option behavior.
-- [ ] Add a Fedora 43 container CI smoke test that builds the RPM, installs it
+- [x] Add a Fedora 43 container CI smoke test that builds the RPM, installs it
   with DNF, verifies the installed payload, removes it, and uploads the RPM artifact (PR #26).
 - [ ] Run the package on a supported Fedora KDE desktop and verify runtime
   dependency resolution and Plasma integration.
@@ -153,8 +157,8 @@ limitations are documented. Live Plasma validation remains.
 
 **Exit criteria:** one coherent PR; current CI passes; icon and preview assets
 exist at the referenced paths; translations validate; RPM packaging is
-reviewed. A real Fedora build/install and live Plasma validation are still
-required before release.
+reviewed. Fedora 43 container build/install/removal now passes; a real Fedora KDE
+desktop installation and live Plasma validation are still required before release.
 
 ### Stage 5 — Real KDE Plasma validation
 

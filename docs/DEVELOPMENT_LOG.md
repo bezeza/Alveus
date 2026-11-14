@@ -75,3 +75,21 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - Make the explicit `--install` path non-interactive for reliable automation.
 - A container build does not replace the outstanding live Fedora KDE/Plasma
   installation and desktop-session validation.
+
+
+### Merged into `main` — PR #26 Fedora RPM and DNF smoke test
+
+- Added a Fedora 43 container workflow that builds the RPM from the current
+  source tree, installs it with DNF, verifies the Plasma metadata, QML module
+  descriptor and application icon, uploads the RPM artifact, then removes the
+  package with DNF.
+- Changed the explicit `--install` helper path to use non-interactive
+  `dnf install -y`.
+- Fedora build/install/payload/removal workflow passed:
+  [run 43601617189](https://github.com/bezeza/Alveus/actions/runs/43601617189).
+- Standard Qt build, CTest, translations, RPM-helper CLI, shell, QML lint,
+  development-log enforcement, offscreen preview, artifact upload, and
+  whitespace checks passed:
+  [run 43601617196](https://github.com/bezeza/Alveus/actions/runs/43601617196).
+- The Fedora container is not a live KDE desktop. RPM activation in Plasma,
+  recovery, multi-monitor behavior, and session restart remain untested.
