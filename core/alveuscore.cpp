@@ -3092,6 +3092,190 @@ void AlveusCore::setSetting(const QString &key, const QVariant &value)
     bump();
 }
 
+QVariantMap AlveusCore::driveDefaults() const
+{
+    return mergeDriveOptions(defaultDriveOptions(), m_settings.value(QStringLiteral("drives")).toObject()).toVariantMap();
+}
+
+QVariantMap AlveusCore::driveOptions(const QString &fenceId) const
+{
+    QJsonObject effective = QJsonObject::fromVariantMap(driveDefaults());
+    if (const Fence *f = findFence(fenceId)) {
+        effective = mergeDriveOptions(effective, f->driveOptions);
+    }
+    return effective.toVariantMap();
+}
+
+QVariantMap AlveusCore::driveOptionOverrides(const QString &fenceId) const
+{
+    const Fence *f = findFence(fenceId);
+    return f ? f->driveOptions.toVariantMap() : QVariantMap();
+}
+
+bool AlveusCore::setDriveDefault(const QString &key, const QVariant &value)
+{
+    QJsonObject options = m_settings.value(QStringLiteral("drives")).toObject();
+    if (!setDriveOptionValue(options, key, QJsonValue::fromVariant(value))
+        || !validDriveOptions(options, false)) {
+        return false;
+    }
+    if (options == m_settings.value(QStringLiteral("drives")).toObject()) {
+        return true;
+    }
+    m_settings.insert(QStringLiteral("drives"), options);
+    scheduleSave();
+    bump();
+    return true;
+}
+
+bool AlveusCore::resetDriveDefault(const QString &key)
+{
+    QJsonObject options = m_settings.value(QStringLiteral("drives")).toObject();
+    if (!removeDriveOptionValue(options, key)) {
+        return false;
+    }
+    if (options.isEmpty()) {
+        m_settings.remove(QStringLiteral("drives"));
+    } else {
+        m_settings.insert(QStringLiteral("drives"), options);
+    }
+    scheduleSave();
+    bump();
+    return true;
+}
+
+void AlveusCore::resetDriveDefaults()
+{
+    if (!m_settings.contains(QStringLiteral("drives"))) {
+        return;
+    }
+    m_settings.remove(QStringLiteral("drives"));
+    scheduleSave();
+    bump();
+}
+
+bool AlveusCore::setDriveOption(const QString &fenceId, const QString &key, const QVariant &value)
+{
+    const int index = indexOfFence(fenceId);
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")) {
+        return false;
+    }
+
+    QJsonObject options = m_fences.at(index).driveOptions;
+    if (!setDriveOptionValue(options, key, QJsonValue::fromVariant(value))
+        || !validDriveOptions(options, true)) {
+        return false;
+    }
+    if (options == m_fences.at(index).driveOptions) {
+        return true;
+    }
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), options.toVariantMap()}});
+    return true;
+}
+
+bool AlveusCore::resetDriveOption(const QString &fenceId, const QString &key)
+{
+    const int index = indexOfFence(fenceId);
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")) {
+        return false;
+    }
+
+    QJsonObject options = m_fences.at(index).driveOptions;
+    if (!removeDriveOptionValue(options, key)) {
+        return false;
+    }
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), options.toVariantMap()}});
+    return true;
+}
+
+void AlveusCore::resetDriveOptions(const QString &fenceId)
+{
+    const int index = indexOfFence(fenceId);
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")
+        || m_fences.at(index).driveOptions.isEmpty()) {
+        return;
+    }
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), QVariantMap()}});
+}
+
+QVariantList AlveusCore::driveVisibilityExceptions(const QString &fenceId) const
+{
+    const Fence *f = findFence(fenceId);
+    if (!f) {
+        return {};
+    }
+
+    const QJsonObject exceptions = f->driveOptions.value(QStringLiteral("visibilityExceptions")).toObject();
+    QStringList keys = exceptions.keys();
+    keys.sort();
+
+    const QVariantList knownDrives = m_drives->drives();
+    QVariantList out;
+    out.reserve(keys.size());
+    for (const QString &id : std::as_const(keys)) {
+        QVariantMap item = {
+            {QStringLiteral("id"), id},
+            {QStringLiteral("mode"), exceptions.value(id).toString()},
+            {QStringLiteral("name"), id},
+            {QStringLiteral("device"), QString()},
+            {QStringLiteral("connected"), false},
+        };
+        for (const QVariant &value : knownDrives) {
+            const QVariantMap drive = value.toMap();
+            if (drive.value(QStringLiteral("id")).toString() == id) {
+                item.insert(QStringLiteral("name"), drive.value(QStringLiteral("name")));
+                item.insert(QStringLiteral("device"), drive.value(QStringLiteral("device")));
+                item.insert(QStringLiteral("connected"), true);
+                break;
+            }
+        }
+        if (privacy()) {
+            item.insert(QStringLiteral("name"), QStringLiteral("••••"));
+            item.insert(QStringLiteral("device"), QString());
+        }
+        out << item;
+    }
+    return out;
+}
+
+bool AlveusCore::setDriveVisibilityException(const QString &fenceId, const QString &stableId, const QString &mode)
+{
+    const int index = indexOfFence(fenceId);
+    const QString id = stableId.trimmed();
+    if (index < 0 || m_fences.at(index).portal != QLatin1String("drives:")
+        || id.isEmpty() || id.size() > 1024
+        || (mode != QLatin1String("hide") && mode != QLatin1String("show") && !mode.isEmpty())) {
+        return false;
+    }
+
+    QJsonObject options = m_fences.at(index).driveOptions;
+    QJsonObject exceptions = options.value(QStringLiteral("visibilityExceptions")).toObject();
+    if (mode.isEmpty()) {
+        if (!exceptions.contains(id)) {
+            return false;
+        }
+        exceptions.remove(id);
+    } else {
+        if (exceptions.value(id).toString() == mode) {
+            return true;
+        }
+        exceptions.insert(id, mode);
+    }
+
+    if (exceptions.isEmpty()) {
+        options.remove(QStringLiteral("visibilityExceptions"));
+    } else {
+        options.insert(QStringLiteral("visibilityExceptions"), exceptions);
+    }
+    updateFence(fenceId, {{QStringLiteral("driveOptions"), options.toVariantMap()}});
+    return true;
+}
+
+QVariantList AlveusCore::visibleDrives(const QString &fenceId, bool showHiddenTemporarily) const
+{
+    return Alveus::filterDriveList(m_drives->drives(), driveOptions(fenceId), showHiddenTemporarily);
+}
+
 void AlveusCore::setHidden(bool hidden)
 {
     if (m_hidden != hidden) {
