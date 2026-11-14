@@ -179,6 +179,18 @@ public:
     // ---- settings ------------------------------------------------------------
     Q_INVOKABLE QVariant setting(const QString &key) const;
     Q_INVOKABLE void setSetting(const QString &key, const QVariant &value);
+    Q_INVOKABLE QVariantMap driveDefaults() const;
+    Q_INVOKABLE QVariantMap driveOptions(const QString &fenceId) const;
+    Q_INVOKABLE QVariantMap driveOptionOverrides(const QString &fenceId) const;
+    Q_INVOKABLE bool setDriveDefault(const QString &key, const QVariant &value);
+    Q_INVOKABLE bool resetDriveDefault(const QString &key);
+    Q_INVOKABLE void resetDriveDefaults();
+    Q_INVOKABLE bool setDriveOption(const QString &fenceId, const QString &key, const QVariant &value);
+    Q_INVOKABLE bool resetDriveOption(const QString &fenceId, const QString &key);
+    Q_INVOKABLE void resetDriveOptions(const QString &fenceId);
+    Q_INVOKABLE QVariantList driveVisibilityExceptions(const QString &fenceId) const;
+    Q_INVOKABLE bool setDriveVisibilityException(const QString &fenceId, const QString &stableId, const QString &mode);
+    Q_INVOKABLE QVariantList visibleDrives(const QString &fenceId, bool showHiddenTemporarily = false) const;
 
     // ---- integrations --------------------------------------------------------
     Q_INVOKABLE QString thumbnail(const QString &path); // "" while not ready
@@ -259,6 +271,7 @@ private:
         QString view = QStringLiteral("grid"); // grid | honeycomb | list
         int iconSize = 0;  // 0 = default
         qint64 created = 0;
+        QJsonObject driveOptions; // explicit per-fence drive overrides and visibility exceptions
 
         Alveus::Rules parsed;
     };
