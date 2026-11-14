@@ -238,14 +238,12 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("kdeconnect-failed")), 2000);
         QVERIFY(phones.isEmpty());
         writeExecutable(helpers.path(), QStringLiteral("kdeconnect-cli"),
-                        "#!/bin/sh\\nprintf 'device-1 Pixel 8\\n'\\n");
+                        "#!/bin/sh\nprintf 'device-1 Pixel 8\\n'\n");
         integrations.refreshPhones();
         QTRY_VERIFY_WITH_TIMEOUT(phones.count() == 1, 2000);
         QCOMPARE(phones.last().first().toList().first().toMap().value(QStringLiteral("id")).toString(),
                  QStringLiteral("device-1"));
         integrations.setWatchScreenShare(false);
-        Q_UNUSED(pwDump)
-        Q_UNUSED(kdeConnect)
     }
 
     void driveHelpersTimeoutAndCanRetry()
