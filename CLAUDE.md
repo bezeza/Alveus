@@ -4,7 +4,7 @@
 
 Desktop fences for KDE Plasma 6 (like Stardock Fences). The author uses it on
 **Fedora with KDE Plasma 6** and speaks Ukrainian — answer in Ukrainian.
-Status: 0.03.1 beta. Use the current QtTest/CTest output as the source of truth; never assume or hard-code a test count. Run the Qt 6.4+ test suite before claiming a pass. **This machine is the first real Plasma it runs on**:
+Status: 0.03.1 beta. Use the current QtTest/CTest output as the source of truth; never assume or hard-code a test count. Run the Qt 6.5+ test suite before claiming a pass. **This machine is the first real Plasma it runs on**:
 expect rough edges and fix them.
 
 ## Layout

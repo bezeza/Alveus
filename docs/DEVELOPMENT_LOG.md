@@ -124,3 +124,16 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   [run 43602359421](https://github.com/bezeza/Alveus/actions/runs/43602359421).
 - No live Plasma service was stopped or restarted by CI. A real desktop recovery
   run remains part of the manual Plasma validation stage.
+
+
+### In progress — Issue #9 / PR #30 Qt compatibility baseline
+
+- Align the declared minimum with Qt Quick Effects / MultiEffect, introduced
+  in Qt 6.5: CMake requires Qt 6.5+, the RPM declares matching build/runtime
+  dependencies, and the README/installer/agent guidance agree.
+- Run CMake on Ubuntu 24.04's Qt 6.4.2 toolchain and assert configuration
+  rejects it specifically because the requested minimum is Qt 6.5.
+- Move legacy-widget removal in `install.sh` until after successful CMake
+  configuration and build, so an unsupported Qt version cannot remove the old
+  widget before the compatibility check fails.
+- Verification is pending on the PR head.

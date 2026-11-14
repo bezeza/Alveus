@@ -14,6 +14,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  qt-minimum:
+    name: Reject unsupported Qt 6.4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Qt 6.4 development packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential cmake qt6-base-dev qt6-declarative-dev
+
+      - name: Confirm Qt 6.4 is rejected with the declared minimum
+        shell: bash
+        run: |
+          qt_version="$(qmake6 -query QT_VERSION)"
+          if [[ "${qt_version}" != 6.4.* ]]; then
+            echo "::error::Expected the Ubuntu 24.04 Qt 6.4 toolchain, found ${qt_version}"
+            exit 1
+          fi
+          set +e
+          output="$(cmake -S . -B build 2>&1)"
+          status=$?
+          set -e
+          if [[ "${status}" -eq 0 ]]; then
+            echo "::error::CMake unexpectedly accepted Qt ${qt_version}; Alveus requires Qt 6.5+"
+            exit 1
+          fi
+          if ! grep -Fq 'with requested version "6.5"' <<< "${output}" || ! grep -Fq 'version: 6.4.2' <<< "${output}"; then
+            printf '%s\n' "${output}"
+            echo "::error::CMake failed for a reason other than the Qt 6.5 minimum"
+            exit 1
+          fi
+          printf '%s\n' "${output}"
+
   build-test:
     name: Qt build, tests and static checks
     runs-on: ubuntu-26.04

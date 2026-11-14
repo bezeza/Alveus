@@ -13,6 +13,8 @@ Inspired by Stardock Fences on Windows.
 
 **Status: 0.03.1 beta.**
 
+Alveus requires KDE Plasma 6 and Qt 6.5 or newer. Qt 6.5 introduced the Qt Quick Effects module used by the frosted-glass backdrop; CMake and the Fedora RPM metadata enforce this minimum.
+
 This beta focuses on reliability. File operations use GNU coreutils (`cp`, `mv`),
 which are standard on Linux desktops. Copies are staged and preserve metadata and
 symlinks when supported; if a destination cannot preserve a symlink, the operation
@@ -106,7 +108,7 @@ sudo dnf install alveus
 ./install.sh
 ```
 
-(Arch and derivatives, Fedora, openSUSE Tumbleweed, Debian/Ubuntu-based with Plasma 6.)
+(Arch and derivatives, Fedora, openSUSE Tumbleweed, Debian/Ubuntu-based with Plasma 6 and Qt 6.5+.)
 
 ### Turn it on
 
@@ -126,7 +128,7 @@ Remove completely: `./uninstall.sh` (or `sudo dnf remove alveus`).
 
 ## Known limitations (0.03.1 beta)
 
-- Automated core tests are included; run the current Qt 6.4+ test suite before
+- Automated core tests are included; run the current Qt 6.5+ test suite before
   installing this beta on a primary desktop
 - Real Plasma desktop runs may still find rough edges — please report them
 - Thumbnails for office documents are not generated (videos, PDFs and images are)

@@ -17,14 +17,15 @@ BuildRequires:  gettext
 BuildRequires:  qt6-rpm-macros
 BuildRequires:  cmake(Qt6Core)
 BuildRequires:  cmake(Qt6Gui)
-BuildRequires:  cmake(Qt6Qml)
-BuildRequires:  cmake(Qt6Quick)
+BuildRequires:  qt6-qtdeclarative-devel >= 6.5
+BuildRequires:  cmake(Qt6Qml) >= 6.5
+BuildRequires:  cmake(Qt6Quick) >= 6.5
 BuildRequires:  cmake(Qt6DBus)
 
 Requires:       plasma-workspace >= 6.0
 Requires:       coreutils
 Requires:       kf6-kirigami
-Requires:       qt6-qtdeclarative%{?_isa}
+Requires:       qt6-qtdeclarative%{?_isa} >= 6.5
 # thumbnails for videos and PDFs
 Recommends:     ffmpegthumbnailer
 Recommends:     poppler-utils
