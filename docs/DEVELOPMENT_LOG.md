@@ -83,4 +83,3 @@ regression check were added; verification is pending on this combined head.
 - Make the helper's explicit `--install` mode non-interactive for CI by
   passing `-y` to DNF. The normal build-only mode remains unchanged.
 - Verification is pending on the Fedora workflow.
-
