@@ -255,5 +255,12 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   per-fence overrides and reset-to-inherited behavior.
 - Add Ukrainian and Russian translations, recursive filtering and ROTA parser
   tests, persisted display-mode tests, and an offscreen drive-view scenario.
-- Verification is pending current-head CI. No live KDE Plasma session or
-  physical storage hardware has been tested.
+- Standard CI passed compilation, all 7 CTest targets (including
+  global/per-fence settings and wide/narrow drive-view scenarios), translation
+  validation, QML lint, preview rendering, development-log enforcement, and
+  whitespace checks:
+  [run 43623269082](https://github.com/bezeza/Alveus/actions/runs/43623269082).
+- Fedora RPM build, package payload verification, artifact upload, DNF install,
+  and DNF removal passed:
+  [run 43623269086](https://github.com/bezeza/Alveus/actions/runs/43623269086).
+- No live KDE Plasma session or physical storage hardware has been tested.
