@@ -272,6 +272,54 @@ private Q_SLOTS:
         QVERIFY(core.fence(b).value(QStringLiteral("activeTab")).toBool());
     }
 
+    void mergeFencesRefreshActivityFileModelCaches()
+    {
+        AlveusCore core(desk(), store());
+
+        // A global source fence becomes activity-specific when merged into a
+        // work-only target. The home cache must stop placing this file in it.
+        const QString workTarget = core.createFence(0, QStringLiteral("work"), 0,
+                                                    0, 0, 0.2, 0.2,
+                                                    QStringLiteral("Documents"), QStringLiteral("pdf"));
+        const QString globalSource = core.createFence(0, QString(), 0,
+                                                      0.3, 0, 0.2, 0.2,
+                                                      QStringLiteral("Images"), QStringLiteral("jpg"));
+        touch(d(QStringLiteral("cache-scope.jpg")), "photo");
+        core.rescanNow();
+        core.looseFiles(0, QStringLiteral("work"));
+        core.looseFiles(0, QStringLiteral("home"));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.jpg"), QStringLiteral("work")), globalSource);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.jpg"), QStringLiteral("home")), globalSource);
+
+        core.mergeFences(workTarget, globalSource);
+        QCOMPARE(core.fence(globalSource).value(QStringLiteral("activity")).toString(), QStringLiteral("work"));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.jpg"), QStringLiteral("work")), globalSource);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.jpg"), QStringLiteral("home")), QString());
+        QVERIFY(names(core.filesInFence(globalSource, QStringLiteral("home"))).isEmpty());
+        QVERIFY(names(core.looseFiles(0, QStringLiteral("home"))).contains(QStringLiteral("cache-scope.jpg")));
+
+        // The reverse scope change must also invalidate caches: a work-only
+        // source fence becomes global when merged into a global target.
+        const QString globalTarget = core.createFence(0, QString(), 0,
+                                                      0.5, 0, 0.2, 0.2,
+                                                      QStringLiteral("Text"), QStringLiteral("txt"));
+        const QString workSource = core.createFence(0, QStringLiteral("work"), 0,
+                                                    0.7, 0, 0.2, 0.2,
+                                                    QStringLiteral("Screenshots"), QStringLiteral("png"));
+        touch(d(QStringLiteral("cache-scope.png")), "screenshot");
+        core.rescanNow();
+        core.looseFiles(0, QStringLiteral("work"));
+        core.looseFiles(0, QStringLiteral("home"));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.png"), QStringLiteral("work")), workSource);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.png"), QStringLiteral("home")), QString());
+
+        core.mergeFences(globalTarget, workSource);
+        QCOMPARE(core.fence(workSource).value(QStringLiteral("activity")).toString(), QString());
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.png"), QStringLiteral("work")), workSource);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.png"), QStringLiteral("home")), workSource);
+        QVERIFY(names(core.filesInFence(workSource, QStringLiteral("home"))).contains(QStringLiteral("cache-scope.png")));
+    }
+
     void pagesAndActivities()
     {
         AlveusCore core(desk(), store());
