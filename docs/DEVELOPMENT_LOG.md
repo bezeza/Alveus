@@ -19,8 +19,19 @@ open pull requests, so proposed code is not mistaken for shipped code.
 - **PR #16:** GitHub Actions build and test pipeline.
 - **PR #17:** headless UI harness and critical QML warning checks.
 
-### In progress
+### In progress — PR #19
 
-- Persistent application diagnostics, a Settings → Diagnostics viewer, and
-  this engineering log are being prepared in PR #19. They are not shipped until
-  that pull request is merged.
+- Persistent application diagnostics, a Settings → Diagnostics viewer, bounded
+  log rotation, and diagnostics documentation.
+- A canonical `AGENTS.md` policy plus lightweight entrypoints for common coding
+  agents (Claude Code, GitHub Copilot, Cursor, Gemini CLI, Cline, and Windsurf).
+- A PR template and CI enforcement requiring a development-log entry whenever
+  implementation, tests, CI, or packaging files change.
+- Updated Claude/README build guidance to avoid stale test counts and to use the
+  same full CTest command as CI.
+
+The diagnostics and agent-governance changes are in the open PR #19. The first
+CI run for the diagnostics implementation passed build, core tests, shell
+checks, QML lint, and whitespace validation. The additional agent-policy and
+CI-enforcement changes still require a fresh CI run. Nothing in this section is
+shipped until PR #19 is merged.

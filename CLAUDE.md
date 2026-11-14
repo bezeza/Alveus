@@ -1,8 +1,10 @@
 # Alveus — notes for Claude Code
 
+> Before any task, read and follow the repository-root `AGENTS.md`. It is the canonical policy for all agents; these notes add Claude-specific project context and must not override it.
+
 Desktop fences for KDE Plasma 6 (like Stardock Fences). The author uses it on
 **Fedora with KDE Plasma 6** and speaks Ukrainian — answer in Ukrainian.
-Status: 0.03.1 beta; 38 core test cases are defined; run the Qt 6.4+ test suite before claiming a pass. **This machine is the first real Plasma it runs on**:
+Status: 0.03.1 beta. Use the current QtTest/CTest output as the source of truth; never assume or hard-code a test count. Run the Qt 6.4+ test suite before claiming a pass. **This machine is the first real Plasma it runs on**:
 expect rough edges and fix them.
 
 ## Layout
@@ -25,7 +27,7 @@ expect rough edges and fix them.
     (`org.kde.draganddrop`), `ConfigOverlay.qml`/`ActionButton.qml` copied from plasma-desktop
   - Optional parts are in Loaders so a missing module never breaks the desktop
 - `po/uk.po` — Ukrainian translation (domain `plasma_applet_ua.bezeza.alveus`)
-- `tests/` — `coretest` (35 tests; FAT test needs ALVEUS_TEST_FAT_DIR), `uiharness` + `scene.qml` + mocks for offscreen renders
+- `tests/` — `coretest` (use the actual QtTest/CTest output for the current test count; FAT test needs ALVEUS_TEST_FAT_DIR), `uiharness` + `scene.qml` + mocks for offscreen renders
 - `packaging/alveus.spec`, `packaging/build-rpm.sh`, `.copr/Makefile`
 - `install.sh`, `uninstall.sh`, `recover.sh` (switch desktops back to the standard one)
 
@@ -34,8 +36,10 @@ expect rough edges and fix them.
 ```sh
 ./packaging/build-rpm.sh && sudo dnf install ~/rpmbuild/RPMS/x86_64/alveus-0.03.1-*.rpm
 # or quicker while iterating:
-cmake -B build -DALVEUS_BUILD_TESTS=ON && cmake --build build -j && sudo cmake --install build
-dbus-run-session -- build/tests/coretest
+cmake -S . -B build -DALVEUS_BUILD_TESTS=ON
+cmake --build build --parallel
+dbus-run-session -- ctest --test-dir build --output-on-failure
+# Install only with explicit user approval: sudo cmake --install build
 systemctl --user restart plasma-plasmashell   # reload after installing
 journalctl --user -b -o cat | grep -iE "alveus|qml|ua\.bezeza" | tail -80
 ```
@@ -63,7 +67,14 @@ If the desktop breaks: `./recover.sh` (nothing is lost).
 - Fence views: table (sortable columns), row/strip, tiles, gallery, compact; sort and group
 - Backups of `layout.json` (keep last few), lock fence, arrow-key navigation
 
+## Agent workflow
+
+Follow `AGENTS.md` for every task. Every implementation PR must update
+`docs/DEVELOPMENT_LOG.md`; CI enforces this. Do not merge, install, or restart
+Plasma without explicit user approval.
+
 ## Style
 
 Keep the code readable and commented in plain English; UI strings via `i18n()`
-in English with Ukrainian in `po/uk.po`. Run `coretest` after core changes.
+in English with Ukrainian in `po/uk.po`. Run the focused core test while
+iterating and the full CTest suite before handoff.

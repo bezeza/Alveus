@@ -86,5 +86,20 @@ jobs:
             package/contents/ui/AlveusSettings.qml \
             tests/scene.qml
 
+      - name: Require development log for implementation changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          changed_files="$(git diff --name-only "${BASE_SHA}...${HEAD_SHA}")"
+          if grep -Eq '^(core/|package/|tests/|packaging/|CMakeLists\\.txt$|install\\.sh$|uninstall\\.sh$|recover\\.sh$|\\.github/workflows/)' <<< "${changed_files}"; then
+            if ! grep -Fxq 'docs/DEVELOPMENT_LOG.md' <<< "${changed_files}"; then
+              echo "::error::Implementation, test, CI, or packaging changes require a dated entry in docs/DEVELOPMENT_LOG.md."
+              exit 1
+            fi
+          fi
+
       - name: Check patch whitespace
         run: git diff --check HEAD^ HEAD
