@@ -738,6 +738,8 @@ private Q_SLOTS:
                             R"({"version":2,"fences":[{"id":"d","title":"Disks","portal":"drives:","driveOptions":{"partitionMode":"unknown"}}]})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-defaults.json"),
                             R"({"version":2,"fences":[],"settings":{"drives":{"groups":{"usb":"yes"}}}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-drive-display-mode.json"),
+                            R"({"version":2,"fences":[],"settings":{"drives":{"displayMode":"huge"}}})");
     }
 
     void newerSettingsAreNeverOverwritten()
@@ -1632,14 +1634,18 @@ private Q_SLOTS:
         QVERIFY(!defaultGroups.value(QStringLiteral("virtual")).toBool());
         QCOMPARE(defaults.value(QStringLiteral("partitionMode")).toString(), QStringLiteral("all"));
         QVERIFY(defaults.value(QStringLiteral("hideEfi")).toBool());
+        QCOMPARE(defaults.value(QStringLiteral("displayMode")).toString(), QStringLiteral("medium"));
 
         QVERIFY(core.setDriveDefault(QStringLiteral("groups.usb"), false));
         QVERIFY(core.setDriveDefault(QStringLiteral("hideEfi"), false));
         QVERIFY(core.setDriveOption(fenceId, QStringLiteral("groups.network"), false));
         QVERIFY(core.setDriveOption(fenceId, QStringLiteral("partitionMode"), QStringLiteral("selected")));
+        QVERIFY(core.setDriveDefault(QStringLiteral("displayMode"), QStringLiteral("compact")));
+        QVERIFY(core.setDriveOption(fenceId, QStringLiteral("displayMode"), QStringLiteral("large")));
         QVERIFY(core.setDriveVisibilityException(fenceId, QStringLiteral("partuuid:efi@wwn:test"), QStringLiteral("show")));
         QVERIFY(core.setDriveVisibilityException(fenceId, QStringLiteral("uuid:old-disk"), QStringLiteral("hide")));
         QVERIFY(!core.setDriveDefault(QStringLiteral("partitionMode"), QStringLiteral("unknown")));
+        QVERIFY(!core.setDriveDefault(QStringLiteral("displayMode"), QStringLiteral("huge")));
         QVERIFY(!core.setDriveOption(fenceId, QStringLiteral("groups.unknown"), true));
         QVERIFY(!core.setDriveVisibilityException(fenceId, QStringLiteral("bad-id"), QStringLiteral("maybe")));
 
@@ -1648,6 +1654,8 @@ private Q_SLOTS:
         QVERIFY(!effectiveGroups.value(QStringLiteral("usb")).toBool()); // inherited global value
         QVERIFY(!effectiveGroups.value(QStringLiteral("network")).toBool()); // per-fence override
         QCOMPARE(effective.value(QStringLiteral("partitionMode")).toString(), QStringLiteral("selected"));
+        QCOMPARE(core.driveDefaults().value(QStringLiteral("displayMode")).toString(), QStringLiteral("compact"));
+        QCOMPARE(effective.value(QStringLiteral("displayMode")).toString(), QStringLiteral("large"));
         QCOMPARE(core.driveVisibilityExceptions(fenceId).size(), 2);
 
         core.saveNow();
@@ -1657,6 +1665,8 @@ private Q_SLOTS:
         QVERIFY(!savedDefaults.value(QStringLiteral("groups")).toMap().value(QStringLiteral("usb")).toBool());
         QVERIFY(!savedOptions.value(QStringLiteral("groups")).toMap().value(QStringLiteral("network")).toBool());
         QCOMPARE(savedOptions.value(QStringLiteral("partitionMode")).toString(), QStringLiteral("selected"));
+        QCOMPARE(savedDefaults.value(QStringLiteral("displayMode")).toString(), QStringLiteral("compact"));
+        QCOMPARE(savedOptions.value(QStringLiteral("displayMode")).toString(), QStringLiteral("large"));
         QCOMPARE(reloaded.driveVisibilityExceptions(fenceId).size(), 2);
 
         QVERIFY(reloaded.resetDriveOption(fenceId, QStringLiteral("groups.network")));
@@ -1664,12 +1674,15 @@ private Q_SLOTS:
                     .value(QStringLiteral("network")).toBool());
         QVERIFY(reloaded.resetDriveOption(fenceId, QStringLiteral("partitionMode")));
         QCOMPARE(reloaded.driveOptions(fenceId).value(QStringLiteral("partitionMode")).toString(), QStringLiteral("all"));
+        QVERIFY(reloaded.resetDriveOption(fenceId, QStringLiteral("displayMode")));
+        QCOMPARE(reloaded.driveOptions(fenceId).value(QStringLiteral("displayMode")).toString(), QStringLiteral("compact"));
         QVERIFY(reloaded.setDriveVisibilityException(fenceId, QStringLiteral("uuid:old-disk"), QString()));
         QCOMPARE(reloaded.driveVisibilityExceptions(fenceId).size(), 1);
         reloaded.resetDriveOptions(fenceId);
         QVERIFY(reloaded.driveOptionOverrides(fenceId).isEmpty());
         reloaded.resetDriveDefaults();
         QVERIFY(reloaded.driveDefaults().value(QStringLiteral("groups")).toMap().value(QStringLiteral("usb")).toBool());
+        QCOMPARE(reloaded.driveDefaults().value(QStringLiteral("displayMode")).toString(), QStringLiteral("medium"));
 
         const auto item = [](const QString &id, const QString &type, bool mounted, qint64 size,
                              const QString &serviceKind = QString(), bool usb = false,
@@ -1761,6 +1774,87 @@ private Q_SLOTS:
         }));
     }
 
+    void driveHierarchyFilteringPreservesDeviceTree()
+    {
+        const auto node = [](const QString &id, const QString &type, bool mounted, const QString &serviceKind,
+                             const QVariantList &children = {}, bool usb = false) {
+            return QVariantMap{
+                {QStringLiteral("id"), id},
+                {QStringLiteral("type"), type},
+                {QStringLiteral("mounted"), mounted},
+                {QStringLiteral("serviceKind"), serviceKind},
+                {QStringLiteral("usb"), usb},
+                {QStringLiteral("removable"), usb},
+                {QStringLiteral("hotplug"), usb},
+                {QStringLiteral("physical"), type == QLatin1String("disk")},
+                {QStringLiteral("children"), children},
+                {QStringLiteral("childCount"), children.size()},
+            };
+        };
+
+        const QVariantMap data = node(QStringLiteral("data"), QStringLiteral("part"), true, QString());
+        const QVariantMap efi = node(QStringLiteral("efi"), QStringLiteral("part"), true, QStringLiteral("efi"));
+        const QVariantMap unmounted = node(QStringLiteral("unused"), QStringLiteral("part"), false, QString());
+        const QVariantMap disk = node(QStringLiteral("disk"), QStringLiteral("disk"), false, QString(),
+                                      {data, efi, unmounted});
+        const QVariantList hierarchy = {disk};
+
+        QVariantMap options{
+            {QStringLiteral("groups"), QVariantMap{{QStringLiteral("internal"), true}}},
+            {QStringLiteral("hideEfi"), true},
+            {QStringLiteral("hideMicrosoftReserved"), true},
+            {QStringLiteral("hideRecovery"), true},
+            {QStringLiteral("hideSwap"), true},
+            {QStringLiteral("hideBiosBoot"), true},
+            {QStringLiteral("showUnmounted"), true},
+            {QStringLiteral("partitionMode"), QStringLiteral("all")},
+            {QStringLiteral("minimumPartitionSizeMiB"), 0},
+        };
+
+        QVariantList visible = filterDriveHierarchy(hierarchy, options);
+        QCOMPARE(visible.size(), 1);
+        QVariantMap visibleDisk = visible.first().toMap();
+        QCOMPARE(visibleDisk.value(QStringLiteral("id")).toString(), QStringLiteral("disk"));
+        QVariantList visibleChildren = visibleDisk.value(QStringLiteral("children")).toList();
+        QCOMPARE(visibleChildren.size(), 2);
+        QCOMPARE(visibleDisk.value(QStringLiteral("childCount")).toInt(), 2);
+        QCOMPARE(visibleChildren.at(0).toMap().value(QStringLiteral("id")).toString(), QStringLiteral("data"));
+        QCOMPARE(visibleChildren.at(1).toMap().value(QStringLiteral("id")).toString(), QStringLiteral("unused"));
+
+        options.insert(QStringLiteral("showUnmounted"), false);
+        visible = filterDriveHierarchy(hierarchy, options);
+        QCOMPARE(visible.size(), 1); // the disk remains because its mounted child is visible
+        visibleChildren = visible.first().toMap().value(QStringLiteral("children")).toList();
+        QCOMPARE(visibleChildren.size(), 1);
+        QCOMPARE(visibleChildren.first().toMap().value(QStringLiteral("id")).toString(), QStringLiteral("data"));
+
+        options.insert(QStringLiteral("partitionMode"), QStringLiteral("selected"));
+        options.insert(QStringLiteral("visibilityExceptions"),
+                       QVariantMap{{QStringLiteral("data"), QStringLiteral("show")}});
+        visible = filterDriveHierarchy(hierarchy, options);
+        QCOMPARE(visible.size(), 1);
+        visibleChildren = visible.first().toMap().value(QStringLiteral("children")).toList();
+        QCOMPARE(visibleChildren.size(), 1);
+        QCOMPARE(visibleChildren.first().toMap().value(QStringLiteral("id")).toString(), QStringLiteral("data"));
+
+        options.insert(QStringLiteral("groups"),
+                       QVariantMap{{QStringLiteral("internal"), false}});
+        QVERIFY(filterDriveHierarchy(hierarchy, options).isEmpty());
+
+        options.insert(QStringLiteral("groups"),
+                       QVariantMap{{QStringLiteral("internal"), true}});
+        const QVariantList temporary = filterDriveHierarchy(hierarchy, options, true);
+        QCOMPARE(temporary.size(), 1);
+        QCOMPARE(temporary.first().toMap().value(QStringLiteral("children")).toList().size(), 3);
+
+        options.remove(QStringLiteral("visibilityExceptions"));
+        options.insert(QStringLiteral("partitionMode"), QStringLiteral("all"));
+        options.insert(QStringLiteral("showUnmounted"), true);
+        options.insert(QStringLiteral("visibilityExceptions"),
+                       QVariantMap{{QStringLiteral("disk"), QStringLiteral("hide")}});
+        QVERIFY(filterDriveHierarchy(hierarchy, options).isEmpty());
+    }
+
     void driveHierarchyParserHandlesDevices()
     {
         const QByteArray json = R"JSON(
@@ -1778,6 +1872,7 @@ private Q_SLOTS:
               "rm": false,
               "hotplug": false,
               "ro": false,
+              "rota": 0,
               "children": [
                 {
                   "name": "nvme0n1p1",
@@ -1837,6 +1932,7 @@ private Q_SLOTS:
               "tran": "usb",
               "rm": true,
               "hotplug": true,
+              "rota": 1,
               "children": [
                 {
                   "name": "sdb1",
@@ -1873,6 +1969,8 @@ private Q_SLOTS:
         QCOMPARE(nvme.vendor, QStringLiteral("Samsung"));
         QCOMPARE(nvme.model, QStringLiteral("990 PRO 1TB"));
         QCOMPARE(nvme.transport, QStringLiteral("nvme"));
+        QVERIFY(nvme.rotationalKnown);
+        QVERIFY(!nvme.rotational); // ROTA=0 identifies solid-state media
         QVERIFY(nvme.system);
         QCOMPARE(nvme.children.size(), 5);
 
@@ -1906,12 +2004,15 @@ private Q_SLOTS:
         QVERIFY(usb.usb);
         QVERIFY(usb.removable);
         QCOMPARE(usb.transport, QStringLiteral("usb"));
+        QVERIFY(usb.rotationalKnown);
+        QVERIFY(usb.rotational); // ROTA=1 identifies a rotating disk in a USB enclosure
         QVERIFY(usb.children.first().usb);
         QVERIFY(usb.children.first().removable);
 
         const Drive &removableWithoutTransport = devices.at(2);
         QVERIFY(removableWithoutTransport.removable);
         QVERIFY(!removableWithoutTransport.usb); // RM alone is not proof of USB transport
+        QVERIFY(!removableWithoutTransport.rotationalKnown); // do not guess SSD/HDD when ROTA is unavailable
 
         const QList<Drive> fallback = driveHierarchyFromLsblk(
             R"({"blockdevices":[{"name":"sdd","path":"/dev/sdd","type":"disk","size":"100"}]})");
