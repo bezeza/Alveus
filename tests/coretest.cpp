@@ -758,6 +758,8 @@ private Q_SLOTS:
                             R"({"version":2,"fences":[],"pages":{"broken":2}})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-setting-type.json"),
                             R"({"version":2,"fences":[],"settings":{"autoPrivacy":1}})");
+        verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-empty-setting-key.json"),
+                            R"({"version":2,"fences":[],"settings":{"":true}})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-setting-icon-size.json"),
                             R"({"version":2,"fences":[],"settings":{"iconSize":129}})");
         verifyRejectedStore(m_tmp.path() + QStringLiteral("/store/invalid-cleanup-days.json"),
@@ -844,6 +846,41 @@ private Q_SLOTS:
         for (const QList<QVariant> &arguments : messages) {
             QCOMPARE(arguments.first().toString(), QStringLiteral("settings-invalid-value"));
         }
+    }
+
+    void invalidRuntimeWritesAreRejectedAndDiagnosed()
+    {
+        AlveusCore core(desk(), store());
+        core.clearDiagnostics();
+        const QString id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2, QStringLiteral("Docs"), QString());
+
+        core.updateFence(id, {{QStringLiteral("view"), QStringLiteral("cards")}});
+        core.updateFence(id, {{QStringLiteral("opacity"), 1.5}});
+        QCOMPARE(core.fence(id).value(QStringLiteral("view")).toString(), QStringLiteral("grid"));
+        QCOMPARE(core.fence(id).value(QStringLiteral("opacity")).toDouble(), 0.55);
+
+        core.setFilePositions({QVariantMap{{QStringLiteral("name"), QStringLiteral("notes")},
+                                           {QStringLiteral("screen"), -1}, {QStringLiteral("page"), 0},
+                                           {QStringLiteral("col"), 0}, {QStringLiteral("row"), 0}}});
+        QVERIFY(core.saveSnapshot(QStringLiteral("   ")).isEmpty());
+        QVERIFY(core.snapshots().isEmpty());
+
+        QSet<QString> logged;
+        for (const QVariant &entry : core.recentDiagnostics(20)) {
+            logged.insert(entry.toMap().value(QStringLiteral("message")).toString());
+        }
+        QVERIFY(std::any_of(logged.cbegin(), logged.cend(), [](const QString &message) {
+            return message.contains(QStringLiteral("fence-invalid-view"));
+        }));
+        QVERIFY(std::any_of(logged.cbegin(), logged.cend(), [](const QString &message) {
+            return message.contains(QStringLiteral("fence-invalid-opacity"));
+        }));
+        QVERIFY(std::any_of(logged.cbegin(), logged.cend(), [](const QString &message) {
+            return message.contains(QStringLiteral("file-position-invalid"));
+        }));
+        QVERIFY(std::any_of(logged.cbegin(), logged.cend(), [](const QString &message) {
+            return message.contains(QStringLiteral("snapshot-invalid-name"));
+        }));
     }
 
     void newerSettingsAreNeverOverwritten()
