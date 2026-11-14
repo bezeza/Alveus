@@ -272,6 +272,54 @@ private Q_SLOTS:
         QVERIFY(core.fence(b).value(QStringLiteral("activeTab")).toBool());
     }
 
+    void mergeFencesRefreshActivityFileModelCaches()
+    {
+        AlveusCore core(desk(), store());
+
+        // A global source fence becomes activity-specific when merged into a
+        // work-only target. The home cache must stop placing this file in it.
+        const QString workTarget = core.createFence(0, QStringLiteral("work"), 0,
+                                                    0, 0, 0.2, 0.2,
+                                                    QStringLiteral("Documents"), QStringLiteral("pdf"));
+        const QString globalSource = core.createFence(0, QString(), 0,
+                                                      0.3, 0, 0.2, 0.2,
+                                                      QStringLiteral("Images"), QStringLiteral("jpg"));
+        touch(d(QStringLiteral("cache-scope.jpg")), "photo");
+        core.rescanNow();
+        core.looseFiles(0, QStringLiteral("work"));
+        core.looseFiles(0, QStringLiteral("home"));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.jpg"), QStringLiteral("work")), globalSource);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.jpg"), QStringLiteral("home")), globalSource);
+
+        core.mergeFences(workTarget, globalSource);
+        QCOMPARE(core.fence(globalSource).value(QStringLiteral("activity")).toString(), QStringLiteral("work"));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.jpg"), QStringLiteral("work")), globalSource);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.jpg"), QStringLiteral("home")), QString());
+        QVERIFY(names(core.filesInFence(globalSource, QStringLiteral("home"))).isEmpty());
+        QVERIFY(names(core.looseFiles(0, QStringLiteral("home"))).contains(QStringLiteral("cache-scope.jpg")));
+
+        // The reverse scope change must also invalidate caches: a work-only
+        // source fence becomes global when merged into a global target.
+        const QString globalTarget = core.createFence(0, QString(), 0,
+                                                      0.5, 0, 0.2, 0.2,
+                                                      QStringLiteral("Text"), QStringLiteral("txt"));
+        const QString workSource = core.createFence(0, QStringLiteral("work"), 0,
+                                                    0.7, 0, 0.2, 0.2,
+                                                    QStringLiteral("Screenshots"), QStringLiteral("png"));
+        touch(d(QStringLiteral("cache-scope.png")), "screenshot");
+        core.rescanNow();
+        core.looseFiles(0, QStringLiteral("work"));
+        core.looseFiles(0, QStringLiteral("home"));
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.png"), QStringLiteral("work")), workSource);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.png"), QStringLiteral("home")), QString());
+
+        core.mergeFences(globalTarget, workSource);
+        QCOMPARE(core.fence(workSource).value(QStringLiteral("activity")).toString(), QString());
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.png"), QStringLiteral("work")), workSource);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("cache-scope.png"), QStringLiteral("home")), workSource);
+        QVERIFY(names(core.filesInFence(workSource, QStringLiteral("home"))).contains(QStringLiteral("cache-scope.png")));
+    }
+
     void pagesAndActivities()
     {
         AlveusCore core(desk(), store());
@@ -741,6 +789,127 @@ private Q_SLOTS:
             }
         }
         QCOMPARE(size, QFileInfo(path).size());
+    }
+
+    void targetedFileModelUpdatesAndInvalidation()
+    {
+        AlveusCore core(desk(), store());
+        core.looseFiles(0, QString()); // populate the per-activity cache before edits
+        QSignalSpy fenceChanges(&core, &AlveusCore::fencesChanged);
+        QSignalSpy fileChanges(&core, &AlveusCore::fileModelsChanged);
+        QSignalSpy positionChanges(&core, &AlveusCore::desktopPositionsChanged);
+
+        const QString id = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2,
+                                            QStringLiteral("PDF"), QStringLiteral("pdf"));
+        const QString otherId = core.createFence(0, QString(), 0, 0.3, 0, 0.2, 0.2,
+                                                 QStringLiteral("Images"), QStringLiteral("png"));
+        QCOMPARE(names(core.filesInFence(id, QString())), QStringList{QStringLiteral("report.pdf")});
+        QVERIFY(core.filesInFence(otherId, QString()).isEmpty());
+        QVERIFY(fileChanges.count() > 0);
+
+        // Appearance edits update the fence row, not every file model.
+        fileChanges.clear();
+        fenceChanges.clear();
+        core.updateFence(id, {{QStringLiteral("color"), QStringLiteral("#334455")}});
+        QCOMPARE(fenceChanges.count(), 1);
+        QCOMPARE(fileChanges.count(), 0);
+
+        // Rule edits invalidate placement and notify only the lists that changed.
+        fileChanges.clear();
+        fenceChanges.clear();
+        core.updateFence(id, {{QStringLiteral("rules"), QStringLiteral("mp3")}});
+        QCOMPARE(fenceChanges.count(), 1);
+        QCOMPARE(fileChanges.count(), 1);
+        QStringList affected = qvariant_cast<QStringList>(fileChanges.first().at(1));
+        QVERIFY(affected.contains(id));
+        QVERIFY(affected.contains(QString()));
+        QVERIFY(!affected.contains(otherId));
+        QCOMPARE(names(core.filesInFence(id, QString())), QStringList{QStringLiteral("song.mp3")});
+
+        // A new file changes only the destination fence model; removal does likewise.
+        fileChanges.clear();
+        touch(d(QStringLiteral("fresh.mp3")), "fresh");
+        core.rescanNow();
+        QCOMPARE(names(core.filesInFence(id, QString())),
+                 (QStringList{QStringLiteral("fresh.mp3"), QStringLiteral("song.mp3")}));
+        QCOMPARE(fileChanges.count(), 1);
+        affected = qvariant_cast<QStringList>(fileChanges.first().at(1));
+        QVERIFY(affected.contains(id));
+        QVERIFY(!affected.contains(otherId));
+
+        fileChanges.clear();
+        QVERIFY(QFile::remove(d(QStringLiteral("fresh.mp3"))));
+        core.rescanNow();
+        QCOMPARE(names(core.filesInFence(id, QString())), QStringList{QStringLiteral("song.mp3")});
+        QCOMPARE(fileChanges.count(), 1);
+
+        // Manual assignment and undo must update the cache in both directions.
+        core.updateFence(id, {{QStringLiteral("rules"), QStringLiteral("pdf")}});
+        fileChanges.clear();
+        core.assignFiles({QStringLiteral("song.mp3")}, id);
+        QCOMPARE(core.fenceOfFile(QStringLiteral("song.mp3"), QString()), id);
+        QCOMPARE(names(core.filesInFence(id, QString())),
+                 (QStringList{QStringLiteral("report.pdf"), QStringLiteral("song.mp3")}));
+        QVERIFY(fileChanges.count() > 0);
+        affected = qvariant_cast<QStringList>(fileChanges.first().at(1));
+        QVERIFY(affected.contains(id));
+        QVERIFY(affected.contains(QString()));
+
+        fileChanges.clear();
+        QVERIFY(core.undo());
+        QCOMPARE(core.fenceOfFile(QStringLiteral("song.mp3"), QString()), QString());
+        QCOMPARE(names(core.filesInFence(id, QString())), QStringList{QStringLiteral("report.pdf")});
+        QVERIFY(fileChanges.count() > 0);
+
+        // Moving loose icons updates their positions without rebuilding fence contents.
+        fileChanges.clear();
+        positionChanges.clear();
+        core.setFilePositions({QVariantMap{{QStringLiteral("name"), QStringLiteral("notes")},
+                                           {QStringLiteral("screen"), 0},
+                                           {QStringLiteral("page"), 0},
+                                           {QStringLiteral("col"), 1},
+                                           {QStringLiteral("row"), 1}}});
+        QCOMPARE(positionChanges.count(), 1);
+        QCOMPARE(fileChanges.count(), 0);
+    }
+
+    void cachedFileModelsScaleAcrossManyFences()
+    {
+        AlveusCore core(desk(), store());
+        const QStringList extensions = {QStringLiteral("pdf"), QStringLiteral("jpg"), QStringLiteral("png"),
+                                        QStringLiteral("txt"), QStringLiteral("mp3"), QStringLiteral("docx"),
+                                        QStringLiteral("xlsx"), QStringLiteral("zip"), QStringLiteral("mp4"),
+                                        QStringLiteral("csv")};
+        QStringList fenceIds;
+        for (int i = 0; i < extensions.size(); ++i) {
+            fenceIds << core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2,
+                                         extensions.at(i), extensions.at(i));
+        }
+
+        for (int i = 0; i < 600; ++i) {
+            const QString path = d(QStringLiteral("bulk-%1.%2").arg(i).arg(extensions.at(i % extensions.size())));
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("x");
+        }
+        core.rescanNow();
+
+        const int expected = QDir(desk()).entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::System).size();
+        int observed = core.looseFiles(0, QString()).size();
+        for (const QString &id : fenceIds) {
+            observed += core.filesInFence(id, QString()).size();
+        }
+        QCOMPARE(observed, expected);
+
+        // Repeated retrieval exercises cache hits rather than re-evaluating every rule for every file.
+        QBENCHMARK {
+            int count = core.looseFiles(0, QString()).size();
+            for (const QString &id : fenceIds) {
+                count += core.filesInFence(id, QString()).size();
+            }
+            observed = count;
+        }
+        QCOMPARE(observed, expected);
     }
 
     void settingsBlockedMessageOnce()

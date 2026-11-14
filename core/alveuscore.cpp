@@ -276,7 +276,7 @@ AlveusCore::AlveusCore(const QString &desktopPath, const QString &storePath, QOb
     // changes on filesystems where a per-file watch could not be installed.
     m_clockTimer.setInterval(10 * 60 * 1000);
     connect(&m_clockTimer, &QTimer::timeout, this, [this]() {
-        m_folders.clear(); // portal contents may change without a directory-entry event
+        invalidateAllFolders(); // portal contents may change without a directory-entry event
         rescan();
     });
     m_clockTimer.start();
@@ -284,9 +284,7 @@ AlveusCore::AlveusCore(const QString &desktopPath, const QString &storePath, QOb
     m_watcher.addPath(m_desktopPath);
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [this](const QString &path) {
         const QString clean = QDir::cleanPath(path);
-        if (m_folders.remove(clean)) {
-            bump(); // re-read this portal on next listFolder()
-        }
+        invalidateFolder(clean);
         if (clean == m_desktopPath || QDir::cleanPath(QFileInfo(clean).absolutePath()) == m_desktopPath) {
             scheduleRescan();
         }
@@ -303,8 +301,8 @@ AlveusCore::AlveusCore(const QString &desktopPath, const QString &storePath, QOb
             if (!m_fileChangeTimer.isActive()) {
                 m_fileChangeTimer.start();
             }
-        } else if (m_folders.remove(parent)) {
-            bump();
+        } else {
+            invalidateFolder(parent);
         }
     });
 
@@ -383,6 +381,154 @@ void AlveusCore::bump()
 {
     ++m_revision;
     Q_EMIT changed();
+}
+
+void AlveusCore::bumpFences(bool fileMembershipChanged)
+{
+    if (fileMembershipChanged) {
+        refreshFileModelCaches(true);
+    }
+    Q_EMIT fencesChanged();
+    bump();
+}
+
+void AlveusCore::bumpFileModels(const QSet<QString> &changedNames)
+{
+    refreshFileModelCaches(false, changedNames);
+    bump();
+}
+
+void AlveusCore::bumpAllFileModels()
+{
+    refreshFileModelCaches(true);
+    bump();
+}
+
+void AlveusCore::bumpDesktopPositions()
+{
+    Q_EMIT desktopPositionsChanged();
+    bump();
+}
+
+void AlveusCore::bumpDesktopTopology()
+{
+    Q_EMIT desktopTopologyChanged();
+    bump();
+}
+
+const AlveusCore::FileModelCache &AlveusCore::fileModelCacheFor(const QString &activity) const
+{
+    const auto existing = m_fileModelCache.constFind(activity);
+    if (existing != m_fileModelCache.cend()) {
+        return existing.value();
+    }
+
+    FileModelCache cache;
+    for (const Entry &entry : m_files) {
+        const QString fenceId = placementFor(entry, activity);
+        cache.byFence[fenceId].append(toMap(entry));
+        cache.fenceByName.insert(entry.name, fenceId);
+    }
+    return m_fileModelCache.insert(activity, std::move(cache)).value();
+}
+
+void AlveusCore::refreshFileModelCaches(bool rebuildAll, const QSet<QString> &changedNames)
+{
+    if (m_fileModelCache.isEmpty()) {
+        return;
+    }
+
+    QHash<QString, const Entry *> currentEntries;
+    if (!rebuildAll) {
+        for (const Entry &entry : std::as_const(m_files)) {
+            currentEntries.insert(entry.name, &entry);
+        }
+    }
+
+    for (auto cacheIt = m_fileModelCache.begin(); cacheIt != m_fileModelCache.end(); ++cacheIt) {
+        const QString activity = cacheIt.key();
+        FileModelCache &cache = cacheIt.value();
+        QStringList changedFenceIds;
+
+        if (rebuildAll) {
+            FileModelCache updated;
+            for (const Entry &entry : std::as_const(m_files)) {
+                const QString fenceId = placementFor(entry, activity);
+                updated.byFence[fenceId].append(toMap(entry));
+                updated.fenceByName.insert(entry.name, fenceId);
+            }
+
+            QSet<QString> allFenceIds;
+            for (auto it = cache.byFence.cbegin(); it != cache.byFence.cend(); ++it) {
+                allFenceIds.insert(it.key());
+            }
+            for (auto it = updated.byFence.cbegin(); it != updated.byFence.cend(); ++it) {
+                allFenceIds.insert(it.key());
+            }
+            for (const QString &fenceId : std::as_const(allFenceIds)) {
+                if (cache.byFence.value(fenceId) != updated.byFence.value(fenceId)) {
+                    changedFenceIds << fenceId;
+                }
+            }
+            cache = std::move(updated);
+        } else {
+            QSet<QString> affectedFenceIds;
+            for (const QString &name : changedNames) {
+                const auto old = cache.fenceByName.find(name);
+                if (old != cache.fenceByName.end()) {
+                    affectedFenceIds.insert(old.value());
+                    cache.fenceByName.erase(old);
+                }
+
+                const auto current = currentEntries.constFind(name);
+                if (current != currentEntries.cend()) {
+                    const QString newFenceId = placementFor(*current.value(), activity);
+                    cache.fenceByName.insert(name, newFenceId);
+                    affectedFenceIds.insert(newFenceId);
+                }
+            }
+
+            for (const QString &fenceId : std::as_const(affectedFenceIds)) {
+                QVariantList updated;
+                for (const Entry &entry : std::as_const(m_files)) {
+                    if (cache.fenceByName.value(entry.name) == fenceId) {
+                        updated << toMap(entry);
+                    }
+                }
+                if (cache.byFence.value(fenceId) != updated) {
+                    changedFenceIds << fenceId;
+                }
+                if (updated.isEmpty()) {
+                    cache.byFence.remove(fenceId);
+                } else {
+                    cache.byFence.insert(fenceId, updated);
+                }
+            }
+        }
+
+        if (!changedFenceIds.isEmpty()) {
+            changedFenceIds.removeDuplicates();
+            changedFenceIds.sort();
+            Q_EMIT fileModelsChanged(activity, changedFenceIds);
+        }
+    }
+}
+
+void AlveusCore::invalidateFolder(const QString &path)
+{
+    const QString clean = QDir::cleanPath(path);
+    if (m_folders.remove(clean)) {
+        Q_EMIT folderContentsChanged(clean);
+    }
+}
+
+void AlveusCore::invalidateAllFolders()
+{
+    const QStringList paths = m_folders.keys();
+    m_folders.clear();
+    for (const QString &path : paths) {
+        Q_EMIT folderContentsChanged(path);
+    }
 }
 
 // =============================================================================
@@ -818,7 +964,7 @@ bool AlveusCore::undo()
                 Q_EMIT message(QStringLiteral("undo-failed"), tasks.at(failedIndex).to.isEmpty()
                                    ? tasks.at(failedIndex).from : tasks.at(failedIndex).to);
             }
-            m_folders.clear();
+            invalidateAllFolders();
             Q_EMIT undoChanged();
             rescanNow();
             return;
@@ -828,13 +974,14 @@ bool AlveusCore::undo()
             if (m_undo.at(i).value(QStringLiteral("uid")).toString() == uid) {
                 const QJsonObject done = m_undo.takeAt(i);
                 applyState(done.value(QStringLiteral("state")).toObject(), false);
+                bumpFences();
                 break;
             }
         }
         if (!sourceLeft.isEmpty()) {
             Q_EMIT message(QStringLiteral("file-source-left"), sourceLeft.join(QStringLiteral(", ")));
         }
-        m_folders.clear(); // file operations may have changed any open folder portal
+        invalidateAllFolders(); // file operations may have changed any open folder portal
         Q_EMIT undoChanged();
         rescanNow();
         scheduleSave();
@@ -942,7 +1089,7 @@ void AlveusCore::rescan()
     if (dropped) {
         scheduleSave();
     }
-    bump();
+    bumpAllFileModels();
 }
 
 AlveusCore::Entry AlveusCore::makeEntry(const QString &dirPath, const QString &name) const
@@ -1057,7 +1204,7 @@ void AlveusCore::registerDesktop(int screen, const QString &activity)
         return;
     }
     ++m_desktops[key(screen, activity)];
-    bump();
+    bumpDesktopTopology();
 }
 
 void AlveusCore::unregisterDesktop(int screen, const QString &activity)
@@ -1069,7 +1216,7 @@ void AlveusCore::unregisterDesktop(int screen, const QString &activity)
     if (--m_desktops[k] <= 0) {
         m_desktops.remove(k);
     }
-    bump();
+    bumpDesktopTopology();
 }
 
 QVariantList AlveusCore::screens(const QString &activity) const
@@ -1245,7 +1392,7 @@ QString AlveusCore::createFence(int screen, const QString &activity, int page, q
     fenceNormalizeGeometry(f);
     m_fences << f;
     scheduleSave();
-    bump();
+    bumpFences(true);
     return f.id;
 }
 
@@ -1256,7 +1403,7 @@ QString AlveusCore::createPortal(int screen, const QString &activity, int page, 
     m_fences[indexOfFence(id)].portal = path.startsWith(QLatin1String("drives:")) ? QStringLiteral("drives:") : QDir::cleanPath(path);
     watchFolder(path);
     scheduleSave();
-    bump();
+    bumpFences(true);
     return id;
 }
 
@@ -1292,6 +1439,8 @@ void AlveusCore::updateFence(const QString &id, const QVariantMap &patch)
                                        QStringLiteral("page"), QStringLiteral("activity")};
     const QString group = m_fences[i].group;
     const bool orphanEdit = patch.value(QStringLiteral("orphan")).toBool();
+    const bool fileMembershipChanged = patch.contains(QStringLiteral("rules"))
+        || patch.contains(QStringLiteral("portal")) || patch.contains(QStringLiteral("activity"));
 
     for (Fence &f : m_fences) {
         const bool self = f.id == id;
@@ -1357,7 +1506,7 @@ void AlveusCore::updateFence(const QString &id, const QVariantMap &patch)
         watchFolder(m_fences[i].portal);
     }
     scheduleSave();
-    bump();
+    bumpFences(fileMembershipChanged);
 }
 
 void AlveusCore::removeFence(const QString &id)
@@ -1392,7 +1541,7 @@ void AlveusCore::removeFence(const QString &id)
         }
     }
     scheduleSave();
-    bump();
+    bumpFences(true);
 }
 
 void AlveusCore::mergeFences(const QString &targetId, const QString &sourceId)
@@ -1428,7 +1577,7 @@ void AlveusCore::mergeFences(const QString &targetId, const QString &sourceId)
             f.hasOrphanGeometry = false;
         }
     }
-    activateTab(sourceId);
+    activateTabInternal(sourceId, true);
 }
 
 void AlveusCore::detachTab(const QString &id)
@@ -1460,10 +1609,15 @@ void AlveusCore::detachTab(const QString &id)
         m_fences[members.first()].activeTab = true;
     }
     scheduleSave();
-    bump();
+    bumpFences();
 }
 
 void AlveusCore::activateTab(const QString &id)
+{
+    activateTabInternal(id, false);
+}
+
+void AlveusCore::activateTabInternal(const QString &id, bool fileMembershipChanged)
 {
     const int i = indexOfFence(id);
     if (i < 0) {
@@ -1479,7 +1633,7 @@ void AlveusCore::activateTab(const QString &id)
         m_fences[i].activeTab = true;
     }
     scheduleSave();
-    bump();
+    bumpFences(fileMembershipChanged);
 }
 
 QString AlveusCore::presetRules(const QString &preset) const
@@ -1566,12 +1720,7 @@ QString AlveusCore::placementFor(const Entry &e, const QString &activity) const
 
 QString AlveusCore::fenceOfFile(const QString &name, const QString &activity) const
 {
-    for (const Entry &e : m_files) {
-        if (e.name == name) {
-            return placementFor(e, activity);
-        }
-    }
-    return QString();
+    return fileModelCacheFor(activity).fenceByName.value(name);
 }
 
 QVariantList AlveusCore::filesInFence(const QString &fenceId, const QString &activity) const
@@ -1579,29 +1728,23 @@ QVariantList AlveusCore::filesInFence(const QString &fenceId, const QString &act
     if (const Fence *f = findFence(fenceId); f && !f->portal.isEmpty()) {
         return listFolder(f->portal);
     }
-    QVariantList out;
-    for (const Entry &e : m_files) {
-        if (placementFor(e, activity) == fenceId) {
-            out << toMap(e);
-        }
-    }
-    return out;
+    return fileModelCacheFor(activity).byFence.value(fenceId);
 }
 
 QVariantList AlveusCore::looseFiles(int screen, const QString &activity) const
 {
     const int primary = primaryScreen(activity);
+    const QVariantList loose = fileModelCacheFor(activity).byFence.value(QString());
     QVariantList out;
-    for (const Entry &e : m_files) {
-        if (!placementFor(e, activity).isEmpty()) {
-            continue;
-        }
-        const Placement p = m_place.value(e.name);
+    out.reserve(loose.size());
+    for (const QVariant &entry : loose) {
+        QVariantMap m = entry.toMap();
+        const QString name = m.value(QStringLiteral("name")).toString();
+        const Placement p = m_place.value(name);
         const int shownOn = p.hasPos ? hostScreen(p.screen, activity) : primary;
         if (shownOn != screen) {
             continue;
         }
-        QVariantMap m = toMap(e);
         // a position saved for an unplugged monitor is not valid here
         const bool posValid = p.hasPos && hostScreen(p.screen, activity) == p.screen;
         m.insert(QStringLiteral("hasPos"), posValid);
@@ -1627,8 +1770,12 @@ void AlveusCore::assignFiles(const QStringList &names, const QString &fenceId)
             p.hasPos = false;
         }
     }
+    QSet<QString> changedNames;
+    for (const QString &name : names) {
+        changedNames.insert(name);
+    }
     scheduleSave();
-    bump();
+    bumpFileModels(changedNames);
 }
 
 void AlveusCore::setFilePositions(const QVariantList &items)
@@ -1647,7 +1794,7 @@ void AlveusCore::setFilePositions(const QVariantList &items)
         p.row = std::max(0, m.value(QStringLiteral("row")).toInt());
     }
     scheduleSave();
-    bump();
+    bumpDesktopPositions();
 }
 
 void AlveusCore::clearPositions(int screen, int page)
@@ -1664,7 +1811,7 @@ void AlveusCore::clearPositions(int screen, int page)
         ++it;
     }
     scheduleSave();
-    bump();
+    bumpDesktopPositions();
 }
 
 bool AlveusCore::isDesktopUrl(const QUrl &url) const
@@ -1912,7 +2059,7 @@ void AlveusCore::runFileTasks(const QString &kind, const QList<FileTask> &tasks,
         if (done > 0 && QDateTime::currentMSecsSinceEpoch() - m_jobStarted > 1500) {
             Q_EMIT message(QStringLiteral("files-done"), kind + QLatin1Char('|') + QString::number(done));
         }
-        m_folders.clear();
+        invalidateAllFolders();
         scheduleSave();
         rescanNow();
     };
@@ -2055,7 +2202,7 @@ void AlveusCore::refreshChangedFiles()
         any = true;
     }
     if (any) {
-        bump();
+        bumpFileModels(changed);
     }
 }
 
@@ -2099,7 +2246,7 @@ QStringList AlveusCore::importToFolder(const QList<QUrl> &urls, bool copy, const
         pushUndo((copy ? QStringLiteral("copy|") : QStringLiteral("move|")) + QString::number(ops.size()),
                  QJsonObject{{QStringLiteral("state"), before}, {QStringLiteral("files"), ops}});
     }
-    m_folders.remove(QDir::cleanPath(folder));
+    invalidateFolder(folder);
     rescanNow();
     return paths;
 }
@@ -2167,7 +2314,7 @@ bool AlveusCore::renamePath(const QString &path, const QString &newName)
     if (QDir(info.absolutePath()).canonicalPath() == QDir(m_desktopPath).canonicalPath() && m_place.contains(info.fileName())) {
         m_place.insert(clean, m_place.take(info.fileName()));
     }
-    m_folders.remove(QDir::cleanPath(info.absolutePath()));
+    invalidateFolder(info.absolutePath());
     scheduleSave();
     rescanNow();
     return true;
@@ -2186,7 +2333,7 @@ int AlveusCore::trashPaths(const QStringList &paths)
         QString inTrash;
         if (QFile::moveToTrash(p, &inTrash)) {
             ops.append(fileOp(QStringLiteral("trashed"), inTrash, p));
-            m_folders.remove(QDir::cleanPath(QFileInfo(p).absolutePath()));
+            invalidateFolder(QFileInfo(p).absolutePath());
         }
     }
     if (!ops.isEmpty()) {
@@ -2209,7 +2356,7 @@ QString AlveusCore::createFolder(const QString &inFolder, const QString &baseNam
     pushUndo(QStringLiteral("create|") + QFileInfo(path).fileName(),
              QJsonObject{{QStringLiteral("state"), before},
                          {QStringLiteral("files"), QJsonArray{fileOp(QStringLiteral("created"), path)}}});
-    m_folders.remove(dir);
+    invalidateFolder(dir);
     rescanNow();
     return path;
 }
@@ -2227,7 +2374,7 @@ QString AlveusCore::createTextFile(const QString &inFolder, const QString &baseN
     pushUndo(QStringLiteral("create|") + QFileInfo(path).fileName(),
              QJsonObject{{QStringLiteral("state"), before},
                          {QStringLiteral("files"), QJsonArray{fileOp(QStringLiteral("created"), path)}}});
-    m_folders.remove(dir);
+    invalidateFolder(dir);
     rescanNow();
     return path;
 }
@@ -2338,6 +2485,7 @@ void AlveusCore::restoreSnapshot(const QString &id)
         if (s.value(QStringLiteral("id")).toString() == id) {
             pushUndo(QStringLiteral("snapshot|") + s.value(QStringLiteral("name")).toString());
             applyState(s.value(QStringLiteral("state")).toObject(), false);
+            bumpFences();
             for (const Fence &f : std::as_const(m_fences)) {
                 watchFolder(f.portal);
             }

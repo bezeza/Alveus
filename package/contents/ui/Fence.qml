@@ -127,7 +127,16 @@ Item {
     }
     Connections {
         target: Core
-        function onChanged() { fence.syncFiles() }
+        function onFileModelsChanged(activityName, fenceIds) {
+            if (fence.desk && activityName === fence.desk.activity && fenceIds.indexOf(fence.fid) !== -1) {
+                fence.syncFiles()
+            }
+        }
+        function onFolderContentsChanged(path) {
+            if (fence.isPortal && fence.browsePath === path) {
+                fence.syncFiles()
+            }
+        }
     }
     onBrowsePathChanged: syncFiles()
     onStartRenamingChanged: if (startRenaming) Qt.callLater(startRename)
