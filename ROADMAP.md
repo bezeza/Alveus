@@ -45,7 +45,7 @@ features.
 | Priority | Work | Current reference | Next action |
 |---|---|---|---|
 | P1 | Background directory validation | [PR #14](https://github.com/bezeza/Alveus/pull/14) | Current-head CI passed; final code review and authorized merge remain |
-| P1 | Cached placement and targeted model updates | [PR #15](https://github.com/bezeza/Alveus/pull/15) | Activity-scope cache fix and two-way regression test added; current-head CI passed; review/merge after approval; reconcile log with PR #19 |
+| P1 | Cached placement and targeted model updates | [PR #15](https://github.com/bezeza/Alveus/pull/15) | Activity-scope cache fix and two-way regression test added; current-head CI passed; review/merge after approval |
 | P2 | Offscreen UI harness and QML warning checks | [PR #17](https://github.com/bezeza/Alveus/pull/17) | Current-head CI passed, including UI harness CTest (2/2); live Plasma validation remains |
 | P2 | Runtime diagnostics and agent workflow | [PR #19](https://github.com/bezeza/Alveus/pull/19) | Finish review, verify privacy/rotation, and pass CI |
 | P2 | Icon, translations, previews, Fedora RPM workflow | [PR #20](https://github.com/bezeza/Alveus/pull/20), [PR #21](https://github.com/bezeza/Alveus/pull/21) | Consolidate overlapping work into one coherent change; fix the current UI-preview failure before considering it complete |
@@ -83,9 +83,11 @@ development-log head passed build, core CTest (1/1), shell checks, QML lint,
 and whitespace validation. PR #15 is ready for review; live Plasma validation
 has not been run.
 
-PR #15 now introduces `docs/DEVELOPMENT_LOG.md`, while PR #19 also adds that
-file on its own branch. Reconcile the log contents before merging PR #19 so the
-two additions do not conflict or lose either entry.
+PR #15 and PR #19 both carry `docs/DEVELOPMENT_LOG.md`. The latest PR #15
+log was copied to the PR #19 branch so both branches currently contain the same
+content, including the cache-invalidation follow-up. Preserve that identical
+version when updating or merging the branches, and verify the file does not
+regress or lose either entry.
 
 ## Near-term execution plan
 
