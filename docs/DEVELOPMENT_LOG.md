@@ -24,7 +24,7 @@ open pull requests, so proposed code is not mistaken for shipped code.
 - Persistent application diagnostics, a Settings → Diagnostics viewer, bounded
   log rotation, and diagnostics documentation.
 - A canonical `AGENTS.md` policy plus lightweight entrypoints for common coding
-  agents (Claude Code, GitHub Copilot, Cursor, Gemini CLI, Cline, and Windsurf).
+  agents (Claude Code, GitHub Copilot, Cursor, Gemini CLI, Cline, Roo Code, Aider, and Windsurf).
 - A PR template and CI enforcement requiring a development-log entry whenever
   implementation, tests, CI, or packaging files change.
 - Updated Claude/README build guidance to avoid stale test counts and to use the

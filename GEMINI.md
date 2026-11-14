@@ -1,7 +1,7 @@
 # Alveus instructions for Gemini CLI
 
 Before doing any work in this repository, read and follow the root
-[`AGENTS.md](AGENTS.md). It is the canonical, mandatory instruction set for
+[`AGENTS.md`](AGENTS.md). It is the canonical, mandatory instruction set for
 all agents. Do not override or weaken it.
 
 Use the existing project documentation and CI workflow as the source of truth.

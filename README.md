@@ -141,7 +141,7 @@ All coding agents must read [`AGENTS.md`](AGENTS.md) before working. It defines
 the shared engineering, diagnostics, testing, and handoff rules. Every
 implementation PR must update `docs/DEVELOPMENT_LOG.md`; CI checks this
 requirement. Provider-specific entrypoints are provided for Claude Code,
-GitHub Copilot, Cursor, Gemini CLI, Cline, and Windsurf.
+GitHub Copilot, Cursor, Gemini CLI, Cline, Roo Code, Aider, and Windsurf.
 
 ## License
 
