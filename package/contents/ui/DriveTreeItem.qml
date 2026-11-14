@@ -132,11 +132,16 @@ Item {
                 Layout.preferredHeight: node.iconSize
             }
 
-            ColumnLayout {
-                id: labelsColumn
+            Item {
+                id: labelsArea
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
-                spacing: 1
+                implicitHeight: labelsColumn.implicitHeight
+
+                ColumnLayout {
+                    id: labelsColumn
+                    anchors.fill: parent
+                    spacing: 1
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -173,6 +178,35 @@ Item {
                     font: Kirigami.Theme.smallFont
                     elide: Text.ElideMiddle
                 }
+            }
+
+
+                MouseArea {
+            id: rowMouse
+            anchors.fill: parent
+            z: 1
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: function(event) {
+                if (event.button === Qt.RightButton) {
+                    menu.popup(rowMouse, event.x, event.y)
+                } else if (node.hasChildren) {
+                    node.expanded = !node.expanded
+                } else if (Core.setting("singleClick")) {
+                    node.open()
+                }
+            }
+            onDoubleClicked: function(event) {
+                if (event.button === Qt.LeftButton && !Core.setting("singleClick") && !node.hasChildren) {
+                    node.open()
+                }
+            }
+            QQC2.ToolTip.visible: containsMouse && node.mounted && !Core.privacy
+            QQC2.ToolTip.delay: 800
+            QQC2.ToolTip.text: node.drive.mountPoint + " · " + node.drive.device
+        }
+    
+    
             }
 
             PlasmaComponents.Label {
@@ -259,31 +293,6 @@ Item {
                 })
             }
         }
-    }
-
-    MouseArea {
-        id: rowMouse
-        anchors.fill: labelsColumn
-        z: 1
-        hoverEnabled: true
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: function(event) {
-            if (event.button === Qt.RightButton) {
-                menu.popup(rowMouse, event.x, event.y)
-            } else if (node.hasChildren) {
-                node.expanded = !node.expanded
-            } else if (Core.setting("singleClick")) {
-                node.open()
-            }
-        }
-        onDoubleClicked: function(event) {
-            if (event.button === Qt.LeftButton && !Core.setting("singleClick") && !node.hasChildren) {
-                node.open()
-            }
-        }
-        QQC2.ToolTip.visible: containsMouse && node.mounted && !Core.privacy
-        QQC2.ToolTip.delay: 800
-        QQC2.ToolTip.text: node.drive.mountPoint + " · " + node.drive.device
     }
 
     DropArea {
