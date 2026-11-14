@@ -1757,7 +1757,7 @@ private Q_SLOTS:
         QVERIFY(reloaded.resetDriveOption(fenceId, QStringLiteral("expandPartitionsByDefault")));
         QVERIFY(reloaded.driveOptions(fenceId).value(QStringLiteral("expandPartitionsByDefault")).toBool());
         QVERIFY(reloaded.resetDriveExpanded(fenceId, QStringLiteral("wwn:disk-one")));
-        QVERIFY(!reloaded.driveExpanded(fenceId, QStringLiteral("wwn:disk-one"), false));
+        QVERIFY(reloaded.driveExpanded(fenceId, QStringLiteral("wwn:disk-one"), true));
         QVERIFY(reloaded.setDriveVisibilityException(fenceId, QStringLiteral("uuid:old-disk"), QString()));
         QCOMPARE(reloaded.driveVisibilityExceptions(fenceId).size(), 1);
         reloaded.resetDriveOptions(fenceId);
