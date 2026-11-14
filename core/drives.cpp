@@ -686,8 +686,9 @@ QVariantList DriveWatcher::buildDeviceList() const
     std::stable_sort(devices.begin(), devices.end(), [](const Alveus::Drive &a, const Alveus::Drive &b) {
         const auto group = [](const Alveus::Drive &d) {
             if (d.system) return 0;
-            if (d.network) return 3;
-            if (d.usb || d.removable) return 2;
+            if (d.usb) return 2;
+            if (d.removable) return 3;
+            if (d.network) return 4;
             return 1;
         };
         const int aGroup = group(a);
