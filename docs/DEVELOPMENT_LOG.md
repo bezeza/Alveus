@@ -190,5 +190,11 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - Add an optional-field hint to the fence settings name field.
 - Add core persistence coverage and a dedicated offscreen UI-harness assertion
   that an empty title remains empty after rendering.
-- Verification is pending current-head CI. No live KDE Plasma session has been
-  used for this change.
+- Standard CI passed compilation, core tests, the empty-title offscreen
+  rendering assertion, translation validation, QML lint, preview rendering,
+  and whitespace checks:
+  [run 43618123285](https://github.com/bezeza/Alveus/actions/runs/43618123285).
+- Fedora RPM build, package payload verification, artifact upload, DNF install,
+  and DNF removal passed:
+  [run 43618123276](https://github.com/bezeza/Alveus/actions/runs/43618123276).
+- No live KDE Plasma session has been used for this change.
