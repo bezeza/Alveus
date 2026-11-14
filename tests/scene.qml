@@ -91,7 +91,7 @@ Item {
         }
         if (s === "drivesnarrow") {
             Core.snoozeCleanup(7)
-            Core.createPortal(0, "", 0, 0.02, 0.04, 0.12, 0.58, "Диски", "drives:")
+            Core.createPortal(0, "", 0, 0.02, 0.04, 0.08, 0.58, "Диски", "drives:")
         }
         if (s === "drivesettings" || s === "driveglobal") {
             Core.snoozeCleanup(7)
