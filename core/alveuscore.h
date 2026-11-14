@@ -288,6 +288,7 @@ private:
     void rescan();
     void bump();
     void bumpFences(bool fileMembershipChanged = false);
+    void activateTabInternal(const QString &id, bool fileMembershipChanged);
     void bumpFileModels(const QSet<QString> &changedNames);
     void bumpAllFileModels();
     void bumpDesktopPositions();
