@@ -1574,7 +1574,7 @@ void AlveusCore::mergeFences(const QString &targetId, const QString &sourceId)
             f.hasOrphanGeometry = false;
         }
     }
-    activateTab(sourceId);
+    activateTabInternal(sourceId, true);
 }
 
 void AlveusCore::detachTab(const QString &id)
@@ -1611,6 +1611,11 @@ void AlveusCore::detachTab(const QString &id)
 
 void AlveusCore::activateTab(const QString &id)
 {
+    activateTabInternal(id, false);
+}
+
+void AlveusCore::activateTabInternal(const QString &id, bool fileMembershipChanged)
+{
     const int i = indexOfFence(id);
     if (i < 0) {
         return;
@@ -1625,7 +1630,7 @@ void AlveusCore::activateTab(const QString &id)
         m_fences[i].activeTab = true;
     }
     scheduleSave();
-    bumpFences();
+    bumpFences(fileMembershipChanged);
 }
 
 QString AlveusCore::presetRules(const QString &preset) const
