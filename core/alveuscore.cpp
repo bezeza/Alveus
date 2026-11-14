@@ -3234,7 +3234,21 @@ QVariantList AlveusCore::driveVisibilityExceptions(const QString &fenceId) const
     QStringList keys = exceptions.keys();
     keys.sort();
 
-    const QVariantList knownDrives = m_drives->drives();
+    const QVariantList knownDrives = m_drives->devices();
+    const auto findDrive = [](const auto &self, const QVariantList &drives, const QString &stableId) -> QVariantMap {
+        for (const QVariant &value : drives) {
+            const QVariantMap drive = value.toMap();
+            if (drive.value(QStringLiteral("id")).toString() == stableId) {
+                return drive;
+            }
+            const QVariantMap nested = self(self, drive.value(QStringLiteral("children")).toList(), stableId);
+            if (!nested.isEmpty()) {
+                return nested;
+            }
+        }
+        return {};
+    };
+
     QVariantList out;
     out.reserve(keys.size());
     for (const QString &id : std::as_const(keys)) {
@@ -3245,14 +3259,11 @@ QVariantList AlveusCore::driveVisibilityExceptions(const QString &fenceId) const
             {QStringLiteral("device"), QString()},
             {QStringLiteral("connected"), false},
         };
-        for (const QVariant &value : knownDrives) {
-            const QVariantMap drive = value.toMap();
-            if (drive.value(QStringLiteral("id")).toString() == id) {
-                item.insert(QStringLiteral("name"), drive.value(QStringLiteral("name")));
-                item.insert(QStringLiteral("device"), drive.value(QStringLiteral("device")));
-                item.insert(QStringLiteral("connected"), true);
-                break;
-            }
+        const QVariantMap drive = findDrive(findDrive, knownDrives, id);
+        if (!drive.isEmpty()) {
+            item.insert(QStringLiteral("name"), drive.value(QStringLiteral("name")));
+            item.insert(QStringLiteral("device"), drive.value(QStringLiteral("device")));
+            item.insert(QStringLiteral("connected"), true);
         }
         if (privacy()) {
             item.insert(QStringLiteral("name"), QStringLiteral("••••"));
