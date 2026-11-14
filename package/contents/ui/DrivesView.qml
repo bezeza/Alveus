@@ -24,7 +24,7 @@ ListView {
         const revision = Core.revision
         return Core.driveOptions(fenceId)
     }
-    readonly property string displayMode: driveSettings.displayMode || "medium"
+    readonly property string displayMode: driveSettings.displayMode || "large"
     readonly property string informationLevel: driveSettings.informationLevel || "detailed"
     readonly property bool separateUsb: driveSettings.separateUsb !== false
     readonly property int visibleDeviceCount: visibleDevices.length
