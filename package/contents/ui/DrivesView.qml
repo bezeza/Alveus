@@ -17,26 +17,52 @@ ListView {
     property string fenceId
     property bool showHiddenTemporarily: false
     property color textColor: Kirigami.Theme.textColor
+    property var visibleDevices: []
 
     readonly property int discoveredCount: Core.driveDevices.length
-    readonly property string displayMode: {
+    readonly property var driveSettings: {
         const revision = Core.revision
-        return Core.driveOptions(fenceId).displayMode || "medium"
+        return Core.driveOptions(fenceId)
     }
+    readonly property string displayMode: driveSettings.displayMode || "medium"
+    readonly property string informationLevel: driveSettings.informationLevel || "detailed"
+    readonly property bool separateUsb: driveSettings.separateUsb !== false
+    readonly property int visibleDeviceCount: visibleDevices.length
 
     clip: true
     boundsBehavior: Flickable.StopAtBounds
-    spacing: Kirigami.Units.smallSpacing
+    spacing: Kirigami.Units.largeSpacing
     model: []
     QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
 
     function refreshModel() {
-        model = Core.visibleDriveDevices(fenceId, showHiddenTemporarily)
+        const devices = Core.visibleDriveDevices(fenceId, showHiddenTemporarily)
+        visibleDevices = devices
+
+        const groups = []
+        if (separateUsb) {
+            const otherDevices = []
+            const usbDevices = []
+            for (const device of devices) {
+                if (device.usb) usbDevices.push(device)
+                else otherDevices.push(device)
+            }
+            if (otherDevices.length > 0) {
+                groups.push({ key: "other", title: i18n("Other storage"), devices: otherDevices })
+            }
+            if (usbDevices.length > 0) {
+                groups.push({ key: "usb", title: i18n("USB devices"), devices: usbDevices })
+            }
+        } else if (devices.length > 0) {
+            groups.push({ key: "all", title: i18n("Storage devices"), devices: devices })
+        }
+        model = groups
     }
 
     Component.onCompleted: refreshModel()
     onFenceIdChanged: refreshModel()
     onShowHiddenTemporarilyChanged: refreshModel()
+    onSeparateUsbChanged: refreshModel()
 
     Connections {
         target: Core
@@ -64,7 +90,7 @@ ListView {
         Item { Layout.fillWidth: true }
         PlasmaComponents.Label {
             visible: view.width > Kirigami.Units.gridUnit * 15
-            text: view.count > 0 ? i18n("%1 devices", view.count) : ""
+            text: view.visibleDeviceCount > 0 ? i18n("%1 devices", view.visibleDeviceCount) : ""
             color: view.textColor
             opacity: 0.6
             font: Kirigami.Theme.smallFont
@@ -77,20 +103,55 @@ ListView {
         }
     }
 
-    delegate: DriveTreeItem {
+    delegate: Item {
         required property var modelData
         width: view.width
-        desk: view.desk
-        fenceId: view.fenceId
-        drive: modelData
-        depth: 0
-        displayMode: view.displayMode
-        textColor: view.textColor
+        implicitHeight: groupLayout.implicitHeight
+        height: implicitHeight
+
+        ColumnLayout {
+            id: groupLayout
+            width: parent.width
+            spacing: Kirigami.Units.smallSpacing
+
+            RowLayout {
+                Layout.fillWidth: true
+                PlasmaComponents.Label {
+                    Layout.fillWidth: true
+                    text: modelData.title
+                    color: view.textColor
+                    font.bold: true
+                }
+                PlasmaComponents.Label {
+                    text: String(modelData.devices.length)
+                    color: view.textColor
+                    opacity: 0.55
+                    font: Kirigami.Theme.smallFont
+                }
+            }
+
+            Repeater {
+                model: modelData.devices
+                delegate: DriveTreeItem {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    Layout.preferredHeight: implicitHeight
+                    desk: view.desk
+                    fenceId: view.fenceId
+                    drive: modelData
+                    depth: 0
+                    displayMode: view.displayMode
+                    informationLevel: view.informationLevel
+                    textColor: view.textColor
+                }
+            }
+        }
     }
 
     PlasmaComponents.Label {
         anchors.centerIn: parent
-        visible: view.count === 0
+        visible: view.visibleDeviceCount === 0
         text: view.discoveredCount === 0
             ? i18n("Searching for storage devices…")
             : i18n("No devices match the current filters")
