@@ -111,6 +111,7 @@ Remove completely: `./uninstall.sh` (or `sudo dnf remove alveus`).
 ## Where things are stored
 
 - Fence layout, saved layouts, settings: `~/.local/share/alveus/layout.json`
+- Diagnostics: `~/.local/share/alveus/logs/alveus.log` (rotating; open from Settings → Diagnostics)
 - Files: your Desktop folder, untouched
 - Widget positions: Plasma's own config, as with the standard desktop
 

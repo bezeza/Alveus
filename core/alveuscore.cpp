@@ -25,6 +25,8 @@
 #include <QLocale>
 #include <QMimeData>
 #include <QMimeDatabase>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QProcess>
 #include <QSaveFile>
 #include <QStandardPaths>
@@ -34,6 +36,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <utility>
 
 #ifndef ALVEUS_VERSION
@@ -48,6 +51,226 @@ constexpr qint64 kMaxPreviewBytes = 25 * 1024 * 1024;
 const QString kCutMime = QStringLiteral("application/x-kde-cutselection");
 
 AlveusCore *s_instance = nullptr;
+
+QMutex s_diagnosticsMutex;
+QString s_diagnosticsPath;
+QString s_diagnosticsHomePath;
+QString s_diagnosticsDesktopPath;
+QString s_diagnosticsSettingsPath;
+QtMessageHandler s_previousMessageHandler = nullptr;
+bool s_diagnosticsHandlerInstalled = false;
+
+constexpr qint64 kDiagnosticsMaxBytes = 1024 * 1024;
+constexpr int kDiagnosticsRotations = 3;
+constexpr int kDiagnosticsMaxMessageLength = 8192;
+
+QString redactDiagnostic(QString value)
+{
+    if (!s_diagnosticsDesktopPath.isEmpty()) {
+        value.replace(s_diagnosticsDesktopPath, QStringLiteral("<desktop>"));
+    }
+    if (!s_diagnosticsSettingsPath.isEmpty()) {
+        value.replace(s_diagnosticsSettingsPath, QStringLiteral("<settings>"));
+    }
+    if (!s_diagnosticsHomePath.isEmpty()) {
+        value.replace(s_diagnosticsHomePath, QStringLiteral("~"));
+    }
+    if (value.size() > kDiagnosticsMaxMessageLength) {
+        value.truncate(kDiagnosticsMaxMessageLength);
+        value += QStringLiteral("…");
+    }
+    return value;
+}
+
+QString diagnosticsLevel(QtMsgType type)
+{
+    switch (type) {
+    case QtWarningMsg: return QStringLiteral("warning");
+    case QtCriticalMsg: return QStringLiteral("critical");
+    case QtFatalMsg: return QStringLiteral("fatal");
+    case QtInfoMsg: return QStringLiteral("info");
+    case QtDebugMsg: return QStringLiteral("debug");
+    }
+    return QStringLiteral("unknown");
+}
+
+void rotateDiagnosticsLog()
+{
+    if (QFileInfo(s_diagnosticsPath).size() < kDiagnosticsMaxBytes) {
+        return;
+    }
+    QFile::remove(s_diagnosticsPath + QStringLiteral(".3"));
+    QFile::rename(s_diagnosticsPath + QStringLiteral(".2"), s_diagnosticsPath + QStringLiteral(".3"));
+    QFile::rename(s_diagnosticsPath + QStringLiteral(".1"), s_diagnosticsPath + QStringLiteral(".2"));
+    QFile::rename(s_diagnosticsPath, s_diagnosticsPath + QStringLiteral(".1"));
+}
+
+void appendDiagnosticLocked(const QString &level, const QString &category, const QString &message,
+                            const QString &source = QString(), int line = 0)
+{
+    if (s_diagnosticsPath.isEmpty()
+        || !QDir().mkpath(QFileInfo(s_diagnosticsPath).absolutePath())) {
+        return;
+    }
+
+    rotateDiagnosticsLog();
+
+    QJsonObject entry;
+    entry.insert(QStringLiteral("timestamp"),
+                 QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
+    entry.insert(QStringLiteral("level"), redactDiagnostic(level));
+    entry.insert(QStringLiteral("category"), redactDiagnostic(category));
+    entry.insert(QStringLiteral("message"), redactDiagnostic(message));
+    if (!source.isEmpty()) {
+        entry.insert(QStringLiteral("source"), QFileInfo(source).fileName());
+    }
+    if (line > 0) {
+        entry.insert(QStringLiteral("line"), line);
+    }
+
+    QFile file(s_diagnosticsPath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        return;
+    }
+    file.write(QJsonDocument(entry).toJson(QJsonDocument::Compact));
+    file.write("\n", 1);
+    file.flush();
+}
+
+void appendDiagnostic(const QString &level, const QString &category, const QString &message)
+{
+    QMutexLocker locker(&s_diagnosticsMutex);
+    appendDiagnosticLocked(level, category, message);
+}
+
+void alveusMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message)
+{
+    if (type != QtDebugMsg && type != QtInfoMsg) {
+        const QString category = context.category ? QString::fromUtf8(context.category) : QString();
+        const QString source = context.file ? QString::fromUtf8(context.file) : QString();
+        {
+            QMutexLocker locker(&s_diagnosticsMutex);
+            appendDiagnosticLocked(diagnosticsLevel(type), category, message, source, context.line);
+        }
+    }
+
+    QtMessageHandler previous = nullptr;
+    {
+        QMutexLocker locker(&s_diagnosticsMutex);
+        previous = s_previousMessageHandler;
+    }
+    if (previous && previous != alveusMessageHandler) {
+        previous(type, context, message);
+    } else if (type != QtDebugMsg && type != QtInfoMsg) {
+        const QByteArray output = message.toLocal8Bit();
+        std::fprintf(stderr, "%s\n", output.constData());
+        std::fflush(stderr);
+    }
+}
+
+void initializeDiagnostics(const QString &desktopPath, const QString &settingsPath)
+{
+    bool installHandler = false;
+    {
+        QMutexLocker locker(&s_diagnosticsMutex);
+        QString dataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+        if (dataPath.isEmpty()) {
+            dataPath = QDir::homePath() + QStringLiteral("/.local/share");
+        }
+        s_diagnosticsPath = QDir(dataPath).filePath(QStringLiteral("alveus/logs/alveus.log"));
+        s_diagnosticsHomePath = QDir::homePath();
+        s_diagnosticsDesktopPath = QDir::cleanPath(desktopPath);
+        s_diagnosticsSettingsPath = QDir::cleanPath(settingsPath);
+        if (!s_diagnosticsHandlerInstalled) {
+            s_diagnosticsHandlerInstalled = true;
+            installHandler = true;
+        }
+    }
+    if (installHandler) {
+        const QtMessageHandler previous = qInstallMessageHandler(alveusMessageHandler);
+        QMutexLocker locker(&s_diagnosticsMutex);
+        s_previousMessageHandler = previous;
+    }
+}
+
+QVariantList readRecentDiagnostics(int limit)
+{
+    QMutexLocker locker(&s_diagnosticsMutex);
+    QVariantList entries;
+    if (s_diagnosticsPath.isEmpty()) {
+        return entries;
+    }
+
+    QStringList paths;
+    for (int i = kDiagnosticsRotations; i >= 1; --i) {
+        paths << s_diagnosticsPath + QLatin1Char('.') + QString::number(i);
+    }
+    paths << s_diagnosticsPath;
+
+    for (const QString &path : paths) {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            continue;
+        }
+        while (!file.atEnd()) {
+            const QByteArray line = file.readLine().trimmed();
+            if (line.isEmpty()) {
+                continue;
+            }
+            const QJsonDocument document = QJsonDocument::fromJson(line);
+            if (!document.isObject()) {
+                continue;
+            }
+            QVariantMap entry = document.object().toVariantMap();
+            const QDateTime timestamp = QDateTime::fromString(
+                entry.value(QStringLiteral("timestamp")).toString(), Qt::ISODateWithMs);
+            entry.insert(QStringLiteral("time"), timestamp.isValid()
+                ? timestamp.toLocalTime().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"))
+                : entry.value(QStringLiteral("timestamp")));
+            entries << entry;
+        }
+    }
+
+    const int wanted = limit > 0 ? limit : 100;
+    while (entries.size() > wanted) {
+        entries.removeFirst();
+    }
+    std::reverse(entries.begin(), entries.end());
+    return entries;
+}
+
+QString diagnosticsReport(int limit)
+{
+    const QVariantList entries = readRecentDiagnostics(limit);
+    QString report = QStringLiteral("Alveus diagnostic log\n");
+    for (auto it = entries.crbegin(); it != entries.crend(); ++it) {
+        const QVariantMap entry = it->toMap();
+        report += QStringLiteral("[%1] [%2] %3: %4")
+            .arg(entry.value(QStringLiteral("timestamp")).toString(),
+                 entry.value(QStringLiteral("level")).toString(),
+                 entry.value(QStringLiteral("category")).toString(),
+                 entry.value(QStringLiteral("message")).toString());
+        const QString source = entry.value(QStringLiteral("source")).toString();
+        if (!source.isEmpty()) {
+            report += QStringLiteral(" (%1:%2)").arg(source).arg(entry.value(QStringLiteral("line")).toInt());
+        }
+        report += QLatin1Char('\n');
+    }
+    return report;
+}
+
+void clearDiagnosticFiles()
+{
+    QMutexLocker locker(&s_diagnosticsMutex);
+    if (s_diagnosticsPath.isEmpty()) {
+        return;
+    }
+    QFile::remove(s_diagnosticsPath);
+    for (int i = 1; i <= kDiagnosticsRotations; ++i) {
+        QFile::remove(s_diagnosticsPath + QLatin1Char('.') + QString::number(i));
+    }
+}
+
 
 QString envOr(const char *name, const QString &fallback)
 {
@@ -261,6 +484,19 @@ AlveusCore::AlveusCore(const QString &desktopPath, const QString &storePath, QOb
         : envOr("ALVEUS_STORE",
                 QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/alveus/layout.json"));
     QDir().mkpath(m_desktopPath);
+    initializeDiagnostics(m_desktopPath, m_storePath);
+    connect(this, &AlveusCore::message, this, [this](const QString &kind, const QString &detail) {
+        if (kind == QStringLiteral("files-done")) {
+            return;
+        }
+        const QString level = (kind == QStringLiteral("file-source-left")
+                               || kind == QStringLiteral("undo-conflict"))
+            ? QStringLiteral("warning") : QStringLiteral("error");
+        appendDiagnostic(level, QStringLiteral("Alveus"), kind + QStringLiteral(": ") + detail);
+        Q_EMIT diagnosticsChanged();
+    });
+    appendDiagnostic(QStringLiteral("info"), QStringLiteral("lifecycle"),
+                     QStringLiteral("Alveus started: ") + version());
 
     // Throttled, not restarted on every event: a burst of changes gives one
     // rescan 250 ms after the first, and continuous changes at most 4 per second.
@@ -377,6 +613,35 @@ AlveusCore *AlveusCore::create(QQmlEngine *qmlEngine, QJSEngine *jsEngine)
 QString AlveusCore::version() const
 {
     return QStringLiteral(ALVEUS_VERSION);
+}
+
+QString AlveusCore::diagnosticsPath() const
+{
+    QMutexLocker locker(&s_diagnosticsMutex);
+    return s_diagnosticsPath;
+}
+
+QVariantList AlveusCore::recentDiagnostics(int limit) const
+{
+    return readRecentDiagnostics(limit);
+}
+
+void AlveusCore::openDiagnosticsFolder() const
+{
+    QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(diagnosticsPath()).absolutePath()));
+}
+
+void AlveusCore::copyDiagnostics() const
+{
+    if (QClipboard *cb = QGuiApplication::clipboard()) {
+        cb->setText(diagnosticsReport(1000));
+    }
+}
+
+void AlveusCore::clearDiagnostics()
+{
+    clearDiagnosticFiles();
+    Q_EMIT diagnosticsChanged();
 }
 
 void AlveusCore::bump()

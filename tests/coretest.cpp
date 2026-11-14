@@ -716,6 +716,45 @@ private Q_SLOTS:
         QCOMPARE(QFile(store()).size(), qint64(QByteArray(R"({"version":999})").size())); // untouched
     }
 
+    void diagnosticsCaptureWarningsAndCanBeCleared()
+    {
+        AlveusCore core(desk(), store());
+        core.clearDiagnostics();
+
+        qWarning("Alveus diagnostics test warning");
+        const QVariantList entries = core.recentDiagnostics(10);
+        QVERIFY(!entries.isEmpty());
+        const QVariantMap latest = entries.first().toMap();
+        QCOMPARE(latest.value(QStringLiteral("level")).toString(), QStringLiteral("warning"));
+        QVERIFY(latest.value(QStringLiteral("message")).toString()
+                    .contains(QStringLiteral("Alveus diagnostics test warning")));
+        QVERIFY(QFileInfo::exists(core.diagnosticsPath()));
+
+        core.clearDiagnostics();
+        QVERIFY(core.recentDiagnostics().isEmpty());
+    }
+
+    void diagnosticsCaptureApplicationErrors()
+    {
+        QDir().mkpath(QFileInfo(store()).absolutePath());
+        touch(store(), R"({"version":999})");
+
+        AlveusCore core(desk(), store());
+        QSignalSpy messages(&core, &AlveusCore::message);
+        QTRY_VERIFY_WITH_TIMEOUT(messages.count() > 0, 1000);
+
+        bool found = false;
+        for (const QVariant &value : core.recentDiagnostics(20)) {
+            const QVariantMap entry = value.toMap();
+            if (entry.value(QStringLiteral("message")).toString()
+                    .contains(QStringLiteral("settings-newer-version"))) {
+                found = true;
+                break;
+            }
+        }
+        QVERIFY(found);
+    }
+
     void desktopFileChangesAreRescanned()
     {
         const QString path = d(QStringLiteral("watch.txt"));

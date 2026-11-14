@@ -83,6 +83,7 @@ jobs:
             -I "$GITHUB_WORKSPACE/build/mocks" \
             -I "$GITHUB_WORKSPACE/tests/mocks" \
             package/contents/ui/Backdrop.qml \
+            package/contents/ui/AlveusSettings.qml \
             tests/scene.qml
 
       - name: Check patch whitespace
