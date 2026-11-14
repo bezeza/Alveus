@@ -267,7 +267,7 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(hasMessageKind(messages, QStringLiteral("drive-list-timeout")), 2000);
 
         const QString quickLsblk = writeExecutable(helpers.path(), QStringLiteral("lsblk"),
-                        "#!/bin/sh\n" + logLine + "printf '{\\"blockdevices\\":[]}\\n'\n");
+                        "#!/bin/sh\n" + logLine + "printf '{\"blockdevices\":[]}\\n'\n");
         QVERIFY(!quickLsblk.isEmpty());
         watcher.refresh();
         QTRY_VERIFY_WITH_TIMEOUT(lineCount(lsblkLog) >= 2, 2000);
