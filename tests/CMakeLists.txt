@@ -68,6 +68,17 @@ set_tests_properties(uiharness_drive_view_narrow PROPERTIES
     TIMEOUT 30)
 
 
+# Render the detailed drive view with USB devices in a dedicated group.
+add_test(NAME uiharness_drive_view_grouped COMMAND uiharness
+    "${CMAKE_SOURCE_DIR}/tests/scene.qml"
+    "${CMAKE_BINARY_DIR}/uiharness-drive-view-grouped.png"
+    700 1600 900 drivesgrouped)
+set_tests_properties(uiharness_drive_view_grouped PROPERTIES
+    ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;ALVEUS_NO_DBUS=1;QML_IMPORT_PATH=${_uiharness_import_path};XDG_DATA_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-grouped-data;XDG_CACHE_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-grouped-cache;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-grouped-config"
+    TIMEOUT 30)
+
+
 # Exercise recovery without touching the user's live Plasma configuration.
 find_program(BASH_EXECUTABLE bash REQUIRED)
 add_test(NAME recover_script COMMAND "${BASH_EXECUTABLE}"

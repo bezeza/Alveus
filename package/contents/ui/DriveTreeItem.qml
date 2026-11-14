@@ -17,7 +17,8 @@ Item {
     property string fenceId
     property var drive: ({})
     property int depth: 0
-    property string displayMode: "medium"
+    property string displayMode: "large"
+    property string informationLevel: "detailed"
     property color textColor: Kirigami.Theme.textColor
     property bool expanded: depth === 0
 
@@ -42,8 +43,9 @@ Item {
         if (drive.type === "crypt" || drive.type === "lvm") return i18n("Logical volume")
         if (drive.physical && drive.transport === "nvme") return i18n("NVMe")
         if (drive.physical && drive.usb) {
-            if (drive.rotationalKnown) return drive.rotational ? i18n("USB HDD") : i18n("USB SSD")
-            return i18n("USB")
+            // ROTA=0 means non-rotational, not necessarily a SATA/NVMe SSD:
+            // USB flash drives must not be mislabeled as SSDs.
+            return drive.rotationalKnown && drive.rotational ? i18n("USB HDD") : i18n("USB")
         }
         if (drive.physical && drive.rotationalKnown) return drive.rotational ? i18n("HDD") : i18n("SSD")
         if (drive.type === "disk") return i18n("Disk")
@@ -53,7 +55,7 @@ Item {
         if (Core.privacy) return "•••••"
         if (depth === 0 && drive.physical) {
             const model = ((drive.vendor || "") + " " + (drive.model || "")).trim()
-            if ((drive.system || drive.label) && model !== "") return model + " · " + drive.device
+            if (model !== "") return model + " · " + drive.device
             return drive.device
         }
         const mountPoints = drive.mountPoints || []
@@ -130,46 +132,77 @@ Item {
                 Layout.preferredHeight: node.iconSize
             }
 
-            ColumnLayout {
-                id: labelsColumn
+            Item {
+                id: labelsArea
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
-                spacing: 1
+                implicitHeight: labelsColumn.implicitHeight
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Kirigami.Units.smallSpacing
-                    PlasmaComponents.Label {
-                        text: Core.privacy ? "•••••" : node.title
-                        font.bold: true
-                        color: node.textColor
-                        elide: Text.ElideRight
+                ColumnLayout {
+                    id: labelsColumn
+                    anchors.fill: parent
+                    spacing: 1
+
+                    RowLayout {
                         Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                    }
-                    Rectangle {
-                        radius: height / 2
-                        color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.14)
-                        implicitWidth: mediaText.implicitWidth + Kirigami.Units.smallSpacing * 2
-                        implicitHeight: mediaText.implicitHeight + 4
+                        spacing: Kirigami.Units.smallSpacing
                         PlasmaComponents.Label {
-                            id: mediaText
-                            anchors.centerIn: parent
-                            text: node.mediaLabel
+                            text: Core.privacy ? "•••••" : node.title
+                            font.bold: true
                             color: node.textColor
-                            font: Kirigami.Theme.smallFont
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
                         }
+                        Rectangle {
+                            radius: height / 2
+                            color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.14)
+                            implicitWidth: mediaText.implicitWidth + Kirigami.Units.smallSpacing * 2
+                            implicitHeight: mediaText.implicitHeight + 4
+                            PlasmaComponents.Label {
+                                id: mediaText
+                                anchors.centerIn: parent
+                                text: node.mediaLabel
+                                color: node.textColor
+                                font: Kirigami.Theme.smallFont
+                            }
+                        }
+                    }
+
+                    PlasmaComponents.Label {
+                        visible: !node.compactControls && node.informationLevel === "detailed"
+                        Layout.fillWidth: true
+                        text: node.detailText
+                        color: node.textColor
+                        opacity: 0.62
+                        font: Kirigami.Theme.smallFont
+                        elide: Text.ElideMiddle
                     }
                 }
 
-                PlasmaComponents.Label {
-                    visible: !node.compactControls
-                    Layout.fillWidth: true
-                    text: node.detailText
-                    color: node.textColor
-                    opacity: 0.62
-                    font: Kirigami.Theme.smallFont
-                    elide: Text.ElideMiddle
+                MouseArea {
+                    id: rowMouse
+                    anchors.fill: parent
+                    z: 1
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: function(event) {
+                        if (event.button === Qt.RightButton) {
+                            menu.popup(rowMouse, event.x, event.y)
+                        } else if (node.hasChildren) {
+                            node.expanded = !node.expanded
+                        } else if (Core.setting("singleClick")) {
+                            node.open()
+                        }
+                    }
+                    onDoubleClicked: function(event) {
+                        if (event.button === Qt.LeftButton && !Core.setting("singleClick") && !node.hasChildren) {
+                            node.open()
+                        }
+                    }
+                    QQC2.ToolTip.visible: containsMouse && node.mounted && !Core.privacy
+                    QQC2.ToolTip.delay: 800
+                    QQC2.ToolTip.text: node.drive.mountPoint + " · " + node.drive.device
                 }
             }
 
@@ -215,7 +248,8 @@ Item {
         }
 
         PlasmaComponents.Label {
-            visible: node.mounted && Number(node.drive.total) > 0 && node.displayMode !== "compact"
+            visible: node.mounted && Number(node.drive.total) > 0
+                && node.displayMode !== "compact" && node.informationLevel === "detailed"
             Layout.fillWidth: true
             Layout.leftMargin: Kirigami.Units.gridUnit * 2 + Kirigami.Units.smallSpacing
             Layout.rightMargin: Kirigami.Units.smallSpacing
@@ -251,35 +285,11 @@ Item {
                     "drive": modelData,
                     "depth": node.depth + 1,
                     "displayMode": node.displayMode,
+                    "informationLevel": node.informationLevel,
                     "textColor": node.textColor
                 })
             }
         }
-    }
-
-    MouseArea {
-        id: rowMouse
-        anchors.fill: labelsColumn
-        z: 1
-        hoverEnabled: true
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: function(event) {
-            if (event.button === Qt.RightButton) {
-                menu.popup(rowMouse, event.x, event.y)
-            } else if (node.hasChildren) {
-                node.expanded = !node.expanded
-            } else if (Core.setting("singleClick")) {
-                node.open()
-            }
-        }
-        onDoubleClicked: function(event) {
-            if (event.button === Qt.LeftButton && !Core.setting("singleClick") && !node.hasChildren) {
-                node.open()
-            }
-        }
-        QQC2.ToolTip.visible: containsMouse && node.mounted && !Core.privacy
-        QQC2.ToolTip.delay: 800
-        QQC2.ToolTip.text: node.drive.mountPoint + " · " + node.drive.device
     }
 
     DropArea {

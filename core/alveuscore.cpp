@@ -353,7 +353,9 @@ const QJsonObject &defaultDriveOptions()
         {QStringLiteral("hideBiosBoot"), true},
         {QStringLiteral("showUnmounted"), true},
         {QStringLiteral("partitionMode"), QStringLiteral("all")},
-        {QStringLiteral("displayMode"), QStringLiteral("medium")},
+        {QStringLiteral("displayMode"), QStringLiteral("large")},
+        {QStringLiteral("separateUsb"), true},
+        {QStringLiteral("informationLevel"), QStringLiteral("detailed")},
         {QStringLiteral("minimumPartitionSizeMiB"), 0},
     };
     return defaults;
@@ -378,7 +380,8 @@ bool validDriveOptions(const QJsonObject &options, bool allowExceptions)
 
     const QStringList boolKeys = {QStringLiteral("hideEfi"), QStringLiteral("hideMicrosoftReserved"),
                                   QStringLiteral("hideRecovery"), QStringLiteral("hideSwap"),
-                                  QStringLiteral("hideBiosBoot"), QStringLiteral("showUnmounted")};
+                                  QStringLiteral("hideBiosBoot"), QStringLiteral("showUnmounted"),
+                                  QStringLiteral("separateUsb")};
     for (const QString &key : boolKeys) {
         if (!hasExpectedType(options, key, QJsonValue::Bool)) {
             return false;
@@ -404,6 +407,17 @@ bool validDriveOptions(const QJsonObject &options, bool allowExceptions)
         const QString value = mode.toString();
         if (value != QLatin1String("compact") && value != QLatin1String("medium")
             && value != QLatin1String("large")) {
+            return false;
+        }
+    }
+
+    if (options.contains(QStringLiteral("informationLevel"))) {
+        const QJsonValue level = options.value(QStringLiteral("informationLevel"));
+        if (!level.isString()) {
+            return false;
+        }
+        const QString value = level.toString();
+        if (value != QLatin1String("detailed") && value != QLatin1String("basic")) {
             return false;
         }
     }
@@ -476,7 +490,8 @@ bool setDriveOptionValue(QJsonObject &options, const QString &key, const QJsonVa
 
     static const QStringList boolKeys = {QStringLiteral("hideEfi"), QStringLiteral("hideMicrosoftReserved"),
                                          QStringLiteral("hideRecovery"), QStringLiteral("hideSwap"),
-                                         QStringLiteral("hideBiosBoot"), QStringLiteral("showUnmounted")};
+                                         QStringLiteral("hideBiosBoot"), QStringLiteral("showUnmounted"),
+                                         QStringLiteral("separateUsb")};
     if (boolKeys.contains(key)) {
         if (!value.isBool()) {
             return false;
@@ -502,6 +517,17 @@ bool setDriveOptionValue(QJsonObject &options, const QString &key, const QJsonVa
         const QString mode = value.toString();
         if (mode != QLatin1String("compact") && mode != QLatin1String("medium")
             && mode != QLatin1String("large")) {
+            return false;
+        }
+        options.insert(key, value);
+        return true;
+    }
+    if (key == QLatin1String("informationLevel")) {
+        if (!value.isString()) {
+            return false;
+        }
+        const QString level = value.toString();
+        if (level != QLatin1String("detailed") && level != QLatin1String("basic")) {
             return false;
         }
         options.insert(key, value);

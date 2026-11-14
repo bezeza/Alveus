@@ -89,6 +89,15 @@ Item {
             Core.snoozeCleanup(7)
             Core.createPortal(0, "", 0, 0.26, 0.04, 0.46, 0.58, "Диски", "drives:")
         }
+        if (s === "drivesgrouped") {
+            Core.snoozeCleanup(7)
+            Core.setDriveDefault("displayMode", "large")
+            Core.setDriveDefault("separateUsb", true)
+            Core.setDriveDefault("informationLevel", "detailed")
+            const id = Core.createPortal(0, "", 0, 0.26, 0.04, 0.46, 0.58, "Диски", "drives:")
+            Core.setDriveOption(id, "separateUsb", true)
+            Core.setDriveOption(id, "informationLevel", "detailed")
+        }
         if (s === "drivesnarrow") {
             Core.snoozeCleanup(7)
             Core.createPortal(0, "", 0, 0.02, 0.04, 0.08, 0.58, "Диски", "drives:")

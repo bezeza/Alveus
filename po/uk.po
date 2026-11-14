@@ -1204,3 +1204,35 @@ msgstr "USB SSD"
 #: package/contents/ui/DriveTreeItem.qml
 msgid "Volume"
 msgstr "Том"
+
+#: package/contents/ui/drive-settings
+msgid "Basic"
+msgstr "Базова"
+
+#: package/contents/ui/drive-settings
+msgid "Detailed"
+msgstr "Докладна"
+
+#: package/contents/ui/drive-settings
+msgid "Device information"
+msgstr "Інформація про пристрій"
+
+#: package/contents/ui/drive-settings
+msgid "Other storage"
+msgstr "Інші накопичувачі"
+
+#: package/contents/ui/drive-settings
+msgid "Separate group"
+msgstr "Окрема група"
+
+#: package/contents/ui/drive-settings
+msgid "Storage devices"
+msgstr "Накопичувачі"
+
+#: package/contents/ui/drive-settings
+msgid "Together with other drives"
+msgstr "Разом з іншими дисками"
+
+#: package/contents/ui/drive-settings
+msgid "USB device grouping"
+msgstr "Групування USB-пристроїв"
