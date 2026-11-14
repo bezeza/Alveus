@@ -1635,6 +1635,64 @@ private Q_SLOTS:
         }));
     }
 
+    void driveSummaryCountsMountedLeafVolumesOnly()
+    {
+        const QVariantMap mountedPartition{
+            {QStringLiteral("id"), QStringLiteral("part-a")},
+            {QStringLiteral("mounted"), true},
+            {QStringLiteral("total"), qint64(1000)},
+            {QStringLiteral("free"), qint64(400)},
+            {QStringLiteral("children"), QVariantList{}},
+        };
+        const QVariantMap physicalDisk{
+            {QStringLiteral("id"), QStringLiteral("disk-a")},
+            {QStringLiteral("mounted"), false},
+            {QStringLiteral("total"), qint64(2000)},
+            {QStringLiteral("free"), qint64(0)},
+            {QStringLiteral("children"), QVariantList{mountedPartition}},
+        };
+        const QVariantMap mountedLogicalVolume{
+            {QStringLiteral("id"), QStringLiteral("crypt-a")},
+            {QStringLiteral("mounted"), true},
+            {QStringLiteral("total"), qint64(800)},
+            {QStringLiteral("free"), qint64(300)},
+            {QStringLiteral("children"), QVariantList{}},
+        };
+        const QVariantMap encryptedPartition{
+            {QStringLiteral("id"), QStringLiteral("part-b")},
+            {QStringLiteral("mounted"), true},
+            {QStringLiteral("total"), qint64(1200)},
+            {QStringLiteral("free"), qint64(100)},
+            {QStringLiteral("children"), QVariantList{mountedLogicalVolume}},
+        };
+        const QVariantMap networkShare{
+            {QStringLiteral("id"), QStringLiteral("network-share")},
+            {QStringLiteral("mounted"), true},
+            {QStringLiteral("total"), qint64(500)},
+            {QStringLiteral("free"), qint64(200)},
+        };
+        const QVariantMap duplicateNetworkShare = networkShare;
+
+        const QVariantMap summary = summarizeDriveHierarchy(
+            {physicalDisk, encryptedPartition, networkShare, duplicateNetworkShare});
+        QCOMPARE(summary.value(QStringLiteral("total")).toLongLong(), qint64(2300));
+        QCOMPARE(summary.value(QStringLiteral("free")).toLongLong(), qint64(900));
+        QCOMPARE(summary.value(QStringLiteral("used")).toLongLong(), qint64(1400));
+        QCOMPARE(summary.value(QStringLiteral("count")).toInt(), 3);
+        QVERIFY(summary.value(QStringLiteral("complete")).toBool());
+
+        const QVariantMap incompleteVolume{
+            {QStringLiteral("id"), QStringLiteral("bad-volume")},
+            {QStringLiteral("mounted"), true},
+            {QStringLiteral("total"), qint64(100)},
+            {QStringLiteral("free"), qint64(-1)},
+        };
+        const QVariantMap incomplete = summarizeDriveHierarchy({mountedPartition, incompleteVolume});
+        QVERIFY(!incomplete.value(QStringLiteral("complete")).toBool());
+        QCOMPARE(incomplete.value(QStringLiteral("total")).toLongLong(), qint64(1000));
+        QCOMPARE(incomplete.value(QStringLiteral("count")).toInt(), 1);
+    }
+
     void driveVisibilitySettingsPersistAndFilter()
     {
         AlveusCore core(desk(), store());
