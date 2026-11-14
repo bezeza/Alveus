@@ -1624,6 +1624,15 @@ private Q_SLOTS:
         const QVariantList visibleDevices = core.visibleDriveDevices(id);
         QVERIFY(!visibleDevices.isEmpty());
         QVERIFY(visibleDevices.first().toMap().contains(QStringLiteral("children")));
+        const QString visibleDeviceId = visibleDevices.first().toMap().value(QStringLiteral("id")).toString();
+        QVERIFY(!visibleDeviceId.isEmpty());
+        QVERIFY(core.setDriveVisibilityException(id, visibleDeviceId, QStringLiteral("hide")));
+        const QVariantList savedExceptions = core.driveVisibilityExceptions(id);
+        QVERIFY(std::any_of(savedExceptions.cbegin(), savedExceptions.cend(), [&visibleDeviceId](const QVariant &value) {
+            const QVariantMap exception = value.toMap();
+            return exception.value(QStringLiteral("id")).toString() == visibleDeviceId
+                && exception.value(QStringLiteral("connected")).toBool();
+        }));
     }
 
     void driveVisibilitySettingsPersistAndFilter()
