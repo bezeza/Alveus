@@ -18,6 +18,7 @@ Item {
     property var drive: ({})
     property int depth: 0
     property string displayMode: "medium"
+    property string informationLevel: "detailed"
     property color textColor: Kirigami.Theme.textColor
     property bool expanded: depth === 0
 
@@ -163,7 +164,7 @@ Item {
                 }
 
                 PlasmaComponents.Label {
-                    visible: !node.compactControls
+                    visible: !node.compactControls && node.informationLevel === "detailed"
                     Layout.fillWidth: true
                     text: node.detailText
                     color: node.textColor
@@ -215,7 +216,8 @@ Item {
         }
 
         PlasmaComponents.Label {
-            visible: node.mounted && Number(node.drive.total) > 0 && node.displayMode !== "compact"
+            visible: node.mounted && Number(node.drive.total) > 0
+                && node.displayMode !== "compact" && node.informationLevel === "detailed"
             Layout.fillWidth: true
             Layout.leftMargin: Kirigami.Units.gridUnit * 2 + Kirigami.Units.smallSpacing
             Layout.rightMargin: Kirigami.Units.smallSpacing
@@ -251,6 +253,7 @@ Item {
                     "drive": modelData,
                     "depth": node.depth + 1,
                     "displayMode": node.displayMode,
+                    "informationLevel": node.informationLevel,
                     "textColor": node.textColor
                 })
             }
