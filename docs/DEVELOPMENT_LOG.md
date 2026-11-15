@@ -319,5 +319,9 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   receives the measured content height through Layout.preferredHeight, and
   the ColumnLayout remains responsible for assigning the item's height.
 - The existing wide and narrow adaptive-layout UI harness scenarios exercise
-  this QML path. Current-head CI is required before this fix is considered
-  verified; no live KDE Plasma test has been performed.
+  this QML path. The first post-fix run passed all 10 CTest targets, including
+  both adaptive-layout scenarios; build, translations, packaging CLI, shell,
+  QML lint, development-log enforcement, and preview rendering also passed.
+  The whitespace check found one whitespace-only line in this log, which has
+  been removed. A clean-head rerun is required; no live KDE Plasma test has
+  been performed.
