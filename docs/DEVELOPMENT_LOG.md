@@ -322,6 +322,8 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   this QML path. The first post-fix run passed all 10 CTest targets, including
   both adaptive-layout scenarios; build, translations, packaging CLI, shell,
   QML lint, development-log enforcement, and preview rendering also passed.
-  The whitespace check found one whitespace-only line in this log, which has
-  been removed. A clean-head rerun is required; no live KDE Plasma test has
-  been performed.
+  The whitespace check found one whitespace-only line in this log, which was
+  removed. Clean-head run [43697656819](https://github.com/bezeza/Alveus/actions/runs/43697656819)
+  passed all 10 CTest targets; the RPM build/install/remove workflow also
+  passed in run [43697656816](https://github.com/bezeza/Alveus/actions/runs/43697656816).
+  No live KDE Plasma test has been performed.
