@@ -250,6 +250,7 @@ KWin.TabBoxSwitcher {
                         cacheBuffer: 0
 
                         delegate: Item {
+                            id: gridCell
                             width: gridView.cellWidth
                             height: gridView.cellHeight
 
@@ -263,7 +264,7 @@ KWin.TabBoxSwitcher {
                                 iconName: model.icon
                                 desktopName: model.desktopName
                                 minimized: model.minimized
-                                selected: GridView.isCurrentItem
+                                selected: gridCell.GridView.isCurrentItem
 
                                 onActivated: (targetIndex) => tabBox.model.activate(targetIndex)
                             }
