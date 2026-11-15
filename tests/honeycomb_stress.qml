@@ -8,6 +8,7 @@ Item {
     property bool prepared: false
     property string failure: ""
     property string dragPath: ""
+    property string dragMode: ""
     property var selection: ({})
     property int selectionRevision: 0
     property int delegateSequence: 0
@@ -32,7 +33,7 @@ Item {
     }
 
     function sourceIndexForPath(path) {
-        if (path === "") return -1
+        if (path === "" || root.dragMode !== "honeycomb") return -1
         for (let i = 0; i < sourceModel.count; ++i) {
             if (sourceModel.get(i).path === path) return i
         }
@@ -139,6 +140,7 @@ Item {
         Connections {
             target: root
             function onDragPathChanged() { viewport.refresh(true) }
+            function onDragModeChanged() { viewport.refresh(true) }
         }
 
         Repeater {
@@ -247,6 +249,7 @@ Item {
 
                                 // A drag source must survive a far scroll. Its
                                 // delegate instance must not be destroyed/recreated.
+                                root.dragMode = "honeycomb"
                                 root.dragPath = "/item-0"
                                 Qt.callLater(function () {
                                     const dragDelegate = delegateForPath("/item-0")
@@ -287,6 +290,7 @@ Item {
                                                 return
                                             }
 
+                                            root.dragMode = ""
                                             root.dragPath = ""
                                             Qt.callLater(function () {
                                                 if (windowIndexForPath("/item-0") !== -1) {
