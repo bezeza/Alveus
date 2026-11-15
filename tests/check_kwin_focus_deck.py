@@ -54,6 +54,7 @@ for token in (
     "desktopName: model.desktopName",
     "minimized: model.minimized",
     "windowId: model.windowId",
+    "selected: gridCell.GridView.isCurrentItem",
 ):
     assert token in main_qml, f"Expected main.qml to bind {token!r}"
 
