@@ -534,7 +534,7 @@ Item {
                     // fences. Only the fence that owns the actual source
                     // delegate may pin it.
                     const dragPath = dragOrigin && dragOrigin.fenceId === fence.fid
-                        ? dragOrigin.path : ""
+                            && dragOrigin.mode === "honeycomb" ? dragOrigin.path : ""
                     const dragIndex = sourceIndexForPath(dragPath)
                     const rows = []
 
