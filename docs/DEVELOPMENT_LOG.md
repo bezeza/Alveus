@@ -375,5 +375,26 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   reordering, and middle/bottom scrolling.
 - Increased the stress scene's harness delay so its asynchronous assertions
   finish before the harness checks the result.
-- CI is rerunning on the updated branch. Live KDE Plasma interaction remains a
-  separate manual release gate.
+- The follow-up interaction audit adds drag-source retention and selection
+  persistence regression coverage; current-head validation is recorded below.
+
+### PR #42 — preserve selection and active drag in virtualized Honeycomb
+
+- Replace destructive Honeycomb window clears with keyed incremental
+  synchronization, preserving delegate instances for rows that remain needed.
+- Pin the active drag source by file path when it scrolls outside the viewport.
+  Its source index is updated across inserts, removals, and same-count reorders;
+  the rest of the delegate window remains bounded.
+- Refresh the pinned row when the desktop drag origin changes, and retain it
+  while the Honeycomb view is temporarily hidden during an active drag.
+- Clear drag origin after release/cancel (deferred until the target DropArea has
+  processed the drop) and when a source delegate is destroyed.
+- Guard the asynchronous drag-image callback against a mouse release before
+  the screenshot is ready. Capture the complete FileIcon so list-mode drags
+  also receive a visible preview instead of grabbing the hidden grid tile.
+- Expand the 5,000-item stress test to verify selection survives delegate
+  destruction/recreation and the active drag source keeps the same delegate
+  instance through a far scroll and same-count reorder. The pinned row must be
+  removed when the drag ends.
+- Current-head CI is pending. Live KDE Plasma interaction remains a separate
+  manual release gate.
