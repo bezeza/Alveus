@@ -148,6 +148,21 @@ jobs:
             package/contents/ui/AlveusSettings.qml \
             tests/scene.qml
 
+      - name: Parse KWin Focus Deck QML
+        shell: bash
+        run: |
+          qmlformat_bin="$(command -v qmlformat || true)"
+          if [[ -z "$qmlformat_bin" && -x /usr/lib/qt6/bin/qmlformat ]]; then
+            qmlformat_bin=/usr/lib/qt6/bin/qmlformat
+          fi
+          if [[ -z "$qmlformat_bin" ]]; then
+            echo "qmlformat was not installed" >&2
+            exit 1
+          fi
+          "$qmlformat_bin" extras/kwin-focus-deck/contents/ui/main.qml >/dev/null
+          "$qmlformat_bin" extras/kwin-focus-deck/contents/ui/WindowCard.qml >/dev/null
+          "$qmlformat_bin" extras/kwin-focus-deck/contents/ui/ShortcutHint.qml >/dev/null
+
       - name: Validate KWin Focus Deck package
         run: python3 tests/check_kwin_focus_deck.py
 
