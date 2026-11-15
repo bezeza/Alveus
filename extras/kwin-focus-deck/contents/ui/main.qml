@@ -165,7 +165,7 @@ KWin.TabBoxSwitcher {
                                 minimized: model.minimized
                                 selected: PathView.isCurrentItem
 
-                                onActivated: (windowIndex) => tabBox.model.activate(windowIndex)
+                                onActivated: (targetIndex) => tabBox.model.activate(targetIndex)
 
                                 Behavior on scale {
                                     NumberAnimation {
@@ -211,7 +211,7 @@ KWin.TabBoxSwitcher {
                                     minimized: model.minimized
                                     selected: GridView.isCurrentItem
 
-                                    onActivated: (windowIndex) => tabBox.model.activate(windowIndex)
+                                    onActivated: (targetIndex) => tabBox.model.activate(targetIndex)
                                 }
                             }
 
