@@ -307,3 +307,8 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   separate manual release gate.
 - Initial CI configure exposed duplicate CTest registration for the Honeycomb
   stress scene. Removed the duplicate; rerunning CI on the corrected commit.
+
+- The 5,000-item offscreen stress CTest passed. The overall build workflow then
+  failed in the desktop preview because sparse file rows exposed undefined
+  optional roles to typed FileIcon properties. Added safe typed defaults to
+  the virtual window rows; rerunning the full CI preview.
