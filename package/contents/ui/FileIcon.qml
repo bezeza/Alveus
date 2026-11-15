@@ -87,16 +87,21 @@ Item {
             Core.openPath(cell.path)
         }
     }
+    function ownsDragOrigin(origin) {
+        return origin && origin.path === cell.path && origin.fenceId === cell.fenceId
+    }
     function clearDragOriginLater() {
-        if (!cell.desk || !cell.desk.dragOrigin || cell.desk.dragOrigin.path !== cell.path) {
+        if (!cell.desk || !ownsDragOrigin(cell.desk.dragOrigin)) {
             return
         }
         const targetDesk = cell.desk
         const draggedPath = cell.path
+        const draggedFenceId = cell.fenceId
         // Let the target DropArea process the drop before clearing its origin.
         Qt.callLater(function () {
             if (targetDesk && targetDesk.dragOrigin
-                    && targetDesk.dragOrigin.path === draggedPath) {
+                    && targetDesk.dragOrigin.path === draggedPath
+                    && targetDesk.dragOrigin.fenceId === draggedFenceId) {
                 targetDesk.dragOrigin = null
             }
         })
@@ -458,7 +463,7 @@ Item {
     }
     Component.onDestruction: {
         dragProxy.Drag.active = false
-        if (cell.desk && cell.desk.dragOrigin && cell.desk.dragOrigin.path === cell.path) {
+        if (cell.desk && ownsDragOrigin(cell.desk.dragOrigin)) {
             cell.desk.dragOrigin = null
         }
     }
