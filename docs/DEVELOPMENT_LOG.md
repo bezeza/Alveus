@@ -335,5 +335,20 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   required properties for every ListModel role, then passes those values to
   FileIcon. This removes reliance on the implicit model context during window
   refreshes while preserving the bounded viewport model and source indexes.
-- Current-head CTest, preview rendering, and Fedora RPM workflows must pass
-  before this change is considered verified.
+- Push CI [43703748351](https://github.com/bezeza/Alveus/actions/runs/43703748351)
+  and PR CI [43703752968](https://github.com/bezeza/Alveus/actions/runs/43703752968)
+  passed all 8 CTest targets, including the 5,000-item virtualization stress
+  test, plus preview rendering. Fedora RPM build/install/remove passed in
+  [43703753014](https://github.com/bezeza/Alveus/actions/runs/43703753014).
+
+
+### PR #42 — make desktop preview image fixtures valid
+
+- Replaced empty files named .jpg/.png in the CI preview setup with small,
+  valid JPEG and PNG fixtures. The preview now exercises actual image decoding
+  instead of emitting expected-but-noisy "Unsupported image format" warnings.
+- The explicit Honeycomb role-binding fix passed the push and pull-request
+  workflows, all 8 CTest targets including the 5,000-item virtualization stress
+  test, preview artifact generation, and Fedora RPM build/install/remove.
+- The updated preview fixture workflow is being rerun on this commit. Live KDE
+  Plasma interaction remains a separate manual release gate.
