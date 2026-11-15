@@ -515,10 +515,11 @@ Item {
                         const row = filesModel.get(i)
                         honeycombWindow.append({
                             sourceIndex: i,
-                            name: row.name, path: row.path, label: row.label, url: row.url,
-                            icon: row.icon, fallbackIcon: row.fallbackIcon, image: row.image,
-                            mime: row.mime, isDir: row.isDir, size: row.size,
-                            modified: row.modified, canThumb: row.canThumb
+                            name: row.name || "", path: row.path || "", label: row.label || "",
+                            url: row.url || "", icon: row.icon || "", fallbackIcon: row.fallbackIcon || "",
+                            image: row.image || "", mime: row.mime || "", isDir: !!row.isDir,
+                            size: Number(row.size) || 0, modified: row.modified || "",
+                            canThumb: !!row.canThumb
                         })
                     }
                 }
