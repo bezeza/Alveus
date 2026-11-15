@@ -501,40 +501,69 @@ Item {
                 contentHeight: Utils.honeycombHeight(filesModel.count, width, cell)
                 clip: true
 
-                // A bounded window model avoids constructing a FileIcon for
-                // every item in a large folder. Two extra rows on each side
-                // keep fast scrolling and drag gestures from hitting a blank edge.
+                // Keep the delegate for an actively dragged file alive even
+                // after it scrolls outside the viewport. FileIcon owns the
+                // QML Drag source, so deleting that delegate would cancel the
+                // system drag. The rest of the window remains virtualized.
                 ListModel { id: honeycombWindow }
+                property bool hasDragSource: false
+
+                function sourceIndexForPath(path) {
+                    if (path === "") return -1
+                    for (let i = 0; i < filesModel.count; ++i) {
+                        if (filesModel.get(i).path === path) return i
+                    }
+                    return -1
+                }
+
+                function windowRow(index) {
+                    const row = filesModel.get(index)
+                    return {
+                        sourceIndex: index,
+                        name: row.name || "", path: row.path || "", label: row.label || "",
+                        url: row.url || "", icon: row.icon || "", fallbackIcon: row.fallbackIcon || "",
+                        image: row.image || "", mime: row.mime || "", isDir: !!row.isDir,
+                        size: Number(row.size) || 0, modified: row.modified || "",
+                        canThumb: !!row.canThumb
+                    }
+                }
 
                 function refreshWindow(force) {
+                    const dragPath = fence.desk && fence.desk.dragOrigin
+                        ? fence.desk.dragOrigin.path : ""
+                    const dragIndex = sourceIndexForPath(dragPath)
+                    const rows = []
+
                     if (!visible || width <= 0 || height <= 0) {
-                        honeycombWindow.clear()
+                        if (dragIndex >= 0) rows.push(windowRow(dragIndex))
+                        Utils.syncModel(honeycombWindow, rows, "path")
+                        hasDragSource = dragIndex >= 0
                         firstVisibleRow = -1
                         lastVisibleRow = -1
                         firstSourceIndex = 0
                         return
                     }
+
                     const range = Utils.honeycombVisibleRange(filesModel.count, width, cell,
                                                                contentY, height, bufferRows)
                     if (!force && range.firstRow === firstVisibleRow
                             && range.lastRow === lastVisibleRow) {
                         return
                     }
-                    honeycombWindow.clear()
                     firstSourceIndex = range.first
                     firstVisibleRow = range.firstRow
                     lastVisibleRow = range.lastRow
                     for (let i = range.first; i < range.last; ++i) {
-                        const row = filesModel.get(i)
-                        honeycombWindow.append({
-                            sourceIndex: i,
-                            name: row.name || "", path: row.path || "", label: row.label || "",
-                            url: row.url || "", icon: row.icon || "", fallbackIcon: row.fallbackIcon || "",
-                            image: row.image || "", mime: row.mime || "", isDir: !!row.isDir,
-                            size: Number(row.size) || 0, modified: row.modified || "",
-                            canThumb: !!row.canThumb
-                        })
+                        rows.push(windowRow(i))
                     }
+                    // Preserve the source delegate by path, not by its old
+                    // viewport position. Its sourceIndex is updated if rows
+                    // before it are inserted, removed, or reordered.
+                    if (dragIndex >= 0 && (dragIndex < range.first || dragIndex >= range.last)) {
+                        rows.push(windowRow(dragIndex))
+                    }
+                    Utils.syncModel(honeycombWindow, rows, "path")
+                    hasDragSource = dragIndex >= 0
                 }
 
                 onContentYChanged: refreshWindow(false)
@@ -547,9 +576,13 @@ Item {
                     target: filesModel
                     function onCountChanged() { fence.scheduleHoneycombRefresh() }
                 }
+                Connections {
+                    target: fence.desk
+                    function onDragOriginChanged() { comb.refreshWindow(true) }
+                }
                 QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
                 Repeater {
-                    model: comb.visible ? honeycombWindow : null
+                    model: (comb.visible || comb.hasDragSource) ? honeycombWindow : null
                     delegate: Item {
                         // Bind ListModel roles explicitly. Required properties
                         // avoid relying on the delegate's implicit model context,
