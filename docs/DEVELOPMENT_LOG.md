@@ -413,3 +413,17 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   passed RPM build, installation, installed-payload verification, artifact
   upload, and DNF removal.
 - Live KDE Plasma interaction remains a separate manual release gate.
+
+## 2026-11-15 — version compatibility audit
+
+- Declared minimums: Qt 6.5+ in CMake/RPM metadata and Plasma 6.0 in the applet
+  metadata and RPM runtime requirements.
+- The Ubuntu 24.04 boundary check confirmed that Qt 6.4.2 is rejected
+  specifically because the project requires Qt 6.5 or newer.
+- Positive CI builds used Qt 6.10.2 on Ubuntu 26.04 and Qt 6.10.3 on Fedora 43.
+  The Fedora build used Plasma 6.7.5; all 8 CTest targets passed. The Fedora RPM
+  build, installation, installed-payload verification, and DNF removal passed.
+- This confirms rejection below the declared Qt floor and compatibility with
+  newer toolchains. It does not directly prove a positive build on Qt 6.5 or
+  Plasma 6.0; the lowest positively verified Plasma version is 6.7.5.
+- No source changes or additional tests were made for this audit.
