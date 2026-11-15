@@ -3,7 +3,7 @@
 // Keeps a ListModel in step with a JS array without recreating delegates,
 // so fences don't flicker or lose state when something else changes.
 function syncModel(model, items, key) {
-    let changed = false
+    let changed = false;
     // Hash membership once instead of scanning the incoming array for every
     // existing row. This makes the common unchanged/append/remove refresh O(n).
     const wantedKeys = new Set();
@@ -14,7 +14,7 @@ function syncModel(model, items, key) {
     for (let i = model.count - 1; i >= 0; --i) {
         if (!wantedKeys.has(model.get(i)[key])) {
             model.remove(i);
-            changed = true
+            changed = true;
         }
     }
 
@@ -48,11 +48,11 @@ function syncModel(model, items, key) {
         for (const role in item) {
             if (current[role] !== item[role]) {
                 model.setProperty(i, role, item[role]);
-                changed = true
+                changed = true;
             }
         }
     }
-    return changed
+    return changed;
 }
 
 function fenceRow(f) {
