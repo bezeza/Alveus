@@ -41,12 +41,21 @@ for token in (
 
 for token in (
     "KWin.WindowThumbnail",
-    "model.caption",
-    "model.icon",
-    "model.desktopName",
-    "model.minimized",
+    "root.caption",
+    "root.iconName",
+    "root.desktopName",
+    "root.minimized",
 ):
     assert token in card_qml, f"Expected WindowCard.qml to contain {token!r}"
+
+for token in (
+    "caption: model.caption",
+    "iconName: model.icon",
+    "desktopName: model.desktopName",
+    "minimized: model.minimized",
+    "windowId: model.windowId",
+):
+    assert token in main_qml, f"Expected main.qml to bind {token!r}"
 
 assert "signal activated" in card_qml
 assert "required property string keyText" in hint_qml
