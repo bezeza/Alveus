@@ -5,7 +5,7 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 
 ## 2026-11-16
 
-### Open work — Alveus Focus Deck 0.1 (branch `feat/kwin-focus-deck`)
+### Open work — Alveus Focus Deck 0.1 ([PR #44](https://github.com/bezeza/Alveus/pull/44))
 
 - Added a standalone `KWin/WindowSwitcher` KPackage under
   `extras/kwin-focus-deck/`; it is separate from the desktop-fence plasmoid.
