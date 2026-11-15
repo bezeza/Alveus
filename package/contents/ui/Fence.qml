@@ -121,9 +121,6 @@ Item {
     function syncFiles() {
         const list = isDrives ? [] : isPortal ? Core.listFolder(browsePath) : Core.filesInFence(fid, desk ? desk.activity : "")
         Utils.syncModel(filesModel, list.map(Utils.fileRow), "path")
-        if (comb) {
-            Qt.callLater(function () { comb.refreshWindow(true) })
-        }
         if (desk) {
             desk.registerVisible(fid, names())
         }
