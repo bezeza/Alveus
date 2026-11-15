@@ -382,9 +382,11 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 
 - Replace destructive Honeycomb window clears with keyed incremental
   synchronization, preserving delegate instances for rows that remain needed.
-- Pin the active drag source by its owning fence and file path when it scrolls
-  outside the viewport. This avoids pinning or clearing a different portal's
-  delegate when two portals display the same filesystem path. Its source index
+- Pin the active Honeycomb drag source by its owning fence and file path when
+  it scrolls outside the viewport. The source view mode is part of its identity,
+  so a grid/list drag does not create a hidden duplicate Honeycomb delegate.
+  This also avoids pinning or clearing a different portal's delegate when two
+  portals display the same filesystem path. Its source index
   is updated across inserts, removals, and same-count reorders; the rest of the
   delegate window remains bounded.
 - Refresh the pinned row when the desktop drag origin changes, and retain it
@@ -399,5 +401,6 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   instance through a far scroll and same-count reorder. The pinned row must be
   removed when the drag ends.
 - The regression test also asserts the pinned source adds no more than one
-  delegate beyond the normal viewport window. Current-head CI is pending. Live
+  delegate beyond the normal viewport window and only pins Honeycomb-originated
+  drags. Current-head CI is pending. Live
   KDE Plasma interaction remains a separate manual release gate.
