@@ -87,6 +87,20 @@ Item {
             Core.openPath(cell.path)
         }
     }
+    function clearDragOriginLater() {
+        if (!cell.desk || !cell.desk.dragOrigin || cell.desk.dragOrigin.path !== cell.path) {
+            return
+        }
+        const targetDesk = cell.desk
+        const draggedPath = cell.path
+        // Let the target DropArea process the drop before clearing its origin.
+        Qt.callLater(function () {
+            if (targetDesk && targetDesk.dragOrigin
+                    && targetDesk.dragOrigin.path === draggedPath) {
+                targetDesk.dragOrigin = null
+            }
+        })
+    }
 
     // ---- look ----------------------------------------------------------------
     readonly property color hl: Kirigami.Theme.highlightColor
@@ -302,17 +316,32 @@ Item {
                 const urls = cell.desk.selectedUrls()
                 dragProxy.Drag.mimeData = { "text/uri-list": urls.join("\r\n") }
                 cell.desk.dragOrigin = { name: cell.name, path: cell.path, fenceId: cell.fenceId }
-                tile.grabToImage(function (result) {
+                cell.grabToImage(function (result) {
+                    // The pointer may be released before the asynchronous
+                    // screenshot is ready. Never start a late drag in that case.
+                    if (!mouse.pressed || !mouse.dragStarted || !cell.desk
+                            || !cell.desk.dragOrigin
+                            || cell.desk.dragOrigin.path !== cell.path || !result.url) {
+                        return
+                    }
                     dragProxy.Drag.imageSource = result.url
                     dragProxy.Drag.active = true
-                }, Qt.size(tile.width, tile.height))
+                }, Qt.size(cell.width, cell.height))
             }
         }
         onReleased: function (event) {
             dragProxy.Drag.active = false
+            if (dragStarted) clearDragOriginLater()
+            dragStarted = false
             if (selectOnRelease && cell.desk) {
                 cell.desk.selectOnly(cell.path)
             }
+        }
+        onCanceled: {
+            dragProxy.Drag.active = false
+            if (dragStarted) clearDragOriginLater()
+            dragStarted = false
+            selectOnRelease = false
         }
         onClicked: function (event) {
             if (event.button === Qt.RightButton) {
@@ -427,5 +456,10 @@ Item {
             onTriggered: Core.showProperties(cell.path)
         }
     }
-    Component.onDestruction: dragProxy.Drag.active = false
+    Component.onDestruction: {
+        dragProxy.Drag.active = false
+        if (cell.desk && cell.desk.dragOrigin && cell.desk.dragOrigin.path === cell.path) {
+            cell.desk.dragOrigin = null
+        }
+    }
 }
