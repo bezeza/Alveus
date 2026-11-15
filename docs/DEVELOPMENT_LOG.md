@@ -305,3 +305,5 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - Extended the UI harness to fail when a scene reports an assertion error.
 - CI is pending on the updated branch. Real Plasma interaction remains a
   separate manual release gate.
+- Initial CI configure exposed duplicate CTest registration for the Honeycomb
+  stress scene. Removed the duplicate; rerunning CI on the corrected commit.
