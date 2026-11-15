@@ -402,5 +402,14 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   removed when the drag ends.
 - The regression test also asserts the pinned source adds no more than one
   delegate beyond the normal viewport window and only pins Honeycomb-originated
-  drags. Current-head CI is pending. Live
-  KDE Plasma interaction remains a separate manual release gate.
+  drags.
+- Current-head push CI [43711567214](https://github.com/bezeza/Alveus/actions/runs/43711567214)
+  and PR CI [43711753482](https://github.com/bezeza/Alveus/actions/runs/43711753482)
+  passed all 8 CTest targets, including the expanded selection/drag stress test,
+  plus static checks, QML lint, desktop preview rendering, artifact upload, and
+  whitespace validation.
+- Current-head Fedora RPM workflow
+  [43711753420](https://github.com/bezeza/Alveus/actions/runs/43711753420)
+  passed RPM build, installation, installed-payload verification, artifact
+  upload, and DNF removal.
+- Live KDE Plasma interaction remains a separate manual release gate.
