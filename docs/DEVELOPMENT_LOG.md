@@ -299,6 +299,9 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   delegates; source indexes preserve the existing geometry.
 - Grid and List modes, FileIcon behavior, file model, and persisted data format
   are unchanged.
-- Verification pending on this branch. CI and offscreen stress coverage must
-  pass before the PR can be considered ready; real Plasma interaction remains
-  a separate manual release gate.
+- Added an offscreen QML stress scene with 5,000 synthetic items. The test
+  checks bounded delegate windows at the start and end of the content and
+  verifies that the final item remains within the full content height.
+- Extended the UI harness to fail when a scene reports an assertion error.
+- CI is pending on the updated branch. Real Plasma interaction remains a
+  separate manual release gate.
