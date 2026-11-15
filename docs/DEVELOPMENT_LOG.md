@@ -17,9 +17,11 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - Added a structural package check and CI QML parser check. The package uses
   KWin's native `TabBoxSwitcher` and `WindowThumbnail` APIs; it adds no KWin
   script, app launcher, app classification, or external process.
-- Verification: GitHub branch contents inspected; local `qmlformat`,
-  ShellCheck, and live Plasma tests have not yet been run. CI and real Fedora
-  KDE session validation remain pending.
+- Verification: GitHub Actions run [#43770632190](https://github.com/bezeza/Alveus/actions/runs/43770632190)
+  passed on the implementation head: Qt build, core tests, translation checks,
+  ShellCheck, existing QML lint, Focus Deck QML parsing, package structure
+  validation, development-log enforcement, preview rendering, and whitespace
+  checks. Live Fedora KDE / Plasma 6.8.2 session validation remains pending.
 
 ## 2026-11-14
 
