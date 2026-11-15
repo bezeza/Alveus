@@ -289,3 +289,16 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   regression fixture. The fixture setup was corrected before the passing run.
 - No live KDE Plasma session was used; manual desktop validation remains a
   separate release gate.
+
+### 2026-11-15 — Issue #7 / virtualized Honeycomb (in progress)
+
+- Added viewport-range and deterministic position helpers for the existing
+  staggered honeycomb geometry.
+- Replaced the all-items Repeater model with a bounded ListModel window. Only
+  visible rows plus a two-row prefetch buffer are instantiated as FileIcon
+  delegates; source indexes preserve the existing geometry.
+- Grid and List modes, FileIcon behavior, file model, and persisted data format
+  are unchanged.
+- Verification pending on this branch. CI and offscreen stress coverage must
+  pass before the PR can be considered ready; real Plasma interaction remains
+  a separate manual release gate.
