@@ -19,8 +19,8 @@ Item {
         return rows
     }
 
-    // Match Fence.syncFiles(): synchronize the complete source model, then
-    // schedule one viewport refresh after all ListModel mutations have landed.
+    // Match Fence.syncFiles(): synchronize the source model, then refresh the
+    // copied viewport window once after all ListModel mutations have landed.
     function syncFiles(rows) {
         const changed = Utils.syncModel(sourceModel, rows, "path")
         if (changed) viewport.scheduleRefresh()
@@ -153,7 +153,7 @@ Item {
                     }
 
                     // Reordering does not change count, but it must still refresh
-                // the source-index mapping used by the virtualized delegates.
+                    // the source-index mapping used by the virtualized delegates.
                     const firstRow = rows[0]
                     rows[0] = rows[1]
                     rows[1] = firstRow
@@ -162,47 +162,49 @@ Item {
                         return
                     }
                     Qt.callLater(function () {
-                        if (sourceModel.count !== 5000 || windowModel.get(0).path !== "/item-1"
-                            || windowModel.get(1).path !== "/item-0") {
-                        fail("Same-count row reorder left stale Honeycomb delegates")
-                        return
-                    }
+                        if (sourceModel.count !== 5000
+                                || windowModel.get(0).path !== "/item-1"
+                                || windowModel.get(1).path !== "/item-0") {
+                            fail("Same-count row reorder left stale Honeycomb delegates")
+                            return
+                        }
 
-                    viewport.contentY = Math.floor(viewport.contentHeight / 2)
-                    Qt.callLater(function () {
-                        const middleRange = Utils.honeycombVisibleRange(
-                            sourceModel.count, viewport.width, viewport.cell,
-                            viewport.contentY, viewport.height, viewport.bufferRows)
-                        if (!checkRange(middleRange, "Middle scroll")) return
-
-                        viewport.contentY = Math.max(0, viewport.contentHeight - viewport.height)
+                        viewport.contentY = Math.floor(viewport.contentHeight / 2)
                         Qt.callLater(function () {
-                            const bottomRange = Utils.honeycombVisibleRange(
+                            const middleRange = Utils.honeycombVisibleRange(
                                 sourceModel.count, viewport.width, viewport.cell,
                                 viewport.contentY, viewport.height, viewport.bufferRows)
-                            if (!checkRange(bottomRange, "Bottom scroll")) return
-                            if (Utils.honeycombSpot(4999, viewport.width, viewport.cell).y
-                                    >= viewport.contentHeight) {
-                                fail("Last item lies outside the content height")
-                                return
-                            }
+                            if (!checkRange(middleRange, "Middle scroll")) return
 
-                            // Update a visible item at the far end without
-                            // changing the item count.
-                            const bottomSourceIndex = bottomRange.last - 1
-                            rows[bottomSourceIndex].name = "updated-bottom-item"
-                            if (!syncFiles(rows)) {
-                                fail("Bottom-row metadata update was not detected")
-                                return
-                            }
+                            viewport.contentY = Math.max(0, viewport.contentHeight - viewport.height)
                             Qt.callLater(function () {
-                                const visibleIndex = bottomSourceIndex - viewport.firstSourceIndex
-                                if (visibleIndex < 0 || visibleIndex >= windowModel.count
-                                        || windowModel.get(visibleIndex).name !== "updated-bottom-item") {
-                                    fail("Bottom-row metadata update was not copied into the visible window")
+                                const bottomRange = Utils.honeycombVisibleRange(
+                                    sourceModel.count, viewport.width, viewport.cell,
+                                    viewport.contentY, viewport.height, viewport.bufferRows)
+                                if (!checkRange(bottomRange, "Bottom scroll")) return
+                                if (Utils.honeycombSpot(4999, viewport.width, viewport.cell).y
+                                        >= viewport.contentHeight) {
+                                    fail("Last item lies outside the content height")
                                     return
                                 }
-                                root.prepared = true
+
+                                // Update a visible item at the far end without
+                                // changing the item count.
+                                const bottomSourceIndex = bottomRange.last - 1
+                                rows[bottomSourceIndex].name = "updated-bottom-item"
+                                if (!syncFiles(rows)) {
+                                    fail("Bottom-row metadata update was not detected")
+                                    return
+                                }
+                                Qt.callLater(function () {
+                                    const visibleIndex = bottomSourceIndex - viewport.firstSourceIndex
+                                    if (visibleIndex < 0 || visibleIndex >= windowModel.count
+                                            || windowModel.get(visibleIndex).name !== "updated-bottom-item") {
+                                        fail("Bottom-row metadata update was not copied into the visible window")
+                                        return
+                                    }
+                                    root.prepared = true
+                                })
                             })
                         })
                     })
