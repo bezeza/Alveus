@@ -7,6 +7,10 @@ Item {
     height: 600
     property bool prepared: false
     property string failure: ""
+    property string dragPath: ""
+    property var selection: ({})
+    property int selectionRevision: 0
+    property int delegateSequence: 0
 
     ListModel { id: sourceModel }
     ListModel { id: windowModel }
@@ -25,6 +29,34 @@ Item {
         const changed = Utils.syncModel(sourceModel, rows, "path")
         if (changed) viewport.scheduleRefresh()
         return changed
+    }
+
+    function sourceIndexForPath(path) {
+        if (path === "") return -1
+        for (let i = 0; i < sourceModel.count; ++i) {
+            if (sourceModel.get(i).path === path) return i
+        }
+        return -1
+    }
+
+    function delegateForPath(path) {
+        for (let i = 0; i < delegates.count; ++i) {
+            const item = delegates.itemAt(i)
+            if (item && item.path === path) return item
+        }
+        return null
+    }
+
+    function windowIndexForPath(path) {
+        for (let i = 0; i < windowModel.count; ++i) {
+            if (windowModel.get(i).path === path) return i
+        }
+        return -1
+    }
+
+    function selectPath(path) {
+        selection[path] = true
+        ++selectionRevision
     }
 
     function fail(message) {
@@ -56,6 +88,7 @@ Item {
         property int firstSourceIndex: 0
         property int refreshCount: 0
         property bool refreshPending: false
+        property bool hasDragSource: false
         contentHeight: Utils.honeycombHeight(sourceModel.count, width, cell)
 
         function windowRow(sourceIndex) {
@@ -64,16 +97,24 @@ Item {
         }
 
         function refresh(force) {
+            const dragIndex = root.sourceIndexForPath(root.dragPath)
+            const rows = []
             const range = Utils.honeycombVisibleRange(sourceModel.count, width, cell,
                                                        contentY, height, bufferRows)
             if (!force && range.firstRow === firstRow && range.lastRow === lastRow) return
-            windowModel.clear()
+
             firstSourceIndex = range.first
             firstRow = range.firstRow
             lastRow = range.lastRow
             for (let i = range.first; i < range.last; ++i) {
-                windowModel.append(windowRow(i))
+                rows.push(windowRow(i))
             }
+            // Keep the active drag's delegate alive if it leaves the viewport.
+            if (dragIndex >= 0 && (dragIndex < range.first || dragIndex >= range.last)) {
+                rows.push(windowRow(dragIndex))
+            }
+            Utils.syncModel(windowModel, rows, "path")
+            hasDragSource = dragIndex >= 0
             ++refreshCount
         }
 
@@ -93,19 +134,30 @@ Item {
 
         Connections {
             target: sourceModel
-            // Count can change thousands of times during one syncFiles call.
-            // Coalescing prevents rebuilding the visible window for each row.
             function onCountChanged() { viewport.scheduleRefresh() }
+        }
+        Connections {
+            target: root
+            function onDragPathChanged() { viewport.refresh(true) }
         }
 
         Repeater {
+            id: delegates
             model: windowModel
             delegate: Item {
                 required property int sourceIndex
+                required property string path
+                required property string name
+                property int instanceId: -1
+                readonly property bool selected: root.selectionRevision >= 0
+                                                  && root.selection[path] === true
+
                 x: Utils.honeycombSpot(sourceIndex, viewport.width, viewport.cell).x
                 y: Utils.honeycombSpot(sourceIndex, viewport.width, viewport.cell).y
                 width: viewport.cell
                 height: viewport.cell
+
+                Component.onCompleted: instanceId = ++root.delegateSequence
             }
         }
     }
@@ -169,41 +221,110 @@ Item {
                             return
                         }
 
+                        // A selected item may leave the virtual window and be
+                        // recreated later; selection is keyed by path, not delegate.
+                        root.selectPath("/item-1")
+                        const selectedDelegate = delegateForPath("/item-1")
+                        if (!selectedDelegate || !selectedDelegate.selected) {
+                            fail("Visible file did not reflect its selection state")
+                            return
+                        }
+                        const selectedInstance = selectedDelegate.instanceId
                         viewport.contentY = Math.floor(viewport.contentHeight / 2)
                         Qt.callLater(function () {
-                            const middleRange = Utils.honeycombVisibleRange(
-                                sourceModel.count, viewport.width, viewport.cell,
-                                viewport.contentY, viewport.height, viewport.bufferRows)
-                            if (!checkRange(middleRange, "Middle scroll")) return
-
-                            viewport.contentY = Math.max(0, viewport.contentHeight - viewport.height)
+                            if (delegateForPath("/item-1") !== null) {
+                                fail("Scrolled-out selected file still has a delegate")
+                                return
+                            }
+                            viewport.contentY = 0
                             Qt.callLater(function () {
-                                const bottomRange = Utils.honeycombVisibleRange(
-                                    sourceModel.count, viewport.width, viewport.cell,
-                                    viewport.contentY, viewport.height, viewport.bufferRows)
-                                if (!checkRange(bottomRange, "Bottom scroll")) return
-                                if (Utils.honeycombSpot(4999, viewport.width, viewport.cell).y
-                                        >= viewport.contentHeight) {
-                                    fail("Last item lies outside the content height")
+                                const restoredSelection = delegateForPath("/item-1")
+                                if (!restoredSelection || !restoredSelection.selected
+                                        || restoredSelection.instanceId === selectedInstance) {
+                                    fail("Selection was not restored when a virtualized delegate was recreated")
                                     return
                                 }
 
-                                // Update a visible item at the far end without
-                                // changing the item count.
-                                const bottomSourceIndex = bottomRange.last - 1
-                                rows[bottomSourceIndex].name = "updated-bottom-item"
-                                if (!syncFiles(rows)) {
-                                    fail("Bottom-row metadata update was not detected")
-                                    return
-                                }
+                                // A drag source must survive a far scroll. Its
+                                // delegate instance must not be destroyed/recreated.
+                                root.dragPath = "/item-0"
                                 Qt.callLater(function () {
-                                    const visibleIndex = bottomSourceIndex - viewport.firstSourceIndex
-                                    if (visibleIndex < 0 || visibleIndex >= windowModel.count
-                                            || windowModel.get(visibleIndex).name !== "updated-bottom-item") {
-                                        fail("Bottom-row metadata update was not copied into the visible window")
+                                    const dragDelegate = delegateForPath("/item-0")
+                                    if (!dragDelegate) {
+                                        fail("Active drag source was not present before scrolling")
                                         return
                                     }
-                                    root.prepared = true
+                                    const dragInstance = dragDelegate.instanceId
+                                    viewport.contentY = Math.floor(viewport.contentHeight / 2)
+                                    Qt.callLater(function () {
+                                        const pinnedDelegate = delegateForPath("/item-0")
+                                        if (!pinnedDelegate || pinnedDelegate.instanceId !== dragInstance
+                                                || pinnedDelegate.sourceIndex !== 1
+                                                || windowIndexForPath("/item-0") < 0
+                                                || windowModel.count >= sourceModel.count) {
+                                            fail("Active drag source delegate was destroyed or lost during scrolling")
+                                            return
+                                        }
+
+                                        // Reordering while dragging must update the
+                                        // pinned source index without replacing it.
+                                        const draggedRow = rows[1]
+                                        rows[1] = rows[2]
+                                        rows[2] = draggedRow
+                                        if (!syncFiles(rows)) {
+                                            fail("Reorder during active drag was not detected")
+                                            return
+                                        }
+                                        Qt.callLater(function () {
+                                            const movedDragDelegate = delegateForPath("/item-0")
+                                            if (!movedDragDelegate
+                                                    || movedDragDelegate.instanceId !== dragInstance
+                                                    || movedDragDelegate.sourceIndex !== 2) {
+                                                fail("Active drag source was not preserved across same-count reorder")
+                                                return
+                                            }
+
+                                            root.dragPath = ""
+                                            Qt.callLater(function () {
+                                                if (windowIndexForPath("/item-0") !== -1) {
+                                                    fail("Completed drag source remained pinned outside the viewport")
+                                                    return
+                                                }
+
+                                                viewport.contentY = Math.max(
+                                                    0, viewport.contentHeight - viewport.height)
+                                                Qt.callLater(function () {
+                                                    const bottomRange = Utils.honeycombVisibleRange(
+                                                        sourceModel.count, viewport.width, viewport.cell,
+                                                        viewport.contentY, viewport.height, viewport.bufferRows)
+                                                    if (!checkRange(bottomRange, "Bottom scroll")) return
+                                                    if (Utils.honeycombSpot(4999, viewport.width, viewport.cell).y
+                                                            >= viewport.contentHeight) {
+                                                        fail("Last item lies outside the content height")
+                                                        return
+                                                    }
+
+                                                    // Update a visible item at the far end without
+                                                    // changing the item count.
+                                                    const bottomSourceIndex = bottomRange.last - 1
+                                                    rows[bottomSourceIndex].name = "updated-bottom-item"
+                                                    if (!syncFiles(rows)) {
+                                                        fail("Bottom-row metadata update was not detected")
+                                                        return
+                                                    }
+                                                    Qt.callLater(function () {
+                                                        const visibleIndex = bottomSourceIndex - viewport.firstSourceIndex
+                                                        if (visibleIndex < 0 || visibleIndex >= windowModel.count
+                                                                || windowModel.get(visibleIndex).name !== "updated-bottom-item") {
+                                                            fail("Bottom-row metadata update was not copied into the visible window")
+                                                            return
+                                                        }
+                                                        root.prepared = true
+                                                    })
+                                                })
+                                            })
+                                        })
+                                    })
                                 })
                             })
                         })
