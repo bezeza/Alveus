@@ -58,6 +58,16 @@ set_tests_properties(uiharness_drive_view PROPERTIES
         "QT_QPA_PLATFORM=offscreen;ALVEUS_NO_DBUS=1;QML_IMPORT_PATH=${_uiharness_import_path};XDG_DATA_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-data;XDG_CACHE_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-cache;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-config"
     TIMEOUT 30)
 
+
+# Stress the same Honeycomb viewport-range helpers with 5,000 synthetic items.
+add_test(NAME uiharness_honeycomb_virtualization COMMAND uiharness
+    "${CMAKE_SOURCE_DIR}/tests/honeycomb_stress.qml"
+    "${CMAKE_BINARY_DIR}/uiharness-honeycomb-stress.png"
+    100 900 600)
+set_tests_properties(uiharness_honeycomb_virtualization PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QML_IMPORT_PATH=${CMAKE_SOURCE_DIR}/package/contents/ui"
+    TIMEOUT 20)
+
 add_test(NAME uiharness_drive_view_narrow COMMAND uiharness
     "${CMAKE_SOURCE_DIR}/tests/scene.qml"
     "${CMAKE_BINARY_DIR}/uiharness-drive-view-narrow.png"
