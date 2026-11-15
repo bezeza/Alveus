@@ -138,10 +138,13 @@ Item {
 
                 // Reordering does not change count, but it must still refresh
                 // the source-index mapping used by the virtualized delegates.
-                rows.push(rows.shift())
+                const firstRow = rows[0]
+                rows[0] = rows[1]
+                rows[1] = firstRow
                 syncFiles(rows)
                 Qt.callLater(function () {
-                    if (sourceModel.count !== 5000 || windowModel.get(0).path !== "/item-1") {
+                    if (sourceModel.count !== 5000 || windowModel.get(0).path !== "/item-1"
+                            || windowModel.get(1).path !== "/item-0") {
                         fail("Same-count row reorder left stale Honeycomb delegates")
                         return
                     }
