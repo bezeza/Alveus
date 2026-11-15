@@ -3,6 +3,19 @@
 This is the engineering record for Alveus. Entries distinguish merged work
 from open pull requests, so proposed code is not mistaken for shipped code.
 
+## 2026-11-15 — desktop fence cache scaling
+
+### Optimized
+- Rebuilt all affected file-fence cache lists in one pass over the desktop entries instead of rescanning every entry once per affected fence.
+- Indexed desktop entries by name once per batched file-change refresh and cached the current watcher paths, removing repeated linear searches and watcher-list enumeration.
+- Reused the already-computed directory flag during full scans instead of issuing a second filesystem metadata query for each entry.
+
+### Validation
+- Added a 600-entry desktop-fence model regression test.
+- Added a batched file-change test that materializes activity caches, modifies files in multiple fences, and verifies that each cached row receives the new size.
+- The existing CTest/CI workflow runs these tests through the coretest target. This is correctness and scaling coverage, not a claim of measured wall-clock performance; live Plasma profiling remains separate.
+
+
 ## 2026-11-14
 
 ### Merged into `main`
