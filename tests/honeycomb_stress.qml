@@ -22,8 +22,9 @@ Item {
     // Match Fence.syncFiles(): synchronize the complete source model, then
     // schedule one viewport refresh after all ListModel mutations have landed.
     function syncFiles(rows) {
-        Utils.syncModel(sourceModel, rows, "path")
-        viewport.scheduleRefresh()
+        const changed = Utils.syncModel(sourceModel, rows, "path")
+        if (changed) viewport.scheduleRefresh()
+        return changed
     }
 
     function fail(message) {
@@ -127,23 +128,41 @@ Item {
                 return
             }
 
-            // Same-count metadata updates must refresh the visible copy.
-            rows[0].name = "renamed-item-0"
-            syncFiles(rows)
+            // An unchanged model must not recreate the visible delegates.
+            const unchangedRefreshCount = viewport.refreshCount
+            if (syncFiles(rows)) {
+                fail("Unchanged source data was reported as a model update")
+                return
+            }
             Qt.callLater(function () {
-                if (windowModel.get(0).name !== "renamed-item-0") {
-                    fail("Same-count metadata update was not copied into the visible window")
+                if (viewport.refreshCount !== unchangedRefreshCount) {
+                    fail("Unchanged source data unnecessarily rebuilt the delegate window")
                     return
                 }
 
-                // Reordering does not change count, but it must still refresh
-                // the source-index mapping used by the virtualized delegates.
-                const firstRow = rows[0]
-                rows[0] = rows[1]
-                rows[1] = firstRow
-                syncFiles(rows)
+                // Same-count metadata updates must refresh the visible copy.
+                rows[0].name = "renamed-item-0"
+                if (!syncFiles(rows)) {
+                    fail("Same-count metadata update was not detected")
+                    return
+                }
                 Qt.callLater(function () {
-                    if (sourceModel.count !== 5000 || windowModel.get(0).path !== "/item-1"
+                    if (windowModel.get(0).name !== "renamed-item-0") {
+                        fail("Same-count metadata update was not copied into the visible window")
+                        return
+                    }
+
+                    // Reordering does not change count, but it must still refresh
+                // the source-index mapping used by the virtualized delegates.
+                    const firstRow = rows[0]
+                    rows[0] = rows[1]
+                    rows[1] = firstRow
+                    if (!syncFiles(rows)) {
+                        fail("Same-count row reorder was not detected")
+                        return
+                    }
+                    Qt.callLater(function () {
+                        if (sourceModel.count !== 5000 || windowModel.get(0).path !== "/item-1"
                             || windowModel.get(1).path !== "/item-0") {
                         fail("Same-count row reorder left stale Honeycomb delegates")
                         return
@@ -172,7 +191,10 @@ Item {
                             // changing the item count.
                             const bottomSourceIndex = bottomRange.last - 1
                             rows[bottomSourceIndex].name = "updated-bottom-item"
-                            syncFiles(rows)
+                            if (!syncFiles(rows)) {
+                                fail("Bottom-row metadata update was not detected")
+                                return
+                            }
                             Qt.callLater(function () {
                                 const visibleIndex = bottomSourceIndex - viewport.firstSourceIndex
                                 if (visibleIndex < 0 || visibleIndex >= windowModel.count
