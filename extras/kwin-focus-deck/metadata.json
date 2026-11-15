@@ -1,0 +1,17 @@
+{
+  "KPackageStructure": "KWin/WindowSwitcher",
+  "KPlugin": {
+    "Authors": [
+      {
+        "Name": "Alveus contributors"
+      }
+    ],
+    "Description": "A calm, thumbnail-first KWin task switcher with a centered focus card and desktop labels.",
+    "Icon": "preferences-system-windows-switcher",
+    "Id": "alveus-focus-deck",
+    "License": "GPL-2.0-or-later",
+    "Name": "Alveus Focus Deck",
+    "Version": "0.1.0"
+  },
+  "X-Plasma-API": "declarativeappletscript"
+}
