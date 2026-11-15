@@ -480,15 +480,67 @@ Item {
                 visible: fence.view === "honeycomb" && !fence.isDrives
                 boundsBehavior: Flickable.StopAtBounds
                 readonly property real cell: fence.iconSize + Kirigami.Units.gridUnit * 2.4
-                readonly property var spots: Utils.honeycomb(filesModel.count, width, cell)
+                readonly property real rowHeight: cell * 0.87
+                readonly property int bufferRows: 2
+                property int firstSourceIndex: 0
+                property int firstVisibleRow: -1
+                property int lastVisibleRow: -1
                 contentHeight: Utils.honeycombHeight(filesModel.count, width, cell)
                 clip: true
+
+                // A bounded window model avoids constructing a FileIcon for
+                // every item in a large folder. Two extra rows on each side
+                // keep fast scrolling and drag gestures from hitting a blank edge.
+                ListModel { id: honeycombWindow }
+
+                function refreshWindow(force) {
+                    if (!visible || width <= 0 || height <= 0) {
+                        honeycombWindow.clear()
+                        firstVisibleRow = -1
+                        lastVisibleRow = -1
+                        firstSourceIndex = 0
+                        return
+                    }
+                    const range = Utils.honeycombVisibleRange(filesModel.count, width, cell,
+                                                               contentY, height, bufferRows)
+                    if (!force && range.firstRow === firstVisibleRow
+                            && range.lastRow === lastVisibleRow) {
+                        return
+                    }
+                    honeycombWindow.clear()
+                    firstSourceIndex = range.first
+                    firstVisibleRow = range.firstRow
+                    lastVisibleRow = range.lastRow
+                    for (let i = range.first; i < range.last; ++i) {
+                        const row = filesModel.get(i)
+                        honeycombWindow.append({
+                            sourceIndex: i,
+                            name: row.name, path: row.path, label: row.label, url: row.url,
+                            icon: row.icon, fallbackIcon: row.fallbackIcon, image: row.image,
+                            mime: row.mime, isDir: row.isDir, size: row.size,
+                            modified: row.modified, canThumb: row.canThumb
+                        })
+                    }
+                }
+
+                onContentYChanged: refreshWindow(false)
+                onWidthChanged: refreshWindow(true)
+                onHeightChanged: refreshWindow(true)
+                onCellChanged: refreshWindow(true)
+                onVisibleChanged: refreshWindow(true)
+                Component.onCompleted: refreshWindow(true)
+                Connections {
+                    target: filesModel
+                    function onCountChanged() { comb.refreshWindow(true) }
+                }
                 QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
                 Repeater {
-                    model: comb.visible ? filesModel : null
+                    model: comb.visible ? honeycombWindow : null
                     delegate: FileIcon {
-                        x: comb.spots[index] ? comb.spots[index].x : 0
-                        y: comb.spots[index] ? comb.spots[index].y : 0
+                        required property int sourceIndex
+                        x: Utils.honeycombSpot(sourceIndex, comb.width, comb.cell).x
+                        y: Utils.honeycombSpot(sourceIndex, comb.width, comb.cell).y
+                           - comb.firstVisibleRow * comb.rowHeight
                         width: comb.cell
                         height: comb.cell
                         mode: "honeycomb"
