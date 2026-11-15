@@ -32,13 +32,13 @@ function syncModel(model, items, key) {
 
         if (found === undefined) {
             model.insert(i, item);
-            changed = true
+            changed = true;
             for (let j = i; j < model.count; ++j) {
                 indexByKey.set(model.get(j)[key], j);
             }
         } else if (found !== i) {
             model.move(found, i, 1);
-            changed = true
+            changed = true;
             for (let j = i; j <= found; ++j) {
                 indexByKey.set(model.get(j)[key], j);
             }
