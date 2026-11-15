@@ -153,6 +153,14 @@ Remove completely: `./uninstall.sh` (or `sudo dnf remove alveus`).
 - **Donations**: fill in `package/contents/ui/links.js` — the buttons appear in
   *Alveus Settings → About*
 
+## KWin window switcher
+
+**Alveus Focus Deck** is a separate KWin WindowSwitcher theme for KDE Plasma 6.
+It provides a centered active-window preview, neighboring thumbnails, desktop
+labels, and an adaptive grid for larger window counts. It does not add an app
+launcher, KWin script, or application filtering. See
+[extras/kwin-focus-deck](extras/kwin-focus-deck/README.md).
+
 ## Development
 
 See the [development roadmap](ROADMAP.md) for planned work, priorities, and release criteria.
