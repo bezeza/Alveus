@@ -307,3 +307,17 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - Add Ukrainian/Russian translations.
 - Verification is pending current-head CI. No live KDE Plasma or multi-device
   storage test has been performed.
+
+
+## 2026-11-15
+
+### PR #40 — fix adaptive drive-view QML loading
+
+- Fixed the drive-group Flow sizing in DrivesView.qml. Flow.implicitHeight
+  is read-only in this Qt Quick component, so assigning to it prevented the
+  entire drive view and its containing Fence from loading. The layout now
+  receives the measured content height through Layout.preferredHeight, and
+  the ColumnLayout remains responsible for assigning the item's height.
+- The existing wide and narrow adaptive-layout UI harness scenarios exercise
+  this QML path. Current-head CI is required before this fix is considered
+  verified; no live KDE Plasma test has been performed.
