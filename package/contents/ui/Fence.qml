@@ -121,6 +121,9 @@ Item {
     function syncFiles() {
         const list = isDrives ? [] : isPortal ? Core.listFolder(browsePath) : Core.filesInFence(fid, desk ? desk.activity : "")
         Utils.syncModel(filesModel, list.map(Utils.fileRow), "path")
+        if (comb) {
+            Qt.callLater(function () { comb.refreshWindow(true) })
+        }
         if (desk) {
             desk.registerVisible(fid, names())
         }
@@ -540,7 +543,6 @@ Item {
                         required property int sourceIndex
                         x: Utils.honeycombSpot(sourceIndex, comb.width, comb.cell).x
                         y: Utils.honeycombSpot(sourceIndex, comb.width, comb.cell).y
-                           - comb.firstVisibleRow * comb.rowHeight
                         width: comb.cell
                         height: comb.cell
                         mode: "honeycomb"
