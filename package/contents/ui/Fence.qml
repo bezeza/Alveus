@@ -537,31 +537,51 @@ Item {
                 QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
                 Repeater {
                     model: comb.visible ? honeycombWindow : null
-                    delegate: FileIcon {
+                    delegate: Item {
+                        // Bind ListModel roles explicitly. Required properties
+                        // avoid relying on the delegate's implicit model context,
+                        // which can be unavailable during model-window updates.
                         required property int sourceIndex
+                        required property string name
+                        required property string path
+                        required property string label
+                        required property string url
+                        required property string icon
+                        required property string fallbackIcon
+                        required property string image
+                        required property string mime
+                        required property bool isDir
+                        required property real size
+                        required property real modified
+                        required property bool canThumb
+
                         x: Utils.honeycombSpot(sourceIndex, comb.width, comb.cell).x
                         y: Utils.honeycombSpot(sourceIndex, comb.width, comb.cell).y
                         width: comb.cell
                         height: comb.cell
-                        mode: "honeycomb"
-                        name: model.name
-                        path: model.path
-                        label: model.label
-                        url: model.url
-                        iconName: model.icon
-                        fallbackIcon: model.fallbackIcon
-                        image: model.image
-                        mime: model.mime
-                        isDir: model.isDir
-                        size: model.size
-                        modified: model.modified
-                        canThumb: model.canThumb
-                        desk: fence.desk
-                        iconSize: fence.iconSize
-                        fenceId: fence.fid
-                        textColor: fence.textColor
-                        inPortal: fence.isPortal
-                        onOpenFolderRequested: function (p) { fence.browsePath = p }
+
+                        FileIcon {
+                            anchors.fill: parent
+                            mode: "honeycomb"
+                            name: parent.name
+                            path: parent.path
+                            label: parent.label
+                            url: parent.url
+                            iconName: parent.icon
+                            fallbackIcon: parent.fallbackIcon
+                            image: parent.image
+                            mime: parent.mime
+                            isDir: parent.isDir
+                            size: parent.size
+                            modified: parent.modified
+                            canThumb: parent.canThumb
+                            desk: fence.desk
+                            iconSize: fence.iconSize
+                            fenceId: fence.fid
+                            textColor: fence.textColor
+                            inPortal: fence.isPortal
+                            onOpenFolderRequested: function (p) { fence.browsePath = p }
+                        }
                     }
                 }
             }
