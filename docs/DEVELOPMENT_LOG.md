@@ -3,6 +3,24 @@
 This is the engineering record for Alveus. Entries distinguish merged work
 from open pull requests, so proposed code is not mistaken for shipped code.
 
+## 2026-11-16
+
+### Open work — Alveus Focus Deck 0.1 (branch `feat/kwin-focus-deck`)
+
+- Added a standalone `KWin/WindowSwitcher` KPackage under
+  `extras/kwin-focus-deck/`; it is separate from the desktop-fence plasmoid.
+- Added the Focus Deck QML layout: centered thumbnail carousel for 1–6 windows,
+  adaptive thumbnail grid for larger window counts, application/window titles,
+  per-window virtual-desktop labels, and compact keyboard hints.
+- Added package install/uninstall helpers. Installation does not change the
+  selected KWin layout, shortcuts, or other session settings.
+- Added a structural package check and CI QML parser check. The package uses
+  KWin's native `TabBoxSwitcher` and `WindowThumbnail` APIs; it adds no KWin
+  script, app launcher, app classification, or external process.
+- Verification: GitHub branch contents inspected; local `qmlformat`,
+  ShellCheck, and live Plasma tests have not yet been run. CI and real Fedora
+  KDE session validation remain pending.
+
 ## 2026-11-14
 
 ### Merged into `main`
