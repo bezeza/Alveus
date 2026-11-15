@@ -188,7 +188,7 @@ KWin.TabBoxSwitcher {
 
                             PathAttribute {
                                 name: "deckScale"
-                                value: 1.0
+                                value: 1.06
                             }
 
                             PathLine {
