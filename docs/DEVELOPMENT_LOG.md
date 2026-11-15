@@ -345,7 +345,7 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 ### PR #42 — make desktop preview image fixtures valid
 
 - Replaced empty files named .jpg/.png in the CI preview setup with small,
-  valid JPEG and PNG fixtures. The preview now exercises actual image decoding
+  valid PNG fixtures. The preview now exercises actual image decoding
   instead of emitting expected-but-noisy "Unsupported image format" warnings.
 - The explicit Honeycomb role-binding fix passed the push and pull-request
   workflows, all 8 CTest targets including the 5,000-item virtualization stress
