@@ -54,6 +54,7 @@ Item {
     readonly property bool busy: titleMouse.drag.active || resizing
     property bool resizing: false
     property bool flashing: false
+    property bool honeycombRefreshPending: false
 
     // portal browsing (not saved: always starts at the portal's own folder)
     property string browsePath: portal
@@ -121,9 +122,21 @@ Item {
     function syncFiles() {
         const list = isDrives ? [] : isPortal ? Core.listFolder(browsePath) : Core.filesInFence(fid, desk ? desk.activity : "")
         Utils.syncModel(filesModel, list.map(Utils.fileRow), "path")
+        scheduleHoneycombRefresh()
         if (desk) {
             desk.registerVisible(fid, names())
         }
+    }
+    // ListModel emits countChanged for every insert/remove. Coalesce those
+    // signals, and also refresh once after syncModel so same-count role updates
+    // and row moves are reflected in the copied Honeycomb window.
+    function scheduleHoneycombRefresh() {
+        if (honeycombRefreshPending) return
+        honeycombRefreshPending = true
+        Qt.callLater(function () {
+            fence.honeycombRefreshPending = false
+            comb.refreshWindow(true)
+        })
     }
     Connections {
         target: Core
@@ -532,7 +545,7 @@ Item {
                 Component.onCompleted: refreshWindow(true)
                 Connections {
                     target: filesModel
-                    function onCountChanged() { comb.refreshWindow(true) }
+                    function onCountChanged() { fence.scheduleHoneycombRefresh() }
                 }
                 QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
                 Repeater {
