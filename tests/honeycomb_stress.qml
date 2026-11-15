@@ -258,10 +258,13 @@ Item {
                                     viewport.contentY = Math.floor(viewport.contentHeight / 2)
                                     Qt.callLater(function () {
                                         const pinnedDelegate = delegateForPath("/item-0")
+                                        const middleRange = Utils.honeycombVisibleRange(
+                                            sourceModel.count, viewport.width, viewport.cell,
+                                            viewport.contentY, viewport.height, viewport.bufferRows)
                                         if (!pinnedDelegate || pinnedDelegate.instanceId !== dragInstance
                                                 || pinnedDelegate.sourceIndex !== 1
                                                 || windowIndexForPath("/item-0") < 0
-                                                || windowModel.count >= sourceModel.count) {
+                                                || windowModel.count > middleRange.last - middleRange.first + 1) {
                                             fail("Active drag source delegate was destroyed or lost during scrolling")
                                             return
                                         }
