@@ -323,3 +323,17 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   x/y/width/height in DriveTreeItem coordinates, preserving the intended
   click target without overlapping the adjacent drive action buttons.
 - Current-head CI and live KDE Plasma interaction checks are pending.
+
+
+## 2026-11-15
+
+### PR #42 — make virtualized Honeycomb role bindings explicit
+
+- The push-triggered preview run exposed intermittent critical QML warnings
+  assigning undefined model roles to FileIcon properties in the virtualized
+  Honeycomb delegate. The delegate now uses an Item wrapper with explicit
+  required properties for every ListModel role, then passes those values to
+  FileIcon. This removes reliance on the implicit model context during window
+  refreshes while preserving the bounded viewport model and source indexes.
+- Current-head CTest, preview rendering, and Fedora RPM workflows must pass
+  before this change is considered verified.
