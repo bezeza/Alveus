@@ -15,7 +15,7 @@ Item {
 
     property bool selected: false
 
-    signal activated(int windowIndex)
+    signal activated(int targetIndex)
 
     Rectangle {
         anchors.fill: parent
