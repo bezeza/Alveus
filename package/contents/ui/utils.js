@@ -3,6 +3,7 @@
 // Keeps a ListModel in step with a JS array without recreating delegates,
 // so fences don't flicker or lose state when something else changes.
 function syncModel(model, items, key) {
+    let changed = false;
     // Hash membership once instead of scanning the incoming array for every
     // existing row. This makes the common unchanged/append/remove refresh O(n).
     const wantedKeys = new Set();
@@ -13,6 +14,7 @@ function syncModel(model, items, key) {
     for (let i = model.count - 1; i >= 0; --i) {
         if (!wantedKeys.has(model.get(i)[key])) {
             model.remove(i);
+            changed = true;
         }
     }
 
@@ -30,11 +32,13 @@ function syncModel(model, items, key) {
 
         if (found === undefined) {
             model.insert(i, item);
+            changed = true;
             for (let j = i; j < model.count; ++j) {
                 indexByKey.set(model.get(j)[key], j);
             }
         } else if (found !== i) {
             model.move(found, i, 1);
+            changed = true;
             for (let j = i; j <= found; ++j) {
                 indexByKey.set(model.get(j)[key], j);
             }
@@ -44,9 +48,11 @@ function syncModel(model, items, key) {
         for (const role in item) {
             if (current[role] !== item[role]) {
                 model.setProperty(i, role, item[role]);
+                changed = true;
             }
         }
     }
+    return changed;
 }
 
 function fenceRow(f) {
@@ -122,4 +128,32 @@ function honeycombHeight(count, width, cell) {
     const w = cell, h = cell * 0.87;
     const perRow = Math.max(1, Math.floor((width - w / 2) / w));
     return Math.ceil(count / perRow) * h + cell * 0.2;
+}
+
+
+// Return only the source-index range intersecting the viewport plus a small
+// row buffer. Honeycomb geometry remains deterministic for the full model.
+function honeycombVisibleRange(count, width, cell, contentY, viewportHeight, bufferRows) {
+    if (count <= 0 || width <= 0 || cell <= 0 || viewportHeight <= 0) {
+        return { first: 0, last: 0, firstRow: 0, lastRow: -1 };
+    }
+    const rowHeight = cell * 0.87;
+    const perRow = Math.max(1, Math.floor((width - cell / 2) / cell));
+    const buffer = Math.max(0, bufferRows || 0);
+    const firstRow = Math.max(0, Math.floor(Math.max(0, contentY) / rowHeight) - buffer);
+    const lastRow = Math.min(Math.ceil(count / perRow) - 1,
+                             Math.ceil((Math.max(0, contentY) + viewportHeight) / rowHeight) + buffer);
+    return {
+        first: Math.min(count, firstRow * perRow),
+        last: Math.min(count, (lastRow + 1) * perRow),
+        firstRow: firstRow,
+        lastRow: lastRow
+    };
+}
+
+function honeycombSpot(index, width, cell) {
+    const perRow = Math.max(1, Math.floor((width - cell / 2) / cell));
+    const row = Math.floor(index / perRow);
+    const col = index % perRow;
+    return { x: col * cell + (row % 2 ? cell / 2 : 0), y: row * cell * 0.87 };
 }

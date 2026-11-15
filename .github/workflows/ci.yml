@@ -179,9 +179,13 @@ jobs:
           printf 'Alveus release notes and project details.\n' > "$HOME/Desktop/Quarterly report.pdf"
           printf 'Remember to review the next Alveus build.\n' > "$HOME/Desktop/Meeting notes.txt"
           printf 'Project folder for the desktop layout.\n' > "$HOME/Desktop/Project folder/README.txt"
-          touch "$HOME/Desktop/Holiday photo.jpg" "$HOME/Desktop/Alveus screenshot.png" "$HOME/Desktop/Project archive.zip" "$HOME/Desktop/Release demo.mp4"
+          # Use real tiny PNG fixtures so QQuickImage exercises thumbnail loading
+          # without emitting misleading "Unsupported image format" warnings.
+          printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAK0lEQVR42mN+vS/qjGT76SYGIkkGx4otr/dFEU8ykKTasWLLqA2jNgyYDQA1R7MRmgCKZgAAAABJRU5ErkJggg==' | base64 --decode > "$HOME/Desktop/Alveus screenshot.png"
+          printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAK0lEQVR42mN+vS/qjGT76SYGIkkGx4otr/dFEU8ykKTasWLLqA2jNgyYDQA1R7MRmgCKZgAAAABJRU5ErkJggg==' | base64 --decode > "$HOME/Desktop/Holiday photo.png"
+          printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAK0lEQVR42mN+vS/qjGT76SYGIkkGx4otr/dFEU8ykKTasWLLqA2jNgyYDQA1R7MRmgCKZgAAAABJRU5ErkJggg==' | base64 --decode > "$HOME/Downloads/Camera sample.png"
+          touch "$HOME/Desktop/Project archive.zip" "$HOME/Desktop/Release demo.mp4"
           printf 'A sample download for the Alveus preview.\n' > "$HOME/Downloads/Alveus beta notes.txt"
-          touch "$HOME/Downloads/Camera sample.jpg"
           build/tests/uiharness tests/scene.qml docs/assets/alveus-desktop-preview.png 1200 1600 900 rich "$HOME/Downloads"
 
       - name: Upload desktop preview

@@ -289,3 +289,141 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   regression fixture. The fixture setup was corrected before the passing run.
 - No live KDE Plasma session was used; manual desktop validation remains a
   separate release gate.
+
+### 2026-11-15 — Issue #7 / virtualized Honeycomb (in progress)
+
+- Added viewport-range and deterministic position helpers for the existing
+  staggered honeycomb geometry.
+- Replaced the all-items Repeater model with a bounded ListModel window. Only
+  visible rows plus a two-row prefetch buffer are instantiated as FileIcon
+  delegates; source indexes preserve the existing geometry.
+- Grid and List modes, FileIcon behavior, file model, and persisted data format
+  are unchanged.
+- Added an offscreen QML stress scene with 5,000 synthetic items. The test
+  checks bounded delegate windows at the start and end of the content and
+  verifies that the final item remains within the full content height.
+- Extended the UI harness to fail when a scene reports an assertion error.
+- CI is pending on the updated branch. Real Plasma interaction remains a
+  separate manual release gate.
+- Initial CI configure exposed duplicate CTest registration for the Honeycomb
+  stress scene. Removed the duplicate; rerunning CI on the corrected commit.
+
+- The 5,000-item offscreen stress CTest passed. The overall build workflow then
+  failed in the desktop preview because sparse file rows exposed undefined
+  optional roles to typed FileIcon properties. Added safe typed defaults to
+  the virtual window rows; rerunning the full CI preview.
+
+
+## 2026-11-15
+
+### PR #42 — repair drive-row click target
+
+- Removed an invalid MouseArea anchor to labelsColumn, which is a descendant
+  rather than a parent or sibling. The hit area now tracks the label column's
+  x/y/width/height in DriveTreeItem coordinates, preserving the intended
+  click target without overlapping the adjacent drive action buttons.
+- Current-head CI and live KDE Plasma interaction checks are pending.
+
+
+## 2026-11-15
+
+### PR #42 — make virtualized Honeycomb role bindings explicit
+
+- The push-triggered preview run exposed intermittent critical QML warnings
+  assigning undefined model roles to FileIcon properties in the virtualized
+  Honeycomb delegate. The delegate now uses an Item wrapper with explicit
+  required properties for every ListModel role, then passes those values to
+  FileIcon. This removes reliance on the implicit model context during window
+  refreshes while preserving the bounded viewport model and source indexes.
+- Push CI [43703748351](https://github.com/bezeza/Alveus/actions/runs/43703748351)
+  and PR CI [43703752968](https://github.com/bezeza/Alveus/actions/runs/43703752968)
+  passed all 8 CTest targets, including the 5,000-item virtualization stress
+  test, plus preview rendering. Fedora RPM build/install/remove passed in
+  [43703753014](https://github.com/bezeza/Alveus/actions/runs/43703753014).
+
+
+### PR #42 — make desktop preview image fixtures valid
+
+- Replaced empty files named .jpg/.png in the CI preview setup with small,
+  valid PNG fixtures. The preview now exercises actual image decoding
+  instead of emitting expected-but-noisy "Unsupported image format" warnings.
+- The explicit Honeycomb role-binding fix passed the push and pull-request
+  workflows, all 8 CTest targets including the 5,000-item virtualization stress
+  test, preview artifact generation, and Fedora RPM build/install/remove.
+- Push CI [43704462940](https://github.com/bezeza/Alveus/actions/runs/43704462940)
+  and PR CI [43704465404](https://github.com/bezeza/Alveus/actions/runs/43704465404)
+  passed all 8 CTest targets, including the 5,000-item virtualization stress
+  test, static checks, and preview rendering. No unsupported-image decode
+  warnings were emitted. Fedora RPM build, installed-payload verification,
+  artifact upload, and DNF removal all passed in
+  [43704465385](https://github.com/bezeza/Alveus/actions/runs/43704465385).
+- Live KDE Plasma interaction remains a separate manual release gate.
+
+### PR #42 — keep virtualized Honeycomb data in sync
+
+- `Utils.syncModel` now reports whether rows were inserted, removed, moved, or
+  had role values changed. Existing callers that do not need the result remain
+  unaffected.
+- `Fence.syncFiles` schedules a coalesced Honeycomb refresh after a real model
+  change. The `countChanged` handler uses the same coalescing path, avoiding a
+  full visible-window rebuild for every individual insertion during a large
+  folder load.
+- Same-count metadata updates and row reordering now refresh the copied
+  Honeycomb window. Unchanged model data does not recreate visible delegates.
+- Expanded the 5,000-item offscreen stress test to cover initial bounded
+  population, no-op synchronization, same-count metadata changes, same-count
+  reordering, and middle/bottom scrolling.
+- Increased the stress scene's harness delay so its asynchronous assertions
+  finish before the harness checks the result.
+- The follow-up interaction audit adds drag-source retention and selection
+  persistence regression coverage; current-head validation is recorded below.
+
+### PR #42 — preserve selection and active drag in virtualized Honeycomb
+
+- Replace destructive Honeycomb window clears with keyed incremental
+  synchronization, preserving delegate instances for rows that remain needed.
+- Pin the active Honeycomb drag source by its owning fence and file path when
+  it scrolls outside the viewport. The source view mode is part of its identity,
+  so a grid/list drag does not create a hidden duplicate Honeycomb delegate.
+  This also avoids pinning or clearing a different portal's delegate when two
+  portals display the same filesystem path. Its source index
+  is updated across inserts, removals, and same-count reorders; the rest of the
+  delegate window remains bounded.
+- Refresh the pinned row when the desktop drag origin changes, and retain it
+  while the Honeycomb view is temporarily hidden during an active drag.
+- Clear drag origin after release/cancel (deferred until the target DropArea has
+  processed the drop) and when a source delegate is destroyed.
+- Guard the asynchronous drag-image callback against a mouse release before
+  the screenshot is ready. Capture the complete FileIcon so list-mode drags
+  also receive a visible preview instead of grabbing the hidden grid tile.
+- Expand the 5,000-item stress test to verify selection survives delegate
+  destruction/recreation and the active drag source keeps the same delegate
+  instance through a far scroll and same-count reorder. The pinned row must be
+  removed when the drag ends.
+- The regression test also asserts the pinned source adds no more than one
+  delegate beyond the normal viewport window and only pins Honeycomb-originated
+  drags.
+- Current-head push CI [43711567214](https://github.com/bezeza/Alveus/actions/runs/43711567214)
+  and PR CI [43711753482](https://github.com/bezeza/Alveus/actions/runs/43711753482)
+  passed all 8 CTest targets, including the expanded selection/drag stress test,
+  plus static checks, QML lint, desktop preview rendering, artifact upload, and
+  whitespace validation.
+- Current-head Fedora RPM workflow
+  [43711753420](https://github.com/bezeza/Alveus/actions/runs/43711753420)
+  passed RPM build, installation, installed-payload verification, artifact
+  upload, and DNF removal.
+- Live KDE Plasma interaction remains a separate manual release gate.
+
+## 2026-11-15 — version compatibility audit
+
+- Declared minimums: Qt 6.5+ in CMake/RPM metadata and Plasma 6.0 in the applet
+  metadata and RPM runtime requirements.
+- The Ubuntu 24.04 boundary check confirmed that Qt 6.4.2 is rejected
+  specifically because the project requires Qt 6.5 or newer.
+- Positive CI builds used Qt 6.10.2 on Ubuntu 26.04 and Qt 6.10.3 on Fedora 43.
+  The Fedora build used Plasma 6.7.5; all 8 CTest targets passed. The Fedora RPM
+  build, installation, installed-payload verification, and DNF removal passed.
+- This confirms rejection below the declared Qt floor and compatibility with
+  newer toolchains. It does not directly prove a positive build on Qt 6.5 or
+  Plasma 6.0; the lowest positively verified Plasma version is 6.7.5.
+- No source changes or additional tests were made for this audit.

@@ -259,7 +259,13 @@ Item {
 
     MouseArea {
         id: rowMouse
-        anchors.fill: labelsColumn
+        // MouseArea is a sibling of content, not of labelsColumn. Map the
+        // label column's geometry into this item's coordinates instead of
+        // anchoring to a descendant (which QQuickItem rejects).
+        x: content.x + headerRow.x + labelsColumn.x
+        y: content.y + headerRow.y + labelsColumn.y
+        width: labelsColumn.width
+        height: labelsColumn.height
         z: 1
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton

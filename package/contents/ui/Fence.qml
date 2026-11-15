@@ -54,6 +54,7 @@ Item {
     readonly property bool busy: titleMouse.drag.active || resizing
     property bool resizing: false
     property bool flashing: false
+    property bool honeycombRefreshPending: false
 
     // portal browsing (not saved: always starts at the portal's own folder)
     property string browsePath: portal
@@ -120,10 +121,22 @@ Item {
     ListModel { id: filesModel }
     function syncFiles() {
         const list = isDrives ? [] : isPortal ? Core.listFolder(browsePath) : Core.filesInFence(fid, desk ? desk.activity : "")
-        Utils.syncModel(filesModel, list.map(Utils.fileRow), "path")
+        const changed = Utils.syncModel(filesModel, list.map(Utils.fileRow), "path")
+        if (changed) scheduleHoneycombRefresh()
         if (desk) {
             desk.registerVisible(fid, names())
         }
+    }
+    // ListModel emits countChanged for every insert/remove. Coalesce those
+    // signals, and also refresh once after syncModel so same-count role updates
+    // and row moves are reflected in the copied Honeycomb window.
+    function scheduleHoneycombRefresh() {
+        if (honeycombRefreshPending) return
+        honeycombRefreshPending = true
+        Qt.callLater(function () {
+            fence.honeycombRefreshPending = false
+            comb.refreshWindow(true)
+        })
     }
     Connections {
         target: Core
@@ -480,36 +493,145 @@ Item {
                 visible: fence.view === "honeycomb" && !fence.isDrives
                 boundsBehavior: Flickable.StopAtBounds
                 readonly property real cell: fence.iconSize + Kirigami.Units.gridUnit * 2.4
-                readonly property var spots: Utils.honeycomb(filesModel.count, width, cell)
+                readonly property real rowHeight: cell * 0.87
+                readonly property int bufferRows: 2
+                property int firstSourceIndex: 0
+                property int firstVisibleRow: -1
+                property int lastVisibleRow: -1
                 contentHeight: Utils.honeycombHeight(filesModel.count, width, cell)
                 clip: true
+
+                // Keep the delegate for an actively dragged file alive even
+                // after it scrolls outside the viewport. FileIcon owns the
+                // QML Drag source, so deleting that delegate would cancel the
+                // system drag. The rest of the window remains virtualized.
+                ListModel { id: honeycombWindow }
+                property bool hasDragSource: false
+
+                function sourceIndexForPath(path) {
+                    if (path === "") return -1
+                    for (let i = 0; i < filesModel.count; ++i) {
+                        if (filesModel.get(i).path === path) return i
+                    }
+                    return -1
+                }
+
+                function windowRow(index) {
+                    const row = filesModel.get(index)
+                    return {
+                        sourceIndex: index,
+                        name: row.name || "", path: row.path || "", label: row.label || "",
+                        url: row.url || "", icon: row.icon || "", fallbackIcon: row.fallbackIcon || "",
+                        image: row.image || "", mime: row.mime || "", isDir: !!row.isDir,
+                        size: Number(row.size) || 0, modified: row.modified || "",
+                        canThumb: !!row.canThumb
+                    }
+                }
+
+                function refreshWindow(force) {
+                    const dragOrigin = fence.desk ? fence.desk.dragOrigin : null
+                    // Portals can show the same filesystem path in several
+                    // fences. Only the fence that owns the actual source
+                    // delegate may pin it.
+                    const dragPath = dragOrigin && dragOrigin.fenceId === fence.fid
+                            && dragOrigin.mode === "honeycomb" ? dragOrigin.path : ""
+                    const dragIndex = sourceIndexForPath(dragPath)
+                    const rows = []
+
+                    if (!visible || width <= 0 || height <= 0) {
+                        if (dragIndex >= 0) rows.push(windowRow(dragIndex))
+                        Utils.syncModel(honeycombWindow, rows, "path")
+                        hasDragSource = dragIndex >= 0
+                        firstVisibleRow = -1
+                        lastVisibleRow = -1
+                        firstSourceIndex = 0
+                        return
+                    }
+
+                    const range = Utils.honeycombVisibleRange(filesModel.count, width, cell,
+                                                               contentY, height, bufferRows)
+                    if (!force && range.firstRow === firstVisibleRow
+                            && range.lastRow === lastVisibleRow) {
+                        return
+                    }
+                    firstSourceIndex = range.first
+                    firstVisibleRow = range.firstRow
+                    lastVisibleRow = range.lastRow
+                    for (let i = range.first; i < range.last; ++i) {
+                        rows.push(windowRow(i))
+                    }
+                    // Preserve the source delegate by path, not by its old
+                    // viewport position. Its sourceIndex is updated if rows
+                    // before it are inserted, removed, or reordered.
+                    if (dragIndex >= 0 && (dragIndex < range.first || dragIndex >= range.last)) {
+                        rows.push(windowRow(dragIndex))
+                    }
+                    Utils.syncModel(honeycombWindow, rows, "path")
+                    hasDragSource = dragIndex >= 0
+                }
+
+                onContentYChanged: refreshWindow(false)
+                onWidthChanged: refreshWindow(true)
+                onHeightChanged: refreshWindow(true)
+                onCellChanged: refreshWindow(true)
+                onVisibleChanged: refreshWindow(true)
+                Component.onCompleted: refreshWindow(true)
+                Connections {
+                    target: filesModel
+                    function onCountChanged() { fence.scheduleHoneycombRefresh() }
+                }
+                Connections {
+                    target: fence.desk
+                    function onDragOriginChanged() { comb.refreshWindow(true) }
+                }
                 QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
                 Repeater {
-                    model: comb.visible ? filesModel : null
-                    delegate: FileIcon {
-                        x: comb.spots[index] ? comb.spots[index].x : 0
-                        y: comb.spots[index] ? comb.spots[index].y : 0
+                    model: (comb.visible || comb.hasDragSource) ? honeycombWindow : null
+                    delegate: Item {
+                        // Bind ListModel roles explicitly. Required properties
+                        // avoid relying on the delegate's implicit model context,
+                        // which can be unavailable during model-window updates.
+                        required property int sourceIndex
+                        required property string name
+                        required property string path
+                        required property string label
+                        required property string url
+                        required property string icon
+                        required property string fallbackIcon
+                        required property string image
+                        required property string mime
+                        required property bool isDir
+                        required property real size
+                        required property real modified
+                        required property bool canThumb
+
+                        x: Utils.honeycombSpot(sourceIndex, comb.width, comb.cell).x
+                        y: Utils.honeycombSpot(sourceIndex, comb.width, comb.cell).y
                         width: comb.cell
                         height: comb.cell
-                        mode: "honeycomb"
-                        name: model.name
-                        path: model.path
-                        label: model.label
-                        url: model.url
-                        iconName: model.icon
-                        fallbackIcon: model.fallbackIcon
-                        image: model.image
-                        mime: model.mime
-                        isDir: model.isDir
-                        size: model.size
-                        modified: model.modified
-                        canThumb: model.canThumb
-                        desk: fence.desk
-                        iconSize: fence.iconSize
-                        fenceId: fence.fid
-                        textColor: fence.textColor
-                        inPortal: fence.isPortal
-                        onOpenFolderRequested: function (p) { fence.browsePath = p }
+
+                        FileIcon {
+                            anchors.fill: parent
+                            mode: "honeycomb"
+                            name: parent.name
+                            path: parent.path
+                            label: parent.label
+                            url: parent.url
+                            iconName: parent.icon
+                            fallbackIcon: parent.fallbackIcon
+                            image: parent.image
+                            mime: parent.mime
+                            isDir: parent.isDir
+                            size: parent.size
+                            modified: parent.modified
+                            canThumb: parent.canThumb
+                            desk: fence.desk
+                            iconSize: fence.iconSize
+                            fenceId: fence.fid
+                            textColor: fence.textColor
+                            inPortal: fence.isPortal
+                            onOpenFolderRequested: function (p) { fence.browsePath = p }
+                        }
                     }
                 }
             }
