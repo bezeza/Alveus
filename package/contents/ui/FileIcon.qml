@@ -89,6 +89,7 @@ Item {
     }
     function ownsDragOrigin(origin) {
         return origin && origin.path === cell.path && origin.fenceId === cell.fenceId
+            && origin.mode === cell.mode
     }
     function clearDragOriginLater() {
         if (!cell.desk || !ownsDragOrigin(cell.desk.dragOrigin)) {
@@ -97,11 +98,13 @@ Item {
         const targetDesk = cell.desk
         const draggedPath = cell.path
         const draggedFenceId = cell.fenceId
+        const draggedMode = cell.mode
         // Let the target DropArea process the drop before clearing its origin.
         Qt.callLater(function () {
             if (targetDesk && targetDesk.dragOrigin
                     && targetDesk.dragOrigin.path === draggedPath
-                    && targetDesk.dragOrigin.fenceId === draggedFenceId) {
+                    && targetDesk.dragOrigin.fenceId === draggedFenceId
+                    && targetDesk.dragOrigin.mode === draggedMode) {
                 targetDesk.dragOrigin = null
             }
         })
@@ -320,7 +323,7 @@ Item {
                 selectOnRelease = false
                 const urls = cell.desk.selectedUrls()
                 dragProxy.Drag.mimeData = { "text/uri-list": urls.join("\r\n") }
-                cell.desk.dragOrigin = { name: cell.name, path: cell.path, fenceId: cell.fenceId }
+                cell.desk.dragOrigin = { name: cell.name, path: cell.path, fenceId: cell.fenceId, mode: cell.mode }
                 cell.grabToImage(function (result) {
                     // The pointer may be released before the asynchronous
                     // screenshot is ready. Never start a late drag in that case.
