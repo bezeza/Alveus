@@ -656,6 +656,65 @@ QVariantList filterDriveHierarchy(const QVariantList &devices, const QVariantMap
     return out;
 }
 
+QVariantMap summarizeDriveHierarchy(const QVariantList &devices)
+{
+    QSet<QString> seen;
+    qint64 totalBytes = 0;
+    qint64 freeBytes = 0;
+    int count = 0;
+    bool complete = true;
+
+    const auto hasMountedDescendant = [](const auto &self, const QVariantList &children) -> bool {
+        for (const QVariant &childValue : children) {
+            const QVariantMap child = childValue.toMap();
+            if (child.value(QStringLiteral("mounted")).toBool()
+                || self(self, child.value(QStringLiteral("children")).toList())) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    std::function<void(const QVariantList &)> visit;
+    visit = [&](const QVariantList &items) {
+        for (const QVariant &value : items) {
+            const QVariantMap drive = value.toMap();
+            const QVariantList children = drive.value(QStringLiteral("children")).toList();
+            const bool hasMountedChild = hasMountedDescendant(hasMountedDescendant, children);
+            if (drive.value(QStringLiteral("mounted")).toBool() && !hasMountedChild) {
+                const QString id = drive.value(QStringLiteral("id")).toString().trimmed();
+                bool totalOk = false;
+                bool freeOk = false;
+                const qint64 total = drive.value(QStringLiteral("total")).toLongLong(&totalOk);
+                const qint64 free = drive.value(QStringLiteral("free")).toLongLong(&freeOk);
+
+                if (id.isEmpty()) {
+                    complete = false;
+                } else if (!seen.contains(id)) {
+                    seen.insert(id);
+                    if (!totalOk || total <= 0 || !freeOk || free < 0) {
+                        complete = false;
+                    } else {
+                        totalBytes += total;
+                        freeBytes += qMin(total, free);
+                        ++count;
+                    }
+                }
+            }
+            visit(children);
+        }
+    };
+    visit(devices);
+
+    return {
+        {QStringLiteral("total"), totalBytes},
+        {QStringLiteral("free"), freeBytes},
+        {QStringLiteral("used"), qMax<qint64>(0, totalBytes - freeBytes)},
+        {QStringLiteral("count"), count},
+        {QStringLiteral("complete"), complete},
+    };
+}
+
 } // namespace Alveus
 
 // ---------------------------------------------------------------------------

@@ -290,3 +290,40 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - The offscreen UI harness now treats invalid QML anchors as critical; the
   previous drive-row anchor warning is fixed and no longer appears.
 - No live KDE Plasma session or physical USB storage test has been performed.
+
+
+### In progress — Stage E / feat/drive-layout-controls (PR #40)
+
+- Add automatic one/two-column layout and fixed one/two/three-column choices;
+  clamp the effective count to the available fence width.
+- Add an optional storage summary that totals unique mounted leaf volumes and
+  avoids counting a physical parent and its child partitions twice.
+- Add independent show/hide control for usage bars.
+- Collapse partitions by default, with a configurable global/per-fence default.
+- Persist per-device expansion state in each drive fence so periodic refreshes
+  and application restarts do not reset the user's expanded rows.
+- Add global/per-fence layout settings with inheritance and reset controls,
+  schema validation, persistence tests, and wide/narrow UI scenarios.
+- Add Ukrainian/Russian translations.
+- Verification is pending current-head CI. No live KDE Plasma or multi-device
+  storage test has been performed.
+
+
+## 2026-11-15
+
+### PR #40 — fix adaptive drive-view QML loading
+
+- Fixed the drive-group Flow sizing in DrivesView.qml. Flow.implicitHeight
+  is read-only in this Qt Quick component, so assigning to it prevented the
+  entire drive view and its containing Fence from loading. The layout now
+  receives the measured content height through Layout.preferredHeight, and
+  the ColumnLayout remains responsible for assigning the item's height.
+- The existing wide and narrow adaptive-layout UI harness scenarios exercise
+  this QML path. The first post-fix run passed all 10 CTest targets, including
+  both adaptive-layout scenarios; build, translations, packaging CLI, shell,
+  QML lint, development-log enforcement, and preview rendering also passed.
+  The whitespace check found one whitespace-only line in this log, which was
+  removed. Clean-head run [43697656819](https://github.com/bezeza/Alveus/actions/runs/43697656819)
+  passed all 10 CTest targets; the RPM build/install/remove workflow also
+  passed in run [43697656816](https://github.com/bezeza/Alveus/actions/runs/43697656816).
+  No live KDE Plasma test has been performed.

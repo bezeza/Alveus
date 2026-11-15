@@ -98,6 +98,15 @@ Item {
             Core.setDriveOption(id, "separateUsb", true)
             Core.setDriveOption(id, "informationLevel", "detailed")
         }
+        if (s === "drivelayout" || s === "drivelayoutnarrow") {
+            Core.snoozeCleanup(7)
+            const wide = s === "drivelayout"
+            const id = Core.createPortal(0, "", 0, wide ? 0.26 : 0.02, 0.04, wide ? 0.46 : 0.08, 0.58, "Диски", "drives:")
+            Core.setDriveOption(id, "columnCount", wide ? "2" : "3")
+            Core.setDriveOption(id, "showSummary", true)
+            Core.setDriveOption(id, "showUsageBar", true)
+            Core.setDriveOption(id, "expandPartitionsByDefault", false)
+        }
         if (s === "drivesnarrow") {
             Core.snoozeCleanup(7)
             Core.createPortal(0, "", 0, 0.02, 0.04, 0.08, 0.58, "Диски", "drives:")

@@ -478,6 +478,34 @@ QQC2.Popup {
                             onActivated: Core.setDriveDefault("informationLevel", currentIndex === 0 ? "detailed" : "basic")
                         }
                     }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        PlasmaComponents.Label {
+                            Layout.fillWidth: true
+                            text: i18n("Drive columns")
+                        }
+                        QQC2.ComboBox {
+                            id: globalDriveColumns
+                            model: [i18n("Automatic"), i18n("1 column"), i18n("2 columns"), i18n("3 columns")]
+                            currentIndex: Math.max(0, ["auto", "1", "2", "3"].indexOf(dialog.effectiveDriveDefaults.columnCount || "auto"))
+                            onActivated: Core.setDriveDefault("columnCount", ["auto", "1", "2", "3"][currentIndex])
+                        }
+                    }
+                    QQC2.CheckBox {
+                        text: i18n("Show storage summary")
+                        checked: dialog.effectiveDriveDefaults.showSummary === true
+                        onToggled: Core.setDriveDefault("showSummary", checked)
+                    }
+                    QQC2.CheckBox {
+                        text: i18n("Show usage bars")
+                        checked: dialog.effectiveDriveDefaults.showUsageBar !== false
+                        onToggled: Core.setDriveDefault("showUsageBar", checked)
+                    }
+                    QQC2.CheckBox {
+                        text: i18n("Expand partitions by default")
+                        checked: dialog.effectiveDriveDefaults.expandPartitionsByDefault === true
+                        onToggled: Core.setDriveDefault("expandPartitionsByDefault", checked)
+                    }
                     PlasmaComponents.Label {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap

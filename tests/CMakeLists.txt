@@ -79,6 +79,27 @@ set_tests_properties(uiharness_drive_view_grouped PROPERTIES
     TIMEOUT 30)
 
 
+# Exercise adaptive two-column layout and the optional storage summary.
+add_test(NAME uiharness_drive_view_layout COMMAND uiharness
+    "${CMAKE_SOURCE_DIR}/tests/scene.qml"
+    "${CMAKE_BINARY_DIR}/uiharness-drive-view-layout.png"
+    700 1600 900 drivelayout)
+set_tests_properties(uiharness_drive_view_layout PROPERTIES
+    ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;ALVEUS_NO_DBUS=1;QML_IMPORT_PATH=${_uiharness_import_path};XDG_DATA_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-layout-data;XDG_CACHE_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-layout-cache;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-layout-config"
+    TIMEOUT 30)
+
+# A requested three-column layout must degrade safely inside a narrow fence.
+add_test(NAME uiharness_drive_view_layout_narrow COMMAND uiharness
+    "${CMAKE_SOURCE_DIR}/tests/scene.qml"
+    "${CMAKE_BINARY_DIR}/uiharness-drive-view-layout-narrow.png"
+    700 1600 900 drivelayoutnarrow)
+set_tests_properties(uiharness_drive_view_layout_narrow PROPERTIES
+    ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;ALVEUS_NO_DBUS=1;QML_IMPORT_PATH=${_uiharness_import_path};XDG_DATA_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-layout-narrow-data;XDG_CACHE_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-layout-narrow-cache;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/uiharness-drive-view-layout-narrow-config"
+    TIMEOUT 30)
+
+
 # Exercise recovery without touching the user's live Plasma configuration.
 find_program(BASH_EXECUTABLE bash REQUIRED)
 add_test(NAME recover_script COMMAND "${BASH_EXECUTABLE}"

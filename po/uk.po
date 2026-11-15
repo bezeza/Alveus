@@ -1236,3 +1236,47 @@ msgstr "Разом з іншими дисками"
 #: package/contents/ui/drive-settings
 msgid "USB device grouping"
 msgstr "Групування USB-пристроїв"
+
+#: package/contents/ui/drive-layout-settings
+msgid "Automatic"
+msgstr "Автоматично"
+
+#: package/contents/ui/drive-layout-settings
+msgid "Drive columns"
+msgstr "Кількість стовпців"
+
+#: package/contents/ui/drive-layout-settings
+msgid "1 column"
+msgstr "1 стовпець"
+
+#: package/contents/ui/drive-layout-settings
+msgid "2 columns"
+msgstr "2 стовпці"
+
+#: package/contents/ui/drive-layout-settings
+msgid "3 columns"
+msgstr "3 стовпці"
+
+#: package/contents/ui/drive-layout-settings
+msgid "Show storage summary"
+msgstr "Показувати зведення накопичувачів"
+
+#: package/contents/ui/drive-layout-settings
+msgid "Show usage bars"
+msgstr "Показувати смуги заповнення"
+
+#: package/contents/ui/drive-layout-settings
+msgid "Expand partitions by default"
+msgstr "Розгортати розділи за замовчуванням"
+
+#: package/contents/ui/drive-layout-settings
+msgid "%1 total · %2 used · %3 free"
+msgstr "%1 загалом · %2 зайнято · %3 вільно"
+
+#: package/contents/ui/DriveTreeItem.qml
+msgid "Use default expansion"
+msgstr "Використовувати типове розгортання"
+
+#: package/contents/ui/DrivesView.qml
+msgid "Mounted volumes: %1 total · %2 used · %3 free"
+msgstr "Підключені томи: %1 загалом · %2 зайнято · %3 вільно"
