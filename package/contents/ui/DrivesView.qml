@@ -170,8 +170,7 @@ ListView {
             Flow {
                 Layout.fillWidth: true
                 spacing: view.cardSpacing
-                implicitHeight: childrenRect.height
-                height: implicitHeight
+                Layout.preferredHeight: childrenRect.height
 
                 Repeater {
                     model: modelData.devices
