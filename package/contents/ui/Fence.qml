@@ -121,8 +121,8 @@ Item {
     ListModel { id: filesModel }
     function syncFiles() {
         const list = isDrives ? [] : isPortal ? Core.listFolder(browsePath) : Core.filesInFence(fid, desk ? desk.activity : "")
-        Utils.syncModel(filesModel, list.map(Utils.fileRow), "path")
-        scheduleHoneycombRefresh()
+        const changed = Utils.syncModel(filesModel, list.map(Utils.fileRow), "path")
+        if (changed) scheduleHoneycombRefresh()
         if (desk) {
             desk.registerVisible(fid, names())
         }
