@@ -10,7 +10,8 @@ if ! command -v kpackagetool6 >/dev/null 2>&1; then
     exit 1
 fi
 
-if kpackagetool6 --type "$PACKAGE_TYPE" --list | grep -Fxq "$PACKAGE_ID"; then
+installed_packages="$(kpackagetool6 --type "$PACKAGE_TYPE" --list)"
+if grep -Fxq "$PACKAGE_ID" <<< "$installed_packages"; then
     kpackagetool6 --type "$PACKAGE_TYPE" --upgrade "$PACKAGE_DIR"
 else
     kpackagetool6 --type "$PACKAGE_TYPE" --install "$PACKAGE_DIR"
