@@ -529,8 +529,12 @@ Item {
                 }
 
                 function refreshWindow(force) {
-                    const dragPath = fence.desk && fence.desk.dragOrigin
-                        ? fence.desk.dragOrigin.path : ""
+                    const dragOrigin = fence.desk ? fence.desk.dragOrigin : null
+                    // Portals can show the same filesystem path in several
+                    // fences. Only the fence that owns the actual source
+                    // delegate may pin it.
+                    const dragPath = dragOrigin && dragOrigin.fenceId === fence.fid
+                        ? dragOrigin.path : ""
                     const dragIndex = sourceIndexForPath(dragPath)
                     const rows = []
 
