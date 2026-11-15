@@ -148,6 +148,9 @@ jobs:
             package/contents/ui/AlveusSettings.qml \
             tests/scene.qml
 
+      - name: Validate KWin Focus Deck package
+        run: python3 tests/check_kwin_focus_deck.py
+
       - name: Require development log for implementation changes
         if: github.event_name == 'pull_request'
         env:
@@ -156,7 +159,7 @@ jobs:
         shell: bash
         run: |
           changed_files="$(git diff --name-only "${BASE_SHA}...${HEAD_SHA}")"
-          if grep -Eq '^(core/|package/|tests/|packaging/|data/|po/|cmake/|CMakeLists\.txt$|install\.sh$|uninstall\.sh$|recover\.sh$|\.github/workflows/)' <<< "${changed_files}"; then
+          if grep -Eq '^(core/|package/|tests/|extras/kwin-focus-deck/|packaging/|data/|po/|cmake/|CMakeLists\.txt$|install\.sh$|uninstall\.sh$|recover\.sh$|\.github/workflows/)' <<< "${changed_files}"; then
             if ! grep -Fxq 'docs/DEVELOPMENT_LOG.md' <<< "${changed_files}"; then
               echo "::error::Implementation, test, CI, or packaging changes require a dated entry in docs/DEVELOPMENT_LOG.md."
               exit 1
