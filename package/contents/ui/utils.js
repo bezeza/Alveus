@@ -123,3 +123,31 @@ function honeycombHeight(count, width, cell) {
     const perRow = Math.max(1, Math.floor((width - w / 2) / w));
     return Math.ceil(count / perRow) * h + cell * 0.2;
 }
+
+
+// Return only the source-index range intersecting the viewport plus a small
+// row buffer. Honeycomb geometry remains deterministic for the full model.
+function honeycombVisibleRange(count, width, cell, contentY, viewportHeight, bufferRows) {
+    if (count <= 0 || width <= 0 || cell <= 0 || viewportHeight <= 0) {
+        return { first: 0, last: 0, firstRow: 0, lastRow: -1 };
+    }
+    const rowHeight = cell * 0.87;
+    const perRow = Math.max(1, Math.floor((width - cell / 2) / cell));
+    const buffer = Math.max(0, bufferRows || 0);
+    const firstRow = Math.max(0, Math.floor(Math.max(0, contentY) / rowHeight) - buffer);
+    const lastRow = Math.min(Math.ceil(count / perRow) - 1,
+                             Math.ceil((Math.max(0, contentY) + viewportHeight) / rowHeight) + buffer);
+    return {
+        first: Math.min(count, firstRow * perRow),
+        last: Math.min(count, (lastRow + 1) * perRow),
+        firstRow: firstRow,
+        lastRow: lastRow
+    };
+}
+
+function honeycombSpot(index, width, cell) {
+    const perRow = Math.max(1, Math.floor((width - cell / 2) / cell));
+    const row = Math.floor(index / perRow);
+    const col = index % perRow;
+    return { x: col * cell + (row % 2 ? cell / 2 : 0), y: row * cell * 0.87 };
+}
