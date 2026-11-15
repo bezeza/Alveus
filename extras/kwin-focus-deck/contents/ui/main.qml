@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.core as PlasmaCore
-import org.kde.kirigami as Kirigami
 import org.kde.kwin as KWin
 
 KWin.TabBoxSwitcher {
@@ -192,7 +191,7 @@ KWin.TabBoxSwitcher {
                             currentIndex: tabBox.currentIndex
                             clip: true
                             keyNavigationWraps: true
-                            cellWidth: width / Math.max(1, Math.min(5, Math.floor(width / 250)))
+                            cellWidth: Math.max(1, width / Math.max(1, Math.min(5, Math.floor(width / 250))))
                             cellHeight: 176
                             cacheBuffer: 0
 
