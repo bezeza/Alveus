@@ -312,3 +312,14 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   failed in the desktop preview because sparse file rows exposed undefined
   optional roles to typed FileIcon properties. Added safe typed defaults to
   the virtual window rows; rerunning the full CI preview.
+
+
+## 2026-11-15
+
+### PR #42 — repair drive-row click target
+
+- Removed an invalid MouseArea anchor to labelsColumn, which is a descendant
+  rather than a parent or sibling. The hit area now tracks the label column's
+  x/y/width/height in DriveTreeItem coordinates, preserving the intended
+  click target without overlapping the adjacent drive action buttons.
+- Current-head CI and live KDE Plasma interaction checks are pending.
