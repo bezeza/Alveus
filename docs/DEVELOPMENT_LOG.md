@@ -358,3 +358,22 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   artifact upload, and DNF removal all passed in
   [43704465385](https://github.com/bezeza/Alveus/actions/runs/43704465385).
 - Live KDE Plasma interaction remains a separate manual release gate.
+
+### PR #42 — keep virtualized Honeycomb data in sync
+
+- `Utils.syncModel` now reports whether rows were inserted, removed, moved, or
+  had role values changed. Existing callers that do not need the result remain
+  unaffected.
+- `Fence.syncFiles` schedules a coalesced Honeycomb refresh after a real model
+  change. The `countChanged` handler uses the same coalescing path, avoiding a
+  full visible-window rebuild for every individual insertion during a large
+  folder load.
+- Same-count metadata updates and row reordering now refresh the copied
+  Honeycomb window. Unchanged model data does not recreate visible delegates.
+- Expanded the 5,000-item offscreen stress test to cover initial bounded
+  population, no-op synchronization, same-count metadata changes, same-count
+  reordering, and middle/bottom scrolling.
+- Increased the stress scene's harness delay so its asynchronous assertions
+  finish before the harness checks the result.
+- CI is rerunning on the updated branch. Live KDE Plasma interaction remains a
+  separate manual release gate.
