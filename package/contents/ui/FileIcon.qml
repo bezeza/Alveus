@@ -328,8 +328,7 @@ Item {
                     // The pointer may be released before the asynchronous
                     // screenshot is ready. Never start a late drag in that case.
                     if (!mouse.pressed || !mouse.dragStarted || !cell.desk
-                            || !cell.desk.dragOrigin
-                            || cell.desk.dragOrigin.path !== cell.path || !result.url) {
+                            || !ownsDragOrigin(cell.desk.dragOrigin) || !result.url) {
                         return
                     }
                     dragProxy.Drag.imageSource = result.url
