@@ -154,6 +154,12 @@ int main(int argc, char **argv)
             app.exit(1);
             return;
         }
+        const QString sceneFailure = view.rootObject()->property("failure").toString();
+        if (!sceneFailure.isEmpty()) {
+            fprintf(stderr, "ERROR: QML scene assertion failed: %s\n", qPrintable(sceneFailure));
+            app.exit(1);
+            return;
+        }
         int exitCode = 0;
         const QImage screenshot = view.grabWindow();
         if (screenshot.isNull() || !screenshot.save(out)) {
