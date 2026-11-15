@@ -108,7 +108,7 @@ KWin.TabBoxSwitcher {
                             visible: count > 0 && count <= 6
                             model: tabBox.model
                             currentIndex: tabBox.currentIndex
-                            pathItemCount: Math.max(1, Math.min(count, 6))
+                            pathItemCount: visible ? Math.max(1, Math.min(count, 6)) : 1
                             preferredHighlightBegin: 0.5
                             preferredHighlightEnd: 0.5
                             highlightRangeMode: PathView.StrictlyEnforceRange
@@ -186,8 +186,8 @@ KWin.TabBoxSwitcher {
                             id: gridView
 
                             anchors.fill: parent
-                            visible: count > 6
-                            model: tabBox.model
+                            visible: carouselView.count > 6
+                            model: visible ? tabBox.model : null
                             currentIndex: tabBox.currentIndex
                             clip: true
                             keyNavigationWraps: true
