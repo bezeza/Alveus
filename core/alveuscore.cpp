@@ -1083,13 +1083,20 @@ void AlveusCore::refreshFileModelCaches(bool rebuildAll, const QSet<QString> &ch
                 }
             }
 
-            for (const QString &fenceId : std::as_const(affectedFenceIds)) {
-                QVariantList updated;
-                for (const Entry &entry : std::as_const(m_files)) {
-                    if (cache.fenceByName.value(entry.name) == fenceId) {
-                        updated << toMap(entry);
-                    }
+            // Rebuild every affected fence in one pass over the desktop model.
+            // The previous per-fence scan cost O(files × affected fences) when a
+            // batch of changed files touched several fences.
+            QHash<QString, QVariantList> updatedByFence;
+            updatedByFence.reserve(affectedFenceIds.size());
+            for (const Entry &entry : std::as_const(m_files)) {
+                const auto fenceIt = cache.fenceByName.constFind(entry.name);
+                if (fenceIt != cache.fenceByName.cend() && affectedFenceIds.contains(fenceIt.value())) {
+                    updatedByFence[fenceIt.value()].append(toMap(entry));
                 }
+            }
+
+            for (const QString &fenceId : std::as_const(affectedFenceIds)) {
+                const QVariantList updated = updatedByFence.take(fenceId);
                 if (cache.byFence.value(fenceId) != updated) {
                     changedFenceIds << fenceId;
                 }
@@ -1668,7 +1675,7 @@ void AlveusCore::rescan()
     // catches size/mtime changes that do not alter the directory entries.
     QSet<QString> wantedFileWatches;
     for (const Entry &entry : std::as_const(m_files)) {
-        if (!QFileInfo(entry.path).isDir()) {
+        if (!entry.isDir) {
             wantedFileWatches.insert(entry.path);
         }
     }
@@ -2865,19 +2872,39 @@ bool AlveusCore::waitForFileJobs(int timeoutMs)
 void AlveusCore::refreshChangedFiles()
 {
     // Re-read only the files that changed; a new or vanished file needs the
-    // full rescan (sorting, placements).
+    // full rescan (sorting, placements). Build the name index and watched-path
+    // set once so a batch does not repeatedly scan the complete model/watcher.
     const QSet<QString> changed = std::exchange(m_changedFiles, {});
+    if (changed.isEmpty()) {
+        return;
+    }
+
+    QHash<QString, qsizetype> indexByName;
+    indexByName.reserve(m_files.size());
+    for (qsizetype i = 0; i < m_files.size(); ++i) {
+        indexByName.insert(m_files.at(i).name, i);
+    }
+
+    QSet<QString> watchedPaths;
+    const QStringList currentWatches = m_watcher.files();
+    for (const QString &path : currentWatches) {
+        watchedPaths.insert(path);
+    }
+
     bool any = false;
     for (const QString &name : changed) {
-        auto it = std::find_if(m_files.begin(), m_files.end(), [&name](const Entry &e) { return e.name == name; });
+        const auto index = indexByName.constFind(name);
         const QString path = m_desktopPath + QLatin1Char('/') + name;
-        if (it == m_files.end() || !QFileInfo::exists(path)) {
+        if (index == indexByName.cend() || !QFileInfo::exists(path)) {
             scheduleRescan();
             return;
         }
-        *it = makeEntry(m_desktopPath, name);
-        if (!m_watcher.files().contains(path)) {
-            m_watcher.addPath(path); // the watch is dropped when a file is replaced
+
+        m_files[*index] = makeEntry(m_desktopPath, name);
+        if (!watchedPaths.contains(path)) {
+            if (m_watcher.addPath(path)) {
+                watchedPaths.insert(path); // the watch is dropped when a file is replaced
+            }
         }
         any = true;
     }

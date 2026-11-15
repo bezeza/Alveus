@@ -444,6 +444,61 @@ private Q_SLOTS:
         QCOMPARE(core.fenceOfFile(QStringLiteral("new.docx"), QString()), docs);
     }
 
+    void largeDesktopFenceModelRetainsItems()
+    {
+        constexpr int itemCount = 600;
+        for (int i = 0; i < itemCount; ++i) {
+            touch(d(QStringLiteral("item-%1.txt").arg(i, 4, 10, QLatin1Char('0'))));
+        }
+
+        AlveusCore core(desk(), store());
+        const QString documents = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2,
+                                                   QStringLiteral("Documents"), QStringLiteral("txt"));
+        const QVariantList files = core.filesInFence(documents, QStringLiteral("work"));
+        QCOMPARE(files.size(), itemCount);
+        QCOMPARE(files.first().toMap().value(QStringLiteral("name")).toString(), QStringLiteral("item-0000.txt"));
+        QCOMPARE(files.last().toMap().value(QStringLiteral("name")).toString(), QStringLiteral("item-0599.txt"));
+    }
+
+    void batchFileChangesRefreshCachedFenceModels()
+    {
+        touch(d(QStringLiteral("alpha.txt")), "a");
+        touch(d(QStringLiteral("beta.txt")), "b");
+        touch(d(QStringLiteral("photo.jpg")), "photo");
+
+        AlveusCore core(desk(), store());
+        const QString documents = core.createFence(0, QString(), 0, 0, 0, 0.2, 0.2,
+                                                   QStringLiteral("Documents"), QStringLiteral("txt"));
+        const QString pictures = core.createFence(0, QString(), 0, 0.3, 0, 0.2, 0.2,
+                                                  QStringLiteral("Pictures"), QStringLiteral("jpg"));
+        // Materialize the activity cache before the watcher reports the batch.
+        core.filesInFence(documents, QStringLiteral("work"));
+        core.filesInFence(pictures, QStringLiteral("work"));
+
+        QSignalSpy changes(&core, &AlveusCore::fileModelsChanged);
+        touch(d(QStringLiteral("alpha.txt")), "alpha updated");
+        touch(d(QStringLiteral("beta.txt")), "beta updated");
+        touch(d(QStringLiteral("photo.jpg")), "photo updated");
+
+        QTRY_VERIFY_WITH_TIMEOUT(changes.count() > 0, 5000);
+
+        const auto sizeFor = [](const QVariantList &files, const QString &name) -> qint64 {
+            for (const QVariant &value : files) {
+                const QVariantMap row = value.toMap();
+                if (row.value(QStringLiteral("name")).toString() == name) {
+                    return row.value(QStringLiteral("size")).toLongLong();
+                }
+            }
+            return -1;
+        };
+        QTRY_COMPARE_WITH_TIMEOUT(sizeFor(core.filesInFence(documents, QStringLiteral("work")),
+                                          QStringLiteral("alpha.txt")), qint64(13), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(sizeFor(core.filesInFence(documents, QStringLiteral("work")),
+                                          QStringLiteral("beta.txt")), qint64(12), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(sizeFor(core.filesInFence(pictures, QStringLiteral("work")),
+                                          QStringLiteral("photo.jpg")), qint64(13), 5000);
+    }
+
     void timeFencesWin()
     {
         age(d(QStringLiteral("report.pdf")), 90);
