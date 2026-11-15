@@ -350,5 +350,11 @@ from open pull requests, so proposed code is not mistaken for shipped code.
 - The explicit Honeycomb role-binding fix passed the push and pull-request
   workflows, all 8 CTest targets including the 5,000-item virtualization stress
   test, preview artifact generation, and Fedora RPM build/install/remove.
-- The updated preview fixture workflow is being rerun on this commit. Live KDE
-  Plasma interaction remains a separate manual release gate.
+- Push CI [43704462940](https://github.com/bezeza/Alveus/actions/runs/43704462940)
+  and PR CI [43704465404](https://github.com/bezeza/Alveus/actions/runs/43704465404)
+  passed all 8 CTest targets, including the 5,000-item virtualization stress
+  test, static checks, and preview rendering. No unsupported-image decode
+  warnings were emitted. Fedora RPM build, installed-payload verification,
+  artifact upload, and DNF removal all passed in
+  [43704465385](https://github.com/bezeza/Alveus/actions/runs/43704465385).
+- Live KDE Plasma interaction remains a separate manual release gate.
