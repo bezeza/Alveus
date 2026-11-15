@@ -291,7 +291,7 @@ from open pull requests, so proposed code is not mistaken for shipped code.
   previous drive-row anchor warning is fixed and no longer appears.
 - No live KDE Plasma session or physical USB storage test has been performed.
 
- 
+
 ### In progress — Stage E / feat/drive-layout-controls (PR #40)
 
 - Add automatic one/two-column layout and fixed one/two/three-column choices;
