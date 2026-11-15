@@ -63,7 +63,7 @@ set_tests_properties(uiharness_drive_view PROPERTIES
 add_test(NAME uiharness_honeycomb_virtualization COMMAND uiharness
     "${CMAKE_SOURCE_DIR}/tests/honeycomb_stress.qml"
     "${CMAKE_BINARY_DIR}/uiharness-honeycomb-stress.png"
-    100 900 600)
+    1500 900 600)
 set_tests_properties(uiharness_honeycomb_virtualization PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QML_IMPORT_PATH=${CMAKE_SOURCE_DIR}/package/contents/ui"
     TIMEOUT 20)
